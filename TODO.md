@@ -100,6 +100,9 @@ concluída** quando todos estes estiverem verificados.
 - [ ] **Filtrar lixo nos passos importados** — alguns sites (ex.
       `mundodereceitasbimby.com.pt`) devolvem `"@type"`, `"position"` misturados
       com passos reais; sem filtro nenhum agora.
+- [ ] **Trazer a foto da importação por URL** — `Recipe.image_path` já existe
+      (critério 3 da v1.0), mas `backend/app/tasks.py` ainda não usa
+      `scraper.image()`; hoje só o upload manual pela UI preenche o campo.
 - [ ] **Importação inteligente via Gemini** — (a) fallback de extração quando o
       `recipe-scrapers` falha ou devolve resultado incompleto; (b) **importação
       por foto** (Vision): fotografar página de livro/receita manuscrita, com
