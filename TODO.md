@@ -62,9 +62,10 @@ concluída** quando todos estes estiverem verificados.
 - [ ] **Upload de foto pela UI** — adicionar/substituir foto no formulário de
       criar/editar, com captura pela câmara no telemóvel (`capture`); foto
       visível no card da Home e no hero do Detalhe (hoje há placeholders).
-- [ ] **Cabeçalhos de secção nos ingredientes** (`Ingredient.is_header: bool`) —
-      padrão de Tandoor e Mealie; mantém-se como funcionalidade de produto,
-      agora sem a urgência de migração.
+- [x] **Cabeçalhos de secção nos ingredientes** (`Ingredient.is_header: bool`) —
+      migração Alembic aditiva, suportado no editor manual (linha de secção
+      distinta, com botão "Adicionar cabeçalho de secção") e no Detalhe
+      (título em negrito antes do grupo de ingredientes). Testado no browser.
 - [ ] **Informação nutricional** — sem campos no modelo nem UI. É também o
       motivo de o `accent-orange` do `DESIGN.md` nunca aparecer.
       *(Se for adiado para v1.1, registar como decisão explícita no PRD, não
