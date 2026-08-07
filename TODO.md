@@ -37,9 +37,12 @@ Ponto de situação a 2026-08-07. Ver `PRD-app-receitas-v3.2.md`, `PRODUCT.md` e
 
 ## Por testar (sem verificação visual)
 
-- [ ] Editor manual de receitas (`AddRecipe.tsx` aba "À mão", `EditRecipe.tsx`,
-      `RecipeForm.tsx`) — build e oxlint passaram, falta testar no browser.
-- [ ] Menu de utilizador (`UserMenu.tsx`) — idem.
+- [x] Editor manual de receitas (`AddRecipe.tsx` aba "À mão", `EditRecipe.tsx`,
+      `RecipeForm.tsx`) — testado no browser (Playwright): criar receita com
+      ingredientes/passos/categoria/tag inline, editar e apagar (confirmação
+      via `window.confirm`), tudo sem erros de consola.
+- [x] Menu de utilizador (`UserMenu.tsx`) — testado no browser: abre, mostra
+      "Vítor & Mariana" e a nota sobre contas individuais na v1.2, sem erros.
 
 ## Limpeza
 
@@ -53,7 +56,7 @@ Ponto de situação a 2026-08-07. Ver `PRD-app-receitas-v3.2.md`, `PRODUCT.md` e
 Critérios de aceitação completos no PRD, Secção 11.1. A v1.0 **só se considera
 concluída** quando todos estes estiverem verificados.
 
-- [ ] Testar no browser o editor manual e o menu de utilizador (ver acima).
+- [x] Testar no browser o editor manual e o menu de utilizador (ver acima).
 - [ ] **Armazenamento de imagens** — `Recipe` sem campo de imagem.
       Pré-requisito de tudo o que envolve fotos.
 - [ ] **Upload de foto pela UI** — adicionar/substituir foto no formulário de
