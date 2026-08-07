@@ -1,0 +1,148 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-08-06T23:00:00Z",
+  "title": "Design System: Tacho",
+  "extensions": {
+    "colorMeta": {
+      "primary-forest": {
+        "role": "primary",
+        "displayName": "Floresta Funda",
+        "canonical": "#2D5F3F",
+        "tonalRamp": ["#0E1F15", "#16311F", "#1F4429", "#275733", "#2D5F3F", "#4C8863", "#8FBBA0", "#D6E8DC"]
+      },
+      "accent-leaf": {
+        "role": "secondary",
+        "displayName": "Verde-Folha",
+        "canonical": "#4CAF50",
+        "tonalRamp": ["#123314", "#1E4D22", "#2C6930", "#3A8640", "#4CAF50", "#7CC77F", "#ADE0AF", "#DEF3DE"]
+      },
+      "accent-orange": {
+        "role": "tertiary",
+        "displayName": "Laranja Tacho",
+        "canonical": "#F2994A",
+        "tonalRamp": ["#4A2A0D", "#7A4614", "#AC631D", "#D67F2E", "#F2994A", "#F6B172", "#FACC9E", "#FDE7D0"]
+      },
+      "bg-sage": {
+        "role": "neutral",
+        "displayName": "Sage Claro",
+        "canonical": "#EAF0E7",
+        "tonalRamp": ["#232B21", "#3C4A39", "#586A54", "#93A88E", "#C4D3BF", "#EAF0E7", "#F3F7F1", "#FAFCF9"]
+      },
+      "card-white": {
+        "role": "neutral",
+        "displayName": "Branco Cartão",
+        "canonical": "#FFFFFF",
+        "tonalRamp": ["#1A1A1A", "#404040", "#737373", "#A6A6A6", "#D9D9D9", "#F5F5F5", "#FAFAFA", "#FFFFFF"]
+      },
+      "text-primary": {
+        "role": "neutral",
+        "displayName": "Verde-Quase-Preto",
+        "canonical": "#1C2B1F",
+        "tonalRamp": ["#0B110C", "#152014", "#1C2B1F", "#33473A", "#546B58", "#829485", "#B4C0B6", "#DEE4DF"]
+      },
+      "text-secondary": {
+        "role": "neutral",
+        "displayName": "Verde Acinzentado",
+        "canonical": "#5C6B5E",
+        "tonalRamp": ["#20261E", "#39422D", "#4B5A4D", "#5C6B5E", "#7C8A7E", "#A2AEA3", "#C8D0C8", "#E9EDE9"]
+      }
+    },
+    "typographyMeta": {
+      "hero-number": { "displayName": "Hero Number", "purpose": "Tempo, porções, passo atual — respostas a uma pergunta real do utilizador." },
+      "section-title": { "displayName": "Section Title", "purpose": "Cabeçalhos de secção dentro de uma página (Ingredientes, Preparação)." },
+      "body": { "displayName": "Body", "purpose": "Texto corrido, ingredientes, instruções, metadata." }
+    },
+    "shadows": [
+      { "name": "card-resting", "value": "0 2px 10px -2px rgba(28,43,31,0.12)", "purpose": "Cards de receita, formulário, hero stats — repouso." },
+      { "name": "card-hover", "value": "0 8px 24px -4px rgba(28,43,31,0.22)", "purpose": "RecipeCard ao passar o rato." },
+      { "name": "cta-primary", "value": "0 8px 20px -6px rgba(45,95,63,0.6)", "purpose": "Botão 'Iniciar Modo Cozinha' — sombra tingida a verde-floresta." },
+      { "name": "nav-floating", "value": "0 10px 30px -8px rgba(28,43,31,0.35)", "purpose": "Bottom nav flutuante — única fonte de elevação, sem borda." }
+    ],
+    "motion": [
+      { "name": "shadow-transition", "value": "transition-shadow (Tailwind default: 150ms ease)", "purpose": "RecipeCard eleva ao hover." },
+      { "name": "press-scale", "value": "active:scale-[0.98]", "purpose": "CTA 'Iniciar Modo Cozinha' comprime ligeiramente ao toque/clique." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Recipe Card",
+      "kind": "card",
+      "refersTo": "card-recipe",
+      "description": "Card de receita na grelha da Home — ícone de marca, título, tempo (laranja no ícone), porções, tags/categorias.",
+      "html": "<a class=\"ds-recipe-card\" href=\"#\"><span class=\"ds-recipe-card__icon\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\"><path d=\"M6 11h12v5.5a3.5 3.5 0 0 1-3.5 3.5h-5A3.5 3.5 0 0 1 6 16.5V11Z\"/><path d=\"M4 11h16\"/></svg></span><span class=\"ds-recipe-card__body\"><h3 class=\"ds-recipe-card__title\">Bacalhau à Brás</h3><span class=\"ds-recipe-card__meta\"><svg class=\"ds-recipe-card__clock\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\"><circle cx=\"12\" cy=\"12\" r=\"8.5\"/><path d=\"M12 7.5V12l3 2\"/></svg>20 min</span></span></a>",
+      "css": ".ds-recipe-card { display: flex; gap: 16px; border-radius: 16px; background: #FFFFFF; padding: 16px; box-shadow: 0 2px 10px -2px rgba(28,43,31,0.12); text-decoration: none; transition: box-shadow 150ms ease; } .ds-recipe-card:hover { box-shadow: 0 8px 24px -4px rgba(28,43,31,0.22); } .ds-recipe-card__icon { display: flex; align-items: center; justify-content: center; width: 56px; height: 56px; flex-shrink: 0; border-radius: 12px; background: #EAF0E7; color: #2D5F3F; } .ds-recipe-card__icon svg { width: 28px; height: 28px; } .ds-recipe-card__title { font-family: Inter, sans-serif; font-weight: 600; color: #1C2B1F; margin: 0; } .ds-recipe-card__meta { display: flex; align-items: center; gap: 4px; margin-top: 6px; font-size: 14px; } .ds-recipe-card__clock { width: 16px; height: 16px; color: #F2994A; }"
+    },
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "CTA principal — 'Iniciar Modo Cozinha', 'Importar receita'.",
+      "html": "<button class=\"ds-btn-primary\">Iniciar Modo Cozinha</button>",
+      "css": ".ds-btn-primary { background: #2D5F3F; color: #FFFFFF; padding: 14px 20px; border-radius: 9999px; border: none; font-family: Inter, sans-serif; font-weight: 600; box-shadow: 0 8px 20px -6px rgba(45,95,63,0.6); transition: transform 150ms ease; } .ds-btn-primary:hover { filter: brightness(1.08); } .ds-btn-primary:focus-visible { outline: 2px solid #4CAF50; outline-offset: 2px; } .ds-btn-primary:active { transform: scale(0.98); }"
+    },
+    {
+      "name": "Cook Mode Button",
+      "kind": "button",
+      "refersTo": "button-cook-mode",
+      "description": "Botão 'Seguinte'/'Concluir' dentro do Modo Cozinha — único lugar onde o laranja é fundo, não ícone.",
+      "html": "<button class=\"ds-btn-cook\">Seguinte</button>",
+      "css": ".ds-btn-cook { background: #F2994A; color: #1C2B1F; padding: 16px; border-radius: 9999px; border: none; font-family: Inter, sans-serif; font-weight: 600; flex: 1; } .ds-btn-cook:focus-visible { outline: 2px solid #FFFFFF; outline-offset: 2px; }"
+    },
+    {
+      "name": "Search Input",
+      "kind": "input",
+      "refersTo": null,
+      "description": "Campo de pesquisa em pill com ícone à esquerda, usado no hero da Home.",
+      "html": "<label class=\"ds-search\"><svg class=\"ds-search__icon\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\"><circle cx=\"10.5\" cy=\"10.5\" r=\"6.5\"/><path d=\"m20 20-4.35-4.35\"/></svg><input type=\"search\" placeholder=\"Procurar receitas…\" /></label>",
+      "css": ".ds-search { display: flex; align-items: center; gap: 8px; border-radius: 9999px; background: #FFFFFF; padding: 12px 16px; box-shadow: inset 0 1px 2px rgba(0,0,0,0.06); border: 2px solid transparent; transition: border-color 150ms ease; } .ds-search:focus-within { border-color: #4CAF50; } .ds-search__icon { width: 20px; height: 20px; color: #5C6B5E; flex-shrink: 0; } .ds-search input { border: none; background: transparent; font-family: Inter, sans-serif; font-size: 14px; width: 100%; outline: none; color: #1C2B1F; } .ds-search input::placeholder { color: #5C6B5E; }"
+    },
+    {
+      "name": "Filter Chip",
+      "kind": "chip",
+      "refersTo": null,
+      "description": "Chip de filtro de categoria/tag no hero da Home — estados ativo/inativo.",
+      "html": "<button class=\"ds-chip ds-chip--active\">Todas</button>",
+      "css": ".ds-chip { border-radius: 9999px; padding: 4px 12px; font-family: Inter, sans-serif; font-size: 12px; font-weight: 500; border: none; background: rgba(255,255,255,0.15); color: #FFFFFF; transition: background 150ms ease; } .ds-chip:hover { background: rgba(255,255,255,0.25); } .ds-chip--active { background: #FFFFFF; color: #2D5F3F; }"
+    },
+    {
+      "name": "Bottom Navigation",
+      "kind": "nav",
+      "refersTo": null,
+      "description": "Navegação flutuante mobile — pill com item ativo em verde-floresta cheio.",
+      "html": "<nav class=\"ds-bottom-nav\"><a class=\"ds-bottom-nav__item ds-bottom-nav__item--active\" href=\"#\">Receitas</a><a class=\"ds-bottom-nav__item\" href=\"#\">Adicionar</a></nav>",
+      "css": ".ds-bottom-nav { display: flex; gap: 4px; border-radius: 9999px; background: rgba(255,255,255,0.95); backdrop-filter: blur(8px); padding: 6px; box-shadow: 0 10px 30px -8px rgba(28,43,31,0.35); } .ds-bottom-nav__item { flex: 1; text-align: center; padding: 8px 0; border-radius: 9999px; font-family: Inter, sans-serif; font-size: 12px; font-weight: 500; color: #5C6B5E; text-decoration: none; } .ds-bottom-nav__item--active { background: #2D5F3F; color: #FFFFFF; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "O Tacho ao Lume",
+    "overview": "Tacho existe para substituir duas ferramentas de terceiros — Tandoor e Mealie — por uma só, com a identidade do próprio agregado. A linguagem visual vem diretamente da Secção 6 do PRD: fundo sage muito claro, cards brancos bem destacados, e verde-floresta como cor de marca em vez de mais uma tag de categoria. O sistema é deliberadamente contido: um único acento de marca (verde-floresta), um acento secundário para estado/organização (verde-folha), e o laranja reservado a um único papel — tempo e o modo ativo do Modo Cozinha, nunca decoração geral.",
+    "keyCharacteristics": [
+      "Fundo sage claro constante; branco reservado a cards e superfícies de conteúdo.",
+      "Verde-floresta como cor de marca/CTA, não como um acento entre vários.",
+      "Laranja com um papel único: tempo e o modo ativo do Modo Cozinha.",
+      "Números grandes e bold só para métricas que respondem a uma pergunta real.",
+      "Ícones de traço próprios, nunca glifos ou emoji."
+    ],
+    "rules": [
+      { "name": "The One Voice Rule", "body": "Verde-floresta é a única cor de ação/CTA em todo o sistema. Verde-folha organiza, nunca convida a agir.", "section": "colors" },
+      { "name": "The One Role Rule", "body": "O laranja tem um único papel em todo o sistema — tempo e Modo Cozinha — e não aparece em mais lado nenhum.", "section": "colors" },
+      { "name": "The No-Decoration Rule", "body": "Tamanho grande e peso bold reservados a números que respondem a uma pergunta real do utilizador, nunca a ênfase decorativa.", "section": "typography" },
+      { "name": "The Ghost Card Rule", "body": "Elevação declara-se uma vez só — borda ou sombra, nunca as duas na mesma superfície.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do usar verde-floresta como a única cor de CTA/ação em toda a app.",
+      "Do reservar o laranja a tempo e ao Modo Cozinha — nunca em texto corrido sobre fundo branco.",
+      "Do manter cards sempre brancos sobre o fundo sage.",
+      "Do declarar elevação uma vez só por superfície."
+    ],
+    "donts": [
+      "Don't usar laranja como cor de texto corrido sobre fundo branco ou card branco.",
+      "Don't introduzir uma segunda família tipográfica.",
+      "Don't adicionar mais destinos ao bottom nav antes de existir o ecrã real por trás deles.",
+      "Don't copiar o padrão de card do Tandoor/Mealie sem resolver primeiro o gap de imagens do modelo Recipe."
+    ]
+  }
+}
