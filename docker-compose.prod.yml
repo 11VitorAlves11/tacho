@@ -1,8 +1,10 @@
-name: tacho
-
 # Compose de produção — usa a imagem única (Dockerfile na raiz, backend a
 # servir também o frontend compilado). Para desenvolvimento local usa-se
 # docker-compose.yml (vite dev + hot reload), não este ficheiro.
+#
+# Sem chave `name:` de topo de propósito — incompatível com o
+# docker-compose 1.29.2 do homelab (ver homelab/CLAUDE.md, "Docker",
+# exceção da CT 209/securo).
 #
 # POSTGRES_DATA_DIR e IMAGES_DIR são opcionais: por omissão usam volumes
 # Docker nomeados (bons para testar isto localmente); num deploy real
