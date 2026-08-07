@@ -132,6 +132,14 @@ export function CameraIcon(props: SVGProps<SVGSVGElement>) {
   )
 }
 
+export function FlameIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M12 3.5c1 2 .5 3.3-.3 4.5-1 1.4-2.2 2.4-2.2 4.3a3.5 3.5 0 0 0 7 0c0-1-.3-1.8-.8-2.6.9.6 1.8 1.7 1.8 3.3a4.5 4.5 0 0 1-9 0c0-4 3-5.6 3.5-9.5Z" />
+    </svg>
+  )
+}
+
 export function UserIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <svg {...base} {...props}>

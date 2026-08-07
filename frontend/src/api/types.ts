@@ -48,6 +48,10 @@ export interface Recipe {
   source_url: string | null
   notes: string | null
   image_path: string | null
+  calories_kcal: number | null
+  protein_g: number | null
+  carbs_g: number | null
+  fat_g: number | null
   created_at: string
   updated_at: string
   ingredients: Ingredient[]
@@ -64,6 +68,10 @@ export interface RecipeInput {
   cook_minutes?: number | null
   source_url?: string | null
   notes?: string | null
+  calories_kcal?: number | null
+  protein_g?: number | null
+  carbs_g?: number | null
+  fat_g?: number | null
   ingredients: { name: string; quantity?: number | null; unit?: string | null; is_header?: boolean }[]
   steps: { instruction: string }[]
   category_ids: string[]

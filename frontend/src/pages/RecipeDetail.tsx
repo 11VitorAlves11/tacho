@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { getRecipe, recipeImageUrl } from '../api/recipes'
 import type { Recipe } from '../api/types'
 import { PageShell } from '../components/PageShell'
-import { ClockIcon, PencilIcon, PlayIcon, ServingsIcon } from '../components/icons'
+import { ClockIcon, FlameIcon, PencilIcon, PlayIcon, ServingsIcon } from '../components/icons'
 
 export function RecipeDetail() {
   const { id } = useParams<{ id: string }>()
@@ -67,6 +67,9 @@ export function RecipeDetail() {
           )}
           {recipe.servings && (
             <HeroStat icon={<ServingsIcon className="size-5" />} value={recipe.servings} label="porções" tone="forest" />
+          )}
+          {recipe.calories_kcal != null && (
+            <HeroStat icon={<FlameIcon className="size-5" />} value={recipe.calories_kcal} label="kcal/porção" tone="forest" />
           )}
         </div>
 
@@ -137,6 +140,18 @@ export function RecipeDetail() {
           </section>
         </div>
 
+        {(recipe.protein_g != null || recipe.carbs_g != null || recipe.fat_g != null) && (
+          <section className="mt-8 rounded-2xl bg-card-white p-5 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)]">
+            <h2 className="text-lg font-semibold text-text-primary">Informação nutricional</h2>
+            <p className="mt-1 text-xs text-text-secondary">Por porção, entrada manual.</p>
+            <div className="mt-3 grid grid-cols-3 gap-3 text-center">
+              <MacroStat value={recipe.protein_g} label="Proteína" />
+              <MacroStat value={recipe.carbs_g} label="Hidratos" />
+              <MacroStat value={recipe.fat_g} label="Gordura" />
+            </div>
+          </section>
+        )}
+
         {recipe.source_url && (
           <p className="mt-8 text-xs text-text-secondary">
             Fonte:{' '}
@@ -147,6 +162,15 @@ export function RecipeDetail() {
         )}
       </article>
     </PageShell>
+  )
+}
+
+function MacroStat({ value, label }: { value: number | null; label: string }) {
+  return (
+    <div className="rounded-xl bg-bg-sage py-3">
+      <div className="text-lg font-bold text-text-primary">{value != null ? `${value}g` : '—'}</div>
+      <div className="text-xs text-text-secondary">{label}</div>
+    </div>
   )
 }
 

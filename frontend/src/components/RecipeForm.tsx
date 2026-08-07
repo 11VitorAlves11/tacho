@@ -45,6 +45,10 @@ export function RecipeForm({
   const [cookMinutes, setCookMinutes] = useState(initial?.cook_minutes?.toString() ?? '')
   const [sourceUrl, setSourceUrl] = useState(initial?.source_url ?? '')
   const [notes, setNotes] = useState(initial?.notes ?? '')
+  const [caloriesKcal, setCaloriesKcal] = useState(initial?.calories_kcal?.toString() ?? '')
+  const [proteinG, setProteinG] = useState(initial?.protein_g?.toString() ?? '')
+  const [carbsG, setCarbsG] = useState(initial?.carbs_g?.toString() ?? '')
+  const [fatG, setFatG] = useState(initial?.fat_g?.toString() ?? '')
   const [ingredients, setIngredients] = useState<IngredientRow[]>(toIngredientRows(initial))
   const [steps, setSteps] = useState<StepRow[]>(toStepRows(initial))
 
@@ -142,6 +146,10 @@ export function RecipeForm({
           cook_minutes: cookMinutes ? Number(cookMinutes) : null,
           source_url: sourceUrl.trim() || null,
           notes: notes.trim() || null,
+          calories_kcal: caloriesKcal ? Number(caloriesKcal) : null,
+          protein_g: proteinG ? Number(proteinG) : null,
+          carbs_g: carbsG ? Number(carbsG) : null,
+          fat_g: fatG ? Number(fatG) : null,
           ingredients: ingredients
             .filter((row) => row.name.trim())
             .map((row) => ({
@@ -415,6 +423,70 @@ export function RecipeForm({
             <Chip key={t.id} label={t.name} active={tagIds.includes(t.id)} onClick={() => toggleTag(t.id)} tone="leaf" />
           ))}
           <InlineAdd value={newTagName} onChange={setNewTagName} onAdd={addNewTag} placeholder="nova tag" />
+        </div>
+      </div>
+
+      <div className="rounded-2xl bg-card-white p-5 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)]">
+        <h2 className="text-lg font-semibold text-text-primary">Informação nutricional</h2>
+        <p className="mt-1 text-xs text-text-secondary">
+          Por porção, opcional e à mão — sem cálculo automático por agora.
+        </p>
+        <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div>
+            <label className="block text-sm font-medium text-text-secondary" htmlFor="calories">
+              Calorias (kcal)
+            </label>
+            <input
+              id="calories"
+              type="number"
+              min={0}
+              value={caloriesKcal}
+              onChange={(e) => setCaloriesKcal(e.target.value)}
+              className={`${fieldClass} mt-1`}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-text-secondary" htmlFor="protein">
+              Proteína (g)
+            </label>
+            <input
+              id="protein"
+              type="number"
+              min={0}
+              step="0.1"
+              value={proteinG}
+              onChange={(e) => setProteinG(e.target.value)}
+              className={`${fieldClass} mt-1`}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-text-secondary" htmlFor="carbs">
+              Hidratos (g)
+            </label>
+            <input
+              id="carbs"
+              type="number"
+              min={0}
+              step="0.1"
+              value={carbsG}
+              onChange={(e) => setCarbsG(e.target.value)}
+              className={`${fieldClass} mt-1`}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-text-secondary" htmlFor="fat">
+              Gordura (g)
+            </label>
+            <input
+              id="fat"
+              type="number"
+              min={0}
+              step="0.1"
+              value={fatG}
+              onChange={(e) => setFatG(e.target.value)}
+              className={`${fieldClass} mt-1`}
+            />
+          </div>
         </div>
       </div>
 
