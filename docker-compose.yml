@@ -36,6 +36,10 @@ services:
       - "${BACKEND_PORT:-8000}:8000"
     volumes:
       - ./backend:/app
+      # Volume nomeado, mais específico que o bind mount acima — sobrevive a
+      # um deploy sem o bind mount de desenvolvimento (ver PRD Secção 9: as
+      # fotos entram no mesmo esquema de backups da BD).
+      - tacho_images:/app/images
     depends_on:
       db:
         condition: service_healthy
@@ -74,3 +78,4 @@ services:
 
 volumes:
   tacho_pgdata:
+  tacho_images:

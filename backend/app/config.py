@@ -9,9 +9,11 @@ class Settings(BaseSettings):
     database_url: str
     redis_url: str
     cors_origins: list[str] = ["http://localhost:5173"]
-    # Caminho relativo ao WORKDIR do container (/app) — coincide com o volume
-    # já montado em docker-compose.yml (./backend:/app), sem precisar de um
-    # volume Docker dedicado só para as fotos.
+    # Caminho relativo ao WORKDIR do container (/app). Em dev resolve para
+    # backend/images/ via bind mount; em docker-compose.yml há também um
+    # volume Docker nomeado (tacho_images) montado no mesmo caminho, mais
+    # específico que o bind mount — garante que as fotos sobrevivem a um
+    # deploy sem o bind mount de desenvolvimento.
     images_dir: str = "images"
     max_image_bytes: int = 8 * 1024 * 1024
 
