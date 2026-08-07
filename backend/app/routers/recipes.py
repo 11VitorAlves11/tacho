@@ -1,7 +1,8 @@
 import uuid
 
 from celery.result import AsyncResult
-from fastapi import APIRouter, Depends, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from app import crud, schemas
@@ -10,6 +11,7 @@ from app.config import get_settings
 from app.database import get_db
 from app.deps import get_workspace_id
 from app.images import copy_recipe_image, delete_recipe_image, save_recipe_image
+from app.schema_org import recipe_to_schema_org
 from app.tasks import import_recipe_from_url
 
 router = APIRouter(prefix="/recipes", tags=["recipes"])
@@ -80,6 +82,22 @@ def update_recipe(
     if recipe is None:
         raise HTTPException(status_code=404, detail="Receita não encontrada")
     return recipe
+
+
+@router.get("/{recipe_id}/export")
+def export_recipe_schema_org(
+    recipe_id: uuid.UUID,
+    request: Request,
+    db: Session = Depends(get_db),
+    workspace_id: uuid.UUID = Depends(get_workspace_id),
+):
+    recipe = crud.get_recipe(db, workspace_id, recipe_id)
+    if recipe is None:
+        raise HTTPException(status_code=404, detail="Receita não encontrada")
+    settings = get_settings()
+    base_url = settings.public_base_url or str(request.base_url).rstrip("/")
+    image_url = f"{base_url}/images/{recipe.image_path}" if recipe.image_path else None
+    return JSONResponse(content=recipe_to_schema_org(recipe, image_url), media_type="application/ld+json")
 
 
 @router.post("/{recipe_id}/duplicate", response_model=schemas.RecipeOut, status_code=201)

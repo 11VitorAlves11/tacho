@@ -28,12 +28,26 @@ def _parse_servings(yields: str | None) -> int | None:
     return int(match.group()) if match else None
 
 
+
+# Alguns sites publicam JSON-LD malformado onde uma HowToSection tem
+# `itemListElement` como um dict solto em vez de uma lista (visto em
+# mundodereceitasbimby.com.pt). O recipe-scrapers, ao fazer `for item in
+# schema_item.get("itemListElement")` sobre esse dict, itera as suas
+# chaves como se fossem passos — devolve "@type", "position", "name",
+# "text" soltos no meio de passos reais. Filtramos só correspondências
+# exatas (não por comprimento) para nunca arriscar apagar um passo real
+# só porque é curto (ex. "Sirva.").
+_SCHEMA_ORG_KEY_LEAKS = frozenset(
+    {"@type", "@context", "name", "text", "position", "url", "image", "itemlistelement", "howtostep", "howtosection"}
+)
+
+
 def _extract_steps(scraper: AbstractScraper) -> list[str]:
     steps = _safe_field(scraper.instructions_list) or []
     if not steps:
         raw = _safe_field(scraper.instructions) or ""
         steps = [line.strip() for line in raw.split("\n") if line.strip()]
-    return steps
+    return [step for step in steps if step.strip().lower() not in _SCHEMA_ORG_KEY_LEAKS]
 
 
 def _scrape(url: str) -> AbstractScraper:

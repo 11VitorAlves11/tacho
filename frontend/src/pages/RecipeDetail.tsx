@@ -155,6 +155,15 @@ export function RecipeDetail() {
           )}
         </div>
 
+        {/* O hero number mostra sempre o tempo total (DESIGN.md, "Hierarchy" —
+            um único hero number por métrica); a repartição prep/confeção fica
+            como legenda secundária, só quando ambos os tempos são conhecidos. */}
+        {recipe.prep_minutes != null && recipe.cook_minutes != null && (
+          <p className="mt-2 text-xs text-text-secondary">
+            Preparação: {recipe.prep_minutes} min · Confeção: {recipe.cook_minutes} min
+          </p>
+        )}
+
         {recipe.last_made_at && (
           <p className="mt-2 text-xs text-text-secondary">Feita pela última vez em {formatLastMade(recipe.last_made_at)}.</p>
         )}

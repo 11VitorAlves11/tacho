@@ -115,9 +115,16 @@ concluída** quando todos estes estiverem verificados.
 - [ ] **Parsing de ingredientes da importação** — a linha scraped fica inteira
       em `Ingredient.name`, sem separar quantidade/unidade. Desbloqueia o custo
       por porção e a pesquisa por ingredientes (v2).
-- [ ] **Filtrar lixo nos passos importados** — alguns sites (ex.
-      `mundodereceitasbimby.com.pt`) devolvem `"@type"`, `"position"` misturados
-      com passos reais; sem filtro nenhum agora.
+- [x] **Filtrar lixo nos passos importados** — causa raiz encontrada e
+      reproduzida (`mundodereceitasbimby.com.pt`, "Cheesecake de Bolacha -
+      gelado sanduíche"): uma `HowToSection` do JSON-LD com
+      `itemListElement` como dict solto (em vez de lista) faz o
+      `recipe-scrapers` iterar as chaves desse dict como se fossem passos —
+      devolve `"@type"`, `"position"`, `"name"`, `"text"` soltos.
+      `app/tasks.py::_extract_steps` filtra essas correspondências exatas
+      (nunca por comprimento, para não arriscar apagar um passo real e
+      curto). Testado com scraping real: 4 entradas de lixo removidas, os 5
+      passos legítimos preservados.
 - [x] **Trazer a foto da importação por URL** — `backend/app/tasks.py` usa
       `scraper.image()` e descarrega a foto via `images.save_recipe_image_from_url`
       (mesma validação de tipo/tamanho do upload manual: JPEG/PNG/WEBP, máx.
@@ -135,7 +142,10 @@ concluída** quando todos estes estiverem verificados.
       ⚠️ Validar cedo com fotos reais (livros PT, letra manuscrita) — risco de
       o LLM "corrigir" quantidades silenciosamente.
 - [ ] **Timers por passo** no Modo Cozinha.
-- [ ] **Tamanho de letra ajustável** no Modo Cozinha (toggle A/A⁺).
+- [x] **Tamanho de letra ajustável** no Modo Cozinha (toggle A/A⁺, canto
+      superior direito). Persistido em `localStorage` — uma vez ligado, não
+      volta ao tamanho normal a cada receita nova. Testado no browser
+      (Playwright), sem erros de consola.
 - [ ] **Notas pós-confeção** — ao concluir o Modo Cozinha, nota rápida opcional
       ("menos sal, +10 min de forno"), guardada com data e visível no Detalhe.
 - [x] **"Última vez feita"** — `Recipe.last_made_at` (migração Alembic
@@ -151,15 +161,33 @@ concluída** quando todos estes estiverem verificados.
       outra, testado). Não copia `last_made_at`. Navega direto para o editor
       da cópia, para renomear logo (ex. "Bolo de cenoura" → "... sem
       lactose", o caso de uso do PRD). Testado no browser (Playwright).
-- [ ] **Tempos separados** prep / cozedura / total (hoje só existe "tempo").
+- [x] **Tempos separados** prep / cozedura / total — `prep_minutes` e
+      `cook_minutes` já existiam separados no backend e no formulário; só
+      faltava mostrar no Detalhe (o hero continua a mostrar só o total, por
+      `DESIGN.md` — "Hierarchy": um único hero number por métrica; a
+      repartição fica como legenda pequena por baixo, só quando os dois
+      tempos são conhecidos). Testado no browser (Playwright).
 - [ ] **Favoritos** — o design tem "Favoritos" na navegação desde o início mas
       nunca foi especificado. Até haver contas, o favorito é do Workspace.
 - [ ] **Dark mode** — variante escura dos tokens do `DESIGN.md`,
       `prefers-color-scheme` com override manual.
 - [ ] **PWA instalável** — manifest + service worker básico.
-- [ ] **Export schema.org Recipe (JSON-LD)** — o mesmo standard que os sites
-      usam e que o `recipe-scrapers` lê; garante que qualquer app futura importa
-      as receitas sem script dedicado.
+- [x] **Export schema.org Recipe (JSON-LD)** — `GET /recipes/{id}/export`
+      (`app/schema_org.py`), `application/ld+json`. Cabeçalhos de secção não
+      têm equivalente em `recipeIngredient` (schema.org espera lista plana)
+      e ficam de fora; o resto mapeia 1:1 (nome, descrição, imagem absoluta,
+      porções, tempos em ISO 8601, ingredientes, passos como `HowToStep`,
+      categorias/tags, nutrição — todos testados individualmente pela API,
+      incluindo nutrição, que nenhuma receita semeada tinha). Imagem usa
+      `Settings.public_base_url` (nova variável `PUBLIC_BASE_URL`, só para
+      isto) em vez de `request.base_url` — sem isso, atrás do proxy da CT
+      202 (sem `--proxy-headers` no `Dockerfile`) a URL exportada ficaria
+      com esquema/host internos em vez de `https://receitas.alveslab.dev`;
+      **falta definir `PUBLIC_BASE_URL` no `.env` de produção no próximo
+      deploy**, ou a imagem exportada continua errada lá. Validado com
+      *round-trip* real: o próprio `recipe-scrapers` (`scrape_html`, modo
+      genérico) consegue reimportar o JSON-LD exportado e devolve os
+      mesmos dados.
 
 ---
 

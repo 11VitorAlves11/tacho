@@ -51,13 +51,15 @@ alto identificado):
   genérico) — as instruções desse site não estão em HTML estático acessível
   ao scraper. Nesse caso a receita fica sem passos e o utilizador tem de os
   escrever à mão.
-- **Alguns sites devolvem passos com lixo.** Ex.:
-  `mundodereceitasbimby.com.pt` devolve `instructions_list()` com entradas
-  válidas misturadas com chaves cruas do JSON-LD (`"@type"`, `"position"`,
-  `"name"`, `"text"`) — bug do scraper específico do site, não nosso. Não
-  filtrámos isto automaticamente (haveria o risco de apagar passos legítimos
-  por engano) — fica visível para o utilizador rever/apagar depois de
-  importar.
+- **Alguns sites devolvem passos com lixo — filtrado.** Ex.:
+  `mundodereceitasbimby.com.pt` (reproduzido em "Cheesecake de Bolacha -
+  gelado sanduíche"): quando uma `HowToSection` do JSON-LD tem
+  `itemListElement` como um dict solto em vez de uma lista, o
+  `recipe-scrapers` itera as chaves desse dict como se fossem passos —
+  devolve `"@type"`, `"position"`, `"name"`, `"text"` soltos no meio de
+  passos reais. `app/tasks.py::_extract_steps` filtra essas correspondências
+  exatas (não por comprimento — nunca arrisca apagar um passo real só por
+  ser curto, ex. "Sirva.").
 - **Cobertura de sites PT confirmada:** `recipe-scrapers` 15.11.0 tem
   scraper dedicado para `pingodoce.pt`, `mundodereceitasbimby.com.pt` e
   `aldi.pt`, entre 583 sites — mais amplo do que fica óbvio à partida.

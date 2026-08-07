@@ -16,6 +16,13 @@ class Settings(BaseSettings):
     # deploy sem o bind mount de desenvolvimento.
     images_dir: str = "images"
     max_image_bytes: int = 8 * 1024 * 1024
+    # Só para o export schema.org (GET /recipes/{id}/export) construir URLs
+    # absolutas corretas. Sem isto, cairia em request.base_url — que atrás
+    # de um proxy reverso sem --proxy-headers configurado (ver Dockerfile)
+    # dava esquema/host errados (ex. http:// interno em vez de https://
+    # público). Em dev fica None e usa-se request.base_url, que já está
+    # certo (sem proxy no meio).
+    public_base_url: str | None = None
 
 
 @lru_cache

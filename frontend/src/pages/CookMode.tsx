@@ -4,12 +4,21 @@ import { getRecipe, markRecipeMade } from '../api/recipes'
 import type { Recipe } from '../api/types'
 import { ChevronLeftIcon } from '../components/icons'
 
+const LARGE_TEXT_KEY = 'tacho:cook-mode-large-text'
+
 export function CookMode() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const [recipe, setRecipe] = useState<Recipe | null>(null)
   const [stepIndex, setStepIndex] = useState(0)
+  // Persistido — o telemóvel fica pousado longe na bancada; uma vez ligado,
+  // não faz sentido voltar ao tamanho normal a cada receita nova.
+  const [largeText, setLargeText] = useState(() => localStorage.getItem(LARGE_TEXT_KEY) === '1')
   const wakeLockRef = useRef<WakeLockSentinel | null>(null)
+
+  useEffect(() => {
+    localStorage.setItem(LARGE_TEXT_KEY, largeText ? '1' : '0')
+  }, [largeText])
 
   // Best-effort — marcar "feita" nunca deve impedir sair do Modo Cozinha,
   // mesmo que a chamada falhe (offline na cozinha é o caso mais comum).
@@ -80,7 +89,17 @@ export function CookMode() {
         <span className="text-sm font-medium text-card-white/80">
           Passo {stepIndex + 1} de {steps.length}
         </span>
-        <span className="size-10" />
+        <button
+          type="button"
+          onClick={() => setLargeText((v) => !v)}
+          aria-pressed={largeText}
+          aria-label={largeText ? 'Diminuir tamanho de letra' : 'Aumentar tamanho de letra'}
+          className={`flex size-10 items-center justify-center rounded-full text-sm font-bold ${
+            largeText ? 'bg-accent-orange text-text-primary' : 'bg-card-white/10 text-card-white'
+          }`}
+        >
+          A{largeText ? '+' : ''}
+        </button>
       </header>
 
       <div className="flex gap-1.5 px-4">
@@ -101,7 +120,11 @@ export function CookMode() {
           {stepIndex + 1}
         </span>
         {step ? (
-          <p className="relative max-w-2xl text-center text-3xl font-semibold leading-snug sm:text-5xl">
+          <p
+            className={`relative max-w-2xl text-center font-semibold leading-snug ${
+              largeText ? 'text-4xl sm:text-6xl' : 'text-3xl sm:text-5xl'
+            }`}
+          >
             {step.instruction}
           </p>
         ) : (
