@@ -114,6 +114,18 @@ def update_recipe(
     return recipe
 
 
+def set_recipe_image(
+    db: Session, workspace_id: uuid.UUID, recipe_id: uuid.UUID, image_path: str
+) -> models.Recipe | None:
+    recipe = get_recipe(db, workspace_id, recipe_id)
+    if recipe is None:
+        return None
+    recipe.image_path = image_path
+    db.commit()
+    db.refresh(recipe)
+    return recipe
+
+
 def delete_recipe(db: Session, workspace_id: uuid.UUID, recipe_id: uuid.UUID) -> bool:
     recipe = get_recipe(db, workspace_id, recipe_id)
     if recipe is None:

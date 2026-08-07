@@ -1,13 +1,15 @@
 import uuid
 
 from celery.result import AsyncResult
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from app import crud, schemas
 from app.celery_app import celery_app
+from app.config import get_settings
 from app.database import get_db
 from app.deps import get_workspace_id
+from app.images import delete_recipe_image, save_recipe_image
 from app.tasks import import_recipe_from_url
 
 router = APIRouter(prefix="/recipes", tags=["recipes"])
@@ -86,5 +88,30 @@ def delete_recipe(
     db: Session = Depends(get_db),
     workspace_id: uuid.UUID = Depends(get_workspace_id),
 ):
-    if not crud.delete_recipe(db, workspace_id, recipe_id):
+    recipe = crud.get_recipe(db, workspace_id, recipe_id)
+    if recipe is None:
         raise HTTPException(status_code=404, detail="Receita não encontrada")
+    image_path = recipe.image_path
+    crud.delete_recipe(db, workspace_id, recipe_id)
+    if image_path:
+        delete_recipe_image(image_path, get_settings())
+
+
+@router.post("/{recipe_id}/image", response_model=schemas.RecipeOut)
+async def upload_recipe_image(
+    recipe_id: uuid.UUID,
+    file: UploadFile,
+    db: Session = Depends(get_db),
+    workspace_id: uuid.UUID = Depends(get_workspace_id),
+):
+    recipe = crud.get_recipe(db, workspace_id, recipe_id)
+    if recipe is None:
+        raise HTTPException(status_code=404, detail="Receita não encontrada")
+
+    settings = get_settings()
+    old_image_path = recipe.image_path
+    filename = await save_recipe_image(file, settings)
+    recipe = crud.set_recipe_image(db, workspace_id, recipe_id, filename)
+    if old_image_path:
+        delete_recipe_image(old_image_path, settings)
+    return recipe

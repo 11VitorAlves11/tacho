@@ -75,6 +75,7 @@ class RecipeSummary(BaseModel):
     servings: int | None
     prep_minutes: int | None
     cook_minutes: int | None
+    image_path: str | None
     categories: list[CategoryOut]
     tags: list[TagOut]
 
@@ -101,6 +102,7 @@ class RecipeOut(BaseModel):
     cook_minutes: int | None
     source_url: str | None
     notes: str | None
+    image_path: str | None
     created_at: datetime
     updated_at: datetime
     ingredients: list[IngredientOut]

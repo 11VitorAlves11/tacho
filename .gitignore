@@ -6,3 +6,4 @@ node_modules/
 dist/
 .impeccable/screenshots/
 backend/imports/
+backend/images/
