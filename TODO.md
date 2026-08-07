@@ -114,9 +114,14 @@ concluída** quando todos estes estiverem verificados.
 - [ ] **Filtrar lixo nos passos importados** — alguns sites (ex.
       `mundodereceitasbimby.com.pt`) devolvem `"@type"`, `"position"` misturados
       com passos reais; sem filtro nenhum agora.
-- [ ] **Trazer a foto da importação por URL** — `Recipe.image_path` já existe
-      (critério 3 da v1.0), mas `backend/app/tasks.py` ainda não usa
-      `scraper.image()`; hoje só o upload manual pela UI preenche o campo.
+- [x] **Trazer a foto da importação por URL** — `backend/app/tasks.py` usa
+      `scraper.image()` e descarrega a foto via `images.save_recipe_image_from_url`
+      (mesma validação de tipo/tamanho do upload manual: JPEG/PNG/WEBP, máx.
+      8MB). Best-effort — qualquer falha (sem imagem, formato não suportado,
+      erro de rede) devolve `None` sem chumbar a importação da receita.
+      Testado com scraping real (pingodoce.pt) ponta a ponta, incluindo
+      verificação visual no browser (Playwright): foto no card da Home e no
+      hero do Detalhe, sem erros de consola.
 - [ ] **Importação inteligente via Gemini** — (a) fallback de extração quando o
       `recipe-scrapers` falha ou devolve resultado incompleto; (b) **importação
       por foto** (Vision): fotografar página de livro/receita manuscrita, com

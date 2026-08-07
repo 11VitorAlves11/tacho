@@ -6,7 +6,9 @@ from recipe_scrapers import AbstractScraper, WebsiteNotImplementedError, scrape_
 
 from app import models
 from app.celery_app import celery_app
+from app.config import get_settings
 from app.database import SessionLocal
+from app.images import save_recipe_image_from_url
 
 
 def _safe_field(getter: Callable[[], object]) -> object | None:
@@ -48,6 +50,8 @@ def import_recipe_from_url(self, url: str, workspace_id: str) -> str:
 
     prep_minutes = _safe_field(scraper.prep_time)
     cook_minutes = _safe_field(scraper.cook_time) or _safe_field(scraper.total_time)
+    image_url = _safe_field(scraper.image)
+    image_path = save_recipe_image_from_url(image_url, get_settings()) if image_url else None
 
     db = SessionLocal()
     try:
@@ -58,6 +62,7 @@ def import_recipe_from_url(self, url: str, workspace_id: str) -> str:
             prep_minutes=prep_minutes,
             cook_minutes=cook_minutes,
             source_url=url,
+            image_path=image_path,
             # Scraped ingredient lines aren't split into quantity/unit/name —
             # see backend/README.md, "Limitações conhecidas".
             ingredients=[
