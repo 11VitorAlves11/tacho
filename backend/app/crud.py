@@ -68,7 +68,9 @@ def create_recipe(db: Session, workspace_id: uuid.UUID, payload: schemas.RecipeC
         source_url=payload.source_url,
         notes=payload.notes,
         ingredients=[
-            models.Ingredient(position=i, name=ing.name, quantity=ing.quantity, unit=ing.unit)
+            models.Ingredient(
+                position=i, name=ing.name, quantity=ing.quantity, unit=ing.unit, is_header=ing.is_header
+            )
             for i, ing in enumerate(payload.ingredients)
         ],
         steps=[models.Step(position=i, instruction=step.instruction) for i, step in enumerate(payload.steps)],
@@ -96,7 +98,9 @@ def update_recipe(
     recipe.source_url = payload.source_url
     recipe.notes = payload.notes
     recipe.ingredients = [
-        models.Ingredient(position=i, name=ing.name, quantity=ing.quantity, unit=ing.unit)
+        models.Ingredient(
+            position=i, name=ing.name, quantity=ing.quantity, unit=ing.unit, is_header=ing.is_header
+        )
         for i, ing in enumerate(payload.ingredients)
     ]
     recipe.steps = [

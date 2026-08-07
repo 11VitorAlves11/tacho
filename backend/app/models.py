@@ -2,6 +2,7 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import (
+    Boolean,
     DateTime,
     ForeignKey,
     Numeric,
@@ -87,6 +88,7 @@ class Ingredient(Base):
     name: Mapped[str] = mapped_column(Text)
     quantity: Mapped[float | None] = mapped_column(Numeric(10, 2))
     unit: Mapped[str | None] = mapped_column(Text)
+    is_header: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
 
     recipe: Mapped["Recipe"] = relationship(back_populates="ingredients")
 

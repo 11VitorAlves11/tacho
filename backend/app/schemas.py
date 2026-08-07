@@ -8,6 +8,7 @@ class IngredientIn(BaseModel):
     name: str
     quantity: float | None = None
     unit: str | None = None
+    is_header: bool = False
 
 
 class IngredientOut(IngredientIn):
