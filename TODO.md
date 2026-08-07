@@ -57,11 +57,16 @@ Critérios de aceitação completos no PRD, Secção 11.1. A v1.0 **só se consi
 concluída** quando todos estes estiverem verificados.
 
 - [x] Testar no browser o editor manual e o menu de utilizador (ver acima).
-- [ ] **Armazenamento de imagens** — `Recipe` sem campo de imagem.
-      Pré-requisito de tudo o que envolve fotos.
-- [ ] **Upload de foto pela UI** — adicionar/substituir foto no formulário de
+- [x] **Armazenamento de imagens** — `Recipe.image_path` (migração Alembic
+      aditiva), fotos guardadas em disco em `backend/images/` (fora do git),
+      servidas em `/images/{ficheiro}` via `StaticFiles`.
+- [x] **Upload de foto pela UI** — `POST /recipes/{id}/image` (valida
+      JPEG/PNG/WEBP, máx. 8MB, substitui e apaga o ficheiro antigo; o
+      ficheiro é também apagado ao apagar a receita). No formulário de
       criar/editar, com captura pela câmara no telemóvel (`capture`); foto
-      visível no card da Home e no hero do Detalhe (hoje há placeholders).
+      visível no card da Home e no hero do Detalhe. Testado no browser
+      (criar com foto, ver no card e no Detalhe, reabrir para editar com a
+      pré-visualização carregada, apagar e confirmar remoção do ficheiro).
 - [x] **Cabeçalhos de secção nos ingredientes** (`Ingredient.is_header: bool`) —
       migração Alembic aditiva, suportado no editor manual (linha de secção
       distinta, com botão "Adicionar cabeçalho de secção") e no Detalhe
