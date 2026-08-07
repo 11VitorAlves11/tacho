@@ -71,10 +71,13 @@ concluída** quando todos estes estiverem verificados.
       migração Alembic aditiva, suportado no editor manual (linha de secção
       distinta, com botão "Adicionar cabeçalho de secção") e no Detalhe
       (título em negrito antes do grupo de ingredientes). Testado no browser.
-- [ ] **Informação nutricional** — sem campos no modelo nem UI. É também o
-      motivo de o `accent-orange` do `DESIGN.md` nunca aparecer.
-      *(Se for adiado para v1.1, registar como decisão explícita no PRD, não
-      deixar escorregar por omissão.)*
+- [x] **Informação nutricional** — entrada manual por porção
+      (`calories_kcal`, `protein_g`, `carbs_g`, `fat_g`, migração Alembic
+      aditiva). Calorias no hero do Detalhe, macros numa secção própria;
+      `accent-orange` **não** foi usado (DESIGN.md linha 84, "The One Role
+      Rule" — laranja fica exclusivo de tempo/Modo Cozinha, também para
+      dados nutricionais). Cálculo automático fica para a v2, com Open Food
+      Facts como base (ver v2 abaixo) — não LLM. Testado no browser.
 - [ ] **Deploy definitivo no homelab** — ver decisão #4. Inclui backup
       automático configurado **e um restauro testado com sucesso**, e desligar
       o Tandoor (CT 202).
@@ -143,7 +146,13 @@ concluída** quando todos estes estiverem verificados.
 
 ## v2
 
-- [ ] Cálculo automático de nutrição a partir dos ingredientes.
+- [ ] **Cálculo automático de nutrição a partir dos ingredientes** — decisão
+      tomada: cruzar os ingredientes parseados (v1.1) com uma base de dados
+      nutricional real, **Open Food Facts**, não um LLM (o Gemini não tem
+      uma base de dados nutricional; pedir-lhe calorias/macros seria
+      alucinação em dados de saúde, um risco pior do que o já assinalado
+      para a importação por foto — ver Riscos no PRD). O Gemini fica
+      reservado ao que já estava previsto: extração de receitas por URL/foto.
 - [ ] **Custo por receita/porção** — preço estimado por ingrediente → custo do
       prato e por porção. Depende do parsing estruturado (v1.1). Nenhum dos dois
       (Tandoor/Mealie) faz isto bem.
