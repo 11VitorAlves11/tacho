@@ -7,3 +7,4 @@ dist/
 .impeccable/screenshots/
 backend/imports/
 backend/images/
+backend/frontend_dist/
