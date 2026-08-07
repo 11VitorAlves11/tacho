@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { recipeImageUrl } from '../api/recipes'
 import type { RecipeSummary } from '../api/types'
 import { ClockIcon, PotIcon, ServingsIcon } from './icons'
 
@@ -15,9 +16,17 @@ export function RecipeCard({ recipe }: { recipe: RecipeSummary }) {
       to={`/receitas/${recipe.id}`}
       className="group flex gap-4 rounded-2xl bg-card-white p-4 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)] transition-shadow hover:shadow-[0_8px_24px_-4px_rgba(28,43,31,0.22)]"
     >
-      <div className="flex size-14 shrink-0 items-center justify-center rounded-xl bg-bg-sage text-primary-forest">
-        <PotIcon className="size-7" />
-      </div>
+      {recipe.image_path ? (
+        <img
+          src={recipeImageUrl(recipe.image_path)}
+          alt=""
+          className="size-14 shrink-0 rounded-xl object-cover"
+        />
+      ) : (
+        <div className="flex size-14 shrink-0 items-center justify-center rounded-xl bg-bg-sage text-primary-forest">
+          <PotIcon className="size-7" />
+        </div>
+      )}
 
       <div className="min-w-0 flex-1">
         <h3 className="truncate font-semibold text-text-primary group-hover:text-primary-forest">

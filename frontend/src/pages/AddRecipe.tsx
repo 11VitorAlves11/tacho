@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { createRecipe, getImportStatus, startImport } from '../api/recipes'
+import { createRecipe, getImportStatus, startImport, uploadRecipeImage } from '../api/recipes'
 import type { RecipeInput } from '../api/types'
 import { PageShell } from '../components/PageShell'
 import { RecipeForm } from '../components/RecipeForm'
@@ -49,8 +49,9 @@ export function AddRecipe() {
     }
   }
 
-  async function handleManualSubmit(payload: RecipeInput) {
+  async function handleManualSubmit(payload: RecipeInput, imageFile: File | null) {
     const recipe = await createRecipe(payload)
+    if (imageFile) await uploadRecipeImage(recipe.id, imageFile)
     navigate(`/receitas/${recipe.id}`)
   }
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { deleteRecipe, getRecipe, updateRecipe } from '../api/recipes'
+import { deleteRecipe, getRecipe, updateRecipe, uploadRecipeImage } from '../api/recipes'
 import type { Recipe, RecipeInput } from '../api/types'
 import { PageShell } from '../components/PageShell'
 import { RecipeForm } from '../components/RecipeForm'
@@ -16,9 +16,10 @@ export function EditRecipe() {
     getRecipe(id).then(setRecipe)
   }, [id])
 
-  async function handleSubmit(payload: RecipeInput) {
+  async function handleSubmit(payload: RecipeInput, imageFile: File | null) {
     if (!id) return
     await updateRecipe(id, payload)
+    if (imageFile) await uploadRecipeImage(id, imageFile)
     navigate(`/receitas/${id}`)
   }
 

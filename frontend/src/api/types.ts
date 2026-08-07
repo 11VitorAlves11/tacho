@@ -32,6 +32,7 @@ export interface RecipeSummary {
   servings: number | null
   prep_minutes: number | null
   cook_minutes: number | null
+  image_path: string | null
   categories: Category[]
   tags: Tag[]
 }
@@ -46,6 +47,7 @@ export interface Recipe {
   cook_minutes: number | null
   source_url: string | null
   notes: string | null
+  image_path: string | null
   created_at: string
   updated_at: string
   ingredients: Ingredient[]

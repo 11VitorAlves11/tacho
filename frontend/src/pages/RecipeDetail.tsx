@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { getRecipe } from '../api/recipes'
+import { getRecipe, recipeImageUrl } from '../api/recipes'
 import type { Recipe } from '../api/types'
 import { PageShell } from '../components/PageShell'
 import { ClockIcon, PencilIcon, PlayIcon, ServingsIcon } from '../components/icons'
@@ -41,7 +41,15 @@ export function RecipeDetail() {
   return (
     <PageShell>
       <article>
-        <div className="flex items-start justify-between gap-3">
+        {recipe.image_path && (
+          <img
+            src={recipeImageUrl(recipe.image_path)}
+            alt=""
+            className="aspect-video w-full rounded-2xl object-cover shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)]"
+          />
+        )}
+
+        <div className={`flex items-start justify-between gap-3 ${recipe.image_path ? 'mt-5' : ''}`}>
           <h1 className="text-2xl font-bold text-text-primary sm:text-3xl">{recipe.title}</h1>
           <Link
             to={`/receitas/${recipe.id}/editar`}

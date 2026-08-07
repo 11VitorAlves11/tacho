@@ -27,6 +27,17 @@ export async function deleteRecipe(id: string) {
   await api.delete(`/recipes/${id}`)
 }
 
+export async function uploadRecipeImage(id: string, file: File) {
+  const formData = new FormData()
+  formData.append('file', file)
+  const { data } = await api.post<Recipe>(`/recipes/${id}/image`, formData)
+  return data
+}
+
+export function recipeImageUrl(imagePath: string) {
+  return `${api.defaults.baseURL}/images/${imagePath}`
+}
+
 export async function startImport(url: string) {
   const { data } = await api.post<ImportStatus>('/recipes/import', { url })
   return data

@@ -1,7 +1,7 @@
-import { useEffect, useState, type FormEvent } from 'react'
-import { createCategory, createTag, listCategories, listTags } from '../api/recipes'
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
+import { createCategory, createTag, listCategories, listTags, recipeImageUrl } from '../api/recipes'
 import type { Category, Recipe, RecipeInput, Tag } from '../api/types'
-import { PlusIcon, XIcon } from './icons'
+import { CameraIcon, PlusIcon, XIcon } from './icons'
 
 interface IngredientRow {
   name: string
@@ -35,7 +35,7 @@ export function RecipeForm({
   submitLabel,
 }: {
   initial?: Recipe
-  onSubmit: (payload: RecipeInput) => Promise<void>
+  onSubmit: (payload: RecipeInput, imageFile: File | null) => Promise<void>
   submitLabel: string
 }) {
   const [title, setTitle] = useState(initial?.title ?? '')
@@ -47,6 +47,19 @@ export function RecipeForm({
   const [notes, setNotes] = useState(initial?.notes ?? '')
   const [ingredients, setIngredients] = useState<IngredientRow[]>(toIngredientRows(initial))
   const [steps, setSteps] = useState<StepRow[]>(toStepRows(initial))
+
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(
+    initial?.image_path ? recipeImageUrl(initial.image_path) : null,
+  )
+  const imageInputRef = useRef<HTMLInputElement>(null)
+
+  function handleImageChange(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setImageFile(file)
+    setImagePreview(URL.createObjectURL(file))
+  }
 
   const [categories, setCategories] = useState<Category[]>([])
   const [tags, setTags] = useState<Tag[]>([])
@@ -120,26 +133,31 @@ export function RecipeForm({
     setSaving(true)
     setError('')
     try {
-      await onSubmit({
-        title: title.trim(),
-        description: description.trim() || null,
-        servings: servings ? Number(servings) : null,
-        prep_minutes: prepMinutes ? Number(prepMinutes) : null,
-        cook_minutes: cookMinutes ? Number(cookMinutes) : null,
-        source_url: sourceUrl.trim() || null,
-        notes: notes.trim() || null,
-        ingredients: ingredients
-          .filter((row) => row.name.trim())
-          .map((row) => ({
-            name: row.name.trim(),
-            quantity: row.isHeader ? null : row.quantity ? Number(row.quantity) : null,
-            unit: row.isHeader ? null : row.unit.trim() || null,
-            is_header: row.isHeader,
-          })),
-        steps: steps.filter((row) => row.instruction.trim()).map((row) => ({ instruction: row.instruction.trim() })),
-        category_ids: categoryIds,
-        tag_ids: tagIds,
-      })
+      await onSubmit(
+        {
+          title: title.trim(),
+          description: description.trim() || null,
+          servings: servings ? Number(servings) : null,
+          prep_minutes: prepMinutes ? Number(prepMinutes) : null,
+          cook_minutes: cookMinutes ? Number(cookMinutes) : null,
+          source_url: sourceUrl.trim() || null,
+          notes: notes.trim() || null,
+          ingredients: ingredients
+            .filter((row) => row.name.trim())
+            .map((row) => ({
+              name: row.name.trim(),
+              quantity: row.isHeader ? null : row.quantity ? Number(row.quantity) : null,
+              unit: row.isHeader ? null : row.unit.trim() || null,
+              is_header: row.isHeader,
+            })),
+          steps: steps
+            .filter((row) => row.instruction.trim())
+            .map((row) => ({ instruction: row.instruction.trim() })),
+          category_ids: categoryIds,
+          tag_ids: tagIds,
+        },
+        imageFile,
+      )
     } catch {
       setError('Não foi possível guardar a receita.')
       setSaving(false)
@@ -152,7 +170,36 @@ export function RecipeForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="rounded-2xl bg-card-white p-5 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)]">
-        <label className="block text-sm font-medium text-text-secondary" htmlFor="title">
+        <input
+          ref={imageInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          capture="environment"
+          onChange={handleImageChange}
+          className="hidden"
+        />
+        <button
+          type="button"
+          onClick={() => imageInputRef.current?.click()}
+          className="relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-xl bg-bg-sage text-text-secondary"
+        >
+          {imagePreview ? (
+            <>
+              <img src={imagePreview} alt="" className="size-full object-cover" />
+              <span className="absolute bottom-2 right-2 flex items-center gap-1 rounded-full bg-primary-forest/90 px-3 py-1.5 text-xs font-medium text-card-white">
+                <CameraIcon className="size-3.5" />
+                Trocar foto
+              </span>
+            </>
+          ) : (
+            <span className="flex flex-col items-center gap-1.5">
+              <CameraIcon className="size-6" />
+              <span className="text-sm font-medium">Adicionar foto</span>
+            </span>
+          )}
+        </button>
+
+        <label className="mt-4 block text-sm font-medium text-text-secondary" htmlFor="title">
           Título
         </label>
         <input
