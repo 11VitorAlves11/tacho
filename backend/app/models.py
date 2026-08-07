@@ -66,6 +66,13 @@ class Recipe(Base):
     # Só o nome do ficheiro (uuid4 + extensão), guardado em Settings.images_dir
     # e servido em /images/{image_path} — nunca o caminho absoluto do disco.
     image_path: Mapped[str | None] = mapped_column(Text)
+    # Informação nutricional por porção, entrada manual (PRD 5.1/11.1 #5).
+    # Cálculo automático a partir dos ingredientes fica para a v2 (Open Food
+    # Facts, não LLM — ver TODO.md).
+    calories_kcal: Mapped[int | None]
+    protein_g: Mapped[float | None] = mapped_column(Numeric(6, 1))
+    carbs_g: Mapped[float | None] = mapped_column(Numeric(6, 1))
+    fat_g: Mapped[float | None] = mapped_column(Numeric(6, 1))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()

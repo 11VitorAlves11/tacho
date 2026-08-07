@@ -57,6 +57,10 @@ class RecipeCreate(BaseModel):
     cook_minutes: int | None = None
     source_url: str | None = None
     notes: str | None = None
+    calories_kcal: int | None = None
+    protein_g: float | None = None
+    carbs_g: float | None = None
+    fat_g: float | None = None
     ingredients: list[IngredientIn] = []
     steps: list[StepIn] = []
     category_ids: list[uuid.UUID] = []
@@ -103,6 +107,10 @@ class RecipeOut(BaseModel):
     source_url: str | None
     notes: str | None
     image_path: str | None
+    calories_kcal: int | None
+    protein_g: float | None
+    carbs_g: float | None
+    fat_g: float | None
     created_at: datetime
     updated_at: datetime
     ingredients: list[IngredientOut]

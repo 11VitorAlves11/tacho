@@ -67,6 +67,10 @@ def create_recipe(db: Session, workspace_id: uuid.UUID, payload: schemas.RecipeC
         cook_minutes=payload.cook_minutes,
         source_url=payload.source_url,
         notes=payload.notes,
+        calories_kcal=payload.calories_kcal,
+        protein_g=payload.protein_g,
+        carbs_g=payload.carbs_g,
+        fat_g=payload.fat_g,
         ingredients=[
             models.Ingredient(
                 position=i, name=ing.name, quantity=ing.quantity, unit=ing.unit, is_header=ing.is_header
@@ -97,6 +101,10 @@ def update_recipe(
     recipe.cook_minutes = payload.cook_minutes
     recipe.source_url = payload.source_url
     recipe.notes = payload.notes
+    recipe.calories_kcal = payload.calories_kcal
+    recipe.protein_g = payload.protein_g
+    recipe.carbs_g = payload.carbs_g
+    recipe.fat_g = payload.fat_g
     recipe.ingredients = [
         models.Ingredient(
             position=i, name=ing.name, quantity=ing.quantity, unit=ing.unit, is_header=ing.is_header
