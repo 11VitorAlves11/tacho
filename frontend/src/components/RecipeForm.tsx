@@ -7,6 +7,7 @@ interface IngredientRow {
   name: string
   quantity: string
   unit: string
+  isHeader: boolean
 }
 
 interface StepRow {
@@ -14,11 +15,12 @@ interface StepRow {
 }
 
 function toIngredientRows(recipe?: Recipe): IngredientRow[] {
-  if (!recipe || recipe.ingredients.length === 0) return [{ name: '', quantity: '', unit: '' }]
+  if (!recipe || recipe.ingredients.length === 0) return [{ name: '', quantity: '', unit: '', isHeader: false }]
   return recipe.ingredients.map((i) => ({
     name: i.name,
     quantity: i.quantity?.toString() ?? '',
     unit: i.unit ?? '',
+    isHeader: i.is_header,
   }))
 }
 
@@ -130,8 +132,9 @@ export function RecipeForm({
           .filter((row) => row.name.trim())
           .map((row) => ({
             name: row.name.trim(),
-            quantity: row.quantity ? Number(row.quantity) : null,
-            unit: row.unit.trim() || null,
+            quantity: row.isHeader ? null : row.quantity ? Number(row.quantity) : null,
+            unit: row.isHeader ? null : row.unit.trim() || null,
+            is_header: row.isHeader,
           })),
         steps: steps.filter((row) => row.instruction.trim()).map((row) => ({ instruction: row.instruction.trim() })),
         category_ids: categoryIds,
@@ -241,46 +244,75 @@ export function RecipeForm({
       <div className="rounded-2xl bg-card-white p-5 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)]">
         <h2 className="text-lg font-semibold text-text-primary">Ingredientes</h2>
         <div className="mt-3 space-y-2">
-          {ingredients.map((row, i) => (
-            <div key={i} className="flex gap-2">
-              <input
-                value={row.quantity}
-                onChange={(e) => updateIngredient(i, { quantity: e.target.value })}
-                placeholder="qtd"
-                inputMode="decimal"
-                className={`${fieldClass} w-16`}
-              />
-              <input
-                value={row.unit}
-                onChange={(e) => updateIngredient(i, { unit: e.target.value })}
-                placeholder="unidade"
-                className={`${fieldClass} w-24`}
-              />
-              <input
-                value={row.name}
-                onChange={(e) => updateIngredient(i, { name: e.target.value })}
-                placeholder="ingrediente"
-                className={fieldClass}
-              />
-              <button
-                type="button"
-                onClick={() => removeIngredient(i)}
-                className="shrink-0 rounded-full p-2 text-text-secondary hover:bg-bg-sage"
-                aria-label="Remover ingrediente"
-              >
-                <XIcon className="size-4" />
-              </button>
-            </div>
-          ))}
+          {ingredients.map((row, i) =>
+            row.isHeader ? (
+              <div key={i} className="flex gap-2">
+                <input
+                  value={row.name}
+                  onChange={(e) => updateIngredient(i, { name: e.target.value })}
+                  placeholder="Nome da secção, ex.: Para o recheio"
+                  className={`${fieldClass} font-semibold`}
+                />
+                <button
+                  type="button"
+                  onClick={() => removeIngredient(i)}
+                  className="shrink-0 rounded-full p-2 text-text-secondary hover:bg-bg-sage"
+                  aria-label="Remover secção"
+                >
+                  <XIcon className="size-4" />
+                </button>
+              </div>
+            ) : (
+              <div key={i} className="flex gap-2">
+                <input
+                  value={row.quantity}
+                  onChange={(e) => updateIngredient(i, { quantity: e.target.value })}
+                  placeholder="qtd"
+                  inputMode="decimal"
+                  className={`${fieldClass} w-16`}
+                />
+                <input
+                  value={row.unit}
+                  onChange={(e) => updateIngredient(i, { unit: e.target.value })}
+                  placeholder="unidade"
+                  className={`${fieldClass} w-24`}
+                />
+                <input
+                  value={row.name}
+                  onChange={(e) => updateIngredient(i, { name: e.target.value })}
+                  placeholder="ingrediente"
+                  className={fieldClass}
+                />
+                <button
+                  type="button"
+                  onClick={() => removeIngredient(i)}
+                  className="shrink-0 rounded-full p-2 text-text-secondary hover:bg-bg-sage"
+                  aria-label="Remover ingrediente"
+                >
+                  <XIcon className="size-4" />
+                </button>
+              </div>
+            ),
+          )}
         </div>
-        <button
-          type="button"
-          onClick={() => setIngredients((rows) => [...rows, { name: '', quantity: '', unit: '' }])}
-          className="mt-3 flex items-center gap-1 text-sm font-medium text-primary-forest"
-        >
-          <PlusIcon className="size-4" />
-          Adicionar ingrediente
-        </button>
+        <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
+          <button
+            type="button"
+            onClick={() => setIngredients((rows) => [...rows, { name: '', quantity: '', unit: '', isHeader: false }])}
+            className="flex items-center gap-1 text-sm font-medium text-primary-forest"
+          >
+            <PlusIcon className="size-4" />
+            Adicionar ingrediente
+          </button>
+          <button
+            type="button"
+            onClick={() => setIngredients((rows) => [...rows, { name: '', quantity: '', unit: '', isHeader: true }])}
+            className="flex items-center gap-1 text-sm font-medium text-text-secondary"
+          >
+            <PlusIcon className="size-4" />
+            Adicionar cabeçalho de secção
+          </button>
+        </div>
       </div>
 
       <div className="rounded-2xl bg-card-white p-5 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)]">

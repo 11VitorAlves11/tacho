@@ -89,16 +89,22 @@ export function RecipeDetail() {
           <section>
             <h2 className="text-lg font-semibold text-text-primary">Ingredientes</h2>
             <ul className="mt-3 space-y-2">
-              {recipe.ingredients.map((ing) => (
-                <li key={ing.id} className="flex justify-between gap-3 border-b border-black/5 pb-2 text-sm">
-                  <span className="text-text-primary">{ing.name}</span>
-                  {(ing.quantity || ing.unit) && (
-                    <span className="shrink-0 text-text-secondary">
-                      {ing.quantity ?? ''} {ing.unit ?? ''}
-                    </span>
-                  )}
-                </li>
-              ))}
+              {recipe.ingredients.map((ing) =>
+                ing.is_header ? (
+                  <li key={ing.id} className="pt-3 text-sm font-semibold text-text-primary first:pt-0">
+                    {ing.name}
+                  </li>
+                ) : (
+                  <li key={ing.id} className="flex justify-between gap-3 border-b border-black/5 pb-2 text-sm">
+                    <span className="text-text-primary">{ing.name}</span>
+                    {(ing.quantity || ing.unit) && (
+                      <span className="shrink-0 text-text-secondary">
+                        {ing.quantity ?? ''} {ing.unit ?? ''}
+                      </span>
+                    )}
+                  </li>
+                ),
+              )}
               {recipe.ingredients.length === 0 && (
                 <li className="text-sm text-text-secondary">Sem ingredientes registados.</li>
               )}

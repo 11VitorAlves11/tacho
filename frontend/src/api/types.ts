@@ -17,6 +17,7 @@ export interface Ingredient {
   name: string
   quantity: number | null
   unit: string | null
+  is_header: boolean
 }
 
 export interface Step {
@@ -61,7 +62,7 @@ export interface RecipeInput {
   cook_minutes?: number | null
   source_url?: string | null
   notes?: string | null
-  ingredients: { name: string; quantity?: number | null; unit?: string | null }[]
+  ingredients: { name: string; quantity?: number | null; unit?: string | null; is_header?: boolean }[]
   steps: { instruction: string }[]
   category_ids: string[]
   tag_ids: string[]
