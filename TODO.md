@@ -5,9 +5,9 @@ Ponto de situação a 2026-08-07. Ver `PRD-app-receitas-v3.2.md`, `PRODUCT.md` e
 
 > **Mudança importante desde a última revisão:** o Tandoor não tem receitas
 > guardadas — **não há migração a fazer**. O script
-> `backend/scripts/migrate_from_tandoor.py` ficou obsoleto e pode ser removido
-> ou arquivado. Vários itens abaixo perderam a urgência que vinha de "corrigir
-> antes da migração".
+> `backend/scripts/migrate_from_tandoor.py`, que tinha ficado obsoleto, foi
+> removido em 2026-08-07. Vários itens abaixo perderam a urgência que vinha de
+> "corrigir antes da migração".
 >
 > **2026-08-07 — v1.0 concluída.** Os 5 critérios de aceitação da Secção 11.1
 > do PRD estão todos cumpridos, incluindo o deploy: o Tacho substituiu o
@@ -48,11 +48,6 @@ Ponto de situação a 2026-08-07. Ver `PRD-app-receitas-v3.2.md`, `PRODUCT.md` e
       via `window.confirm`), tudo sem erros de consola.
 - [x] Menu de utilizador (`UserMenu.tsx`) — testado no browser: abre, mostra
       "Vítor & Mariana" e a nota sobre contas individuais na v1.2, sem erros.
-
-## Limpeza
-
-- [ ] Remover/arquivar `backend/scripts/migrate_from_tandoor.py` e os fixtures
-      de export sintético que o acompanham.
 
 ---
 

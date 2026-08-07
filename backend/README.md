@@ -62,42 +62,8 @@ alto identificado):
   scraper dedicado para `pingodoce.pt`, `mundodereceitasbimby.com.pt` e
   `aldi.pt`, entre 583 sites — mais amplo do que fica óbvio à partida.
 
-## Migração do Tandoor
-
-`scripts/migrate_from_tandoor.py` lê um export "Default" do Tandoor
-(Definições > Dados e Ferramentas > Exportar Dados) e importa para o
-Workspace único. Uso:
-
-```bash
-.venv/bin/python -m scripts.migrate_from_tandoor caminho/export.zip --dry-run   # ver o resumo primeiro
-.venv/bin/python -m scripts.migrate_from_tandoor caminho/export.zip             # importar a sério
-```
-
-O esquema JSON usado está **verificado contra o código-fonte real do
-Tandoor** (GitHub, `cookbook/integration/default.py` +
-`cookbook/serializer.py`), não adivinhado — mas nunca foi corrido contra um
-export real desta instância (192.168.1.202 exige login Authentik, sem
-acesso a partir desta máquina). Testado mecanicamente com um export
-sintético fiel ao esquema real (2 receitas, ingredientes com/sem unidade,
-cabeçalho de secção, keywords, foto) — confirma que o script não tem bugs
-de parsing/inserção, não que bate certo com todas as particularidades da
-tua coleção real. **Corre sempre `--dry-run` primeiro** contra o export
-real e confirma visualmente os números antes de importar a sério.
-
-Limitações: fotos são extraídas para `--images-dir` mas não ligadas a
-nenhuma receita (o tacho_app ainda não tem armazenamento de imagens —
-funcionalidade própria por construir, fora do âmbito desta migração);
-"categorias" ficam vazias (o export do Tandoor só tem "keywords", mapeadas
-para Tags); cabeçalhos de secção nos ingredientes são descartados;
-deduplicação é só por título igual.
-
 ## Por fazer a seguir
 
-- Frontend: passa primeiro pelo `new-work` do Impeccable, para o mundo visual
-  da Secção 6 do PRD ficar decidido antes de existir qualquer ecrã.
-- Armazenamento de imagens (upload próprio + campo no modelo `Recipe`) —
-  falta no schema atual; necessário antes de ligar as fotos migradas do
-  Tandoor.
 - Planeamento de refeições + lista de compras (v1.1).
 - Workspace multi-utilizador + autenticação real (v1.2) — confirmar primeiro,
   contra o código do Securo, se `fastapi-users` e o modelo "Workspace" são
