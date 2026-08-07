@@ -9,7 +9,7 @@ from app.celery_app import celery_app
 from app.config import get_settings
 from app.database import get_db
 from app.deps import get_workspace_id
-from app.images import delete_recipe_image, save_recipe_image
+from app.images import copy_recipe_image, delete_recipe_image, save_recipe_image
 from app.tasks import import_recipe_from_url
 
 router = APIRouter(prefix="/recipes", tags=["recipes"])
@@ -77,6 +77,32 @@ def update_recipe(
     workspace_id: uuid.UUID = Depends(get_workspace_id),
 ):
     recipe = crud.update_recipe(db, workspace_id, recipe_id, payload)
+    if recipe is None:
+        raise HTTPException(status_code=404, detail="Receita não encontrada")
+    return recipe
+
+
+@router.post("/{recipe_id}/duplicate", response_model=schemas.RecipeOut, status_code=201)
+def duplicate_recipe(
+    recipe_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    workspace_id: uuid.UUID = Depends(get_workspace_id),
+):
+    original = crud.get_recipe(db, workspace_id, recipe_id)
+    if original is None:
+        raise HTTPException(status_code=404, detail="Receita não encontrada")
+
+    image_path = copy_recipe_image(original.image_path, get_settings()) if original.image_path else None
+    return crud.duplicate_recipe(db, workspace_id, recipe_id, image_path)
+
+
+@router.post("/{recipe_id}/mark-made", response_model=schemas.RecipeOut)
+def mark_recipe_made(
+    recipe_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    workspace_id: uuid.UUID = Depends(get_workspace_id),
+):
+    recipe = crud.mark_recipe_made(db, workspace_id, recipe_id)
     if recipe is None:
         raise HTTPException(status_code=404, detail="Receita não encontrada")
     return recipe

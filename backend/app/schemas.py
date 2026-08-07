@@ -113,6 +113,7 @@ class RecipeOut(BaseModel):
     fat_g: float | None
     created_at: datetime
     updated_at: datetime
+    last_made_at: datetime | None
     ingredients: list[IngredientOut]
     steps: list[StepOut]
     categories: list[CategoryOut]

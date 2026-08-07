@@ -1,21 +1,62 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { getRecipe, recipeImageUrl } from '../api/recipes'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { duplicateRecipe, getRecipe, recipeImageUrl } from '../api/recipes'
 import type { Recipe } from '../api/types'
 import { PageShell } from '../components/PageShell'
-import { ClockIcon, FlameIcon, PencilIcon, PlayIcon, ServingsIcon } from '../components/icons'
+import {
+  ClockIcon,
+  CopyIcon,
+  FlameIcon,
+  MinusIcon,
+  PencilIcon,
+  PlayIcon,
+  PlusIcon,
+  ServingsIcon,
+} from '../components/icons'
+
+// Recalcula a quantidade para o número de porções escolhido, sem persistir
+// nada — padrão Mealie (PRD/TODO: "sem mudanças no backend").
+function scaleQuantity(quantity: number, originalServings: number, desiredServings: number): number {
+  return quantity * (desiredServings / originalServings)
+}
+
+function formatQuantity(quantity: number): string {
+  const rounded = Math.round(quantity * 100) / 100
+  return rounded.toFixed(2).replace(/\.?0+$/, '')
+}
+
+function formatLastMade(iso: string): string {
+  return new Date(iso).toLocaleDateString('pt-PT', { day: 'numeric', month: 'long', year: 'numeric' })
+}
 
 export function RecipeDetail() {
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const [recipe, setRecipe] = useState<Recipe | null>(null)
   const [notFound, setNotFound] = useState(false)
+  const [desiredServings, setDesiredServings] = useState<number | null>(null)
+  const [duplicating, setDuplicating] = useState(false)
 
   useEffect(() => {
     if (!id) return
     getRecipe(id)
-      .then(setRecipe)
+      .then((r) => {
+        setRecipe(r)
+        setDesiredServings(r.servings)
+      })
       .catch(() => setNotFound(true))
   }, [id])
+
+  async function handleDuplicate() {
+    if (!id || duplicating) return
+    setDuplicating(true)
+    try {
+      const copy = await duplicateRecipe(id)
+      navigate(`/receitas/${copy.id}/editar`)
+    } finally {
+      setDuplicating(false)
+    }
+  }
 
   if (notFound) {
     return (
@@ -51,13 +92,24 @@ export function RecipeDetail() {
 
         <div className={`flex items-start justify-between gap-3 ${recipe.image_path ? 'mt-5' : ''}`}>
           <h1 className="text-2xl font-bold text-text-primary sm:text-3xl">{recipe.title}</h1>
-          <Link
-            to={`/receitas/${recipe.id}/editar`}
-            className="flex shrink-0 items-center gap-1.5 rounded-full bg-card-white px-3 py-1.5 text-sm font-medium text-text-secondary shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)] hover:text-primary-forest"
-          >
-            <PencilIcon className="size-4" />
-            <span className="hidden sm:inline">Editar</span>
-          </Link>
+          <div className="flex shrink-0 gap-2">
+            <button
+              type="button"
+              onClick={handleDuplicate}
+              disabled={duplicating}
+              className="flex items-center gap-1.5 rounded-full bg-card-white px-3 py-1.5 text-sm font-medium text-text-secondary shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)] hover:text-primary-forest disabled:opacity-50"
+            >
+              <CopyIcon className="size-4" />
+              <span className="hidden sm:inline">Duplicar</span>
+            </button>
+            <Link
+              to={`/receitas/${recipe.id}/editar`}
+              className="flex items-center gap-1.5 rounded-full bg-card-white px-3 py-1.5 text-sm font-medium text-text-secondary shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)] hover:text-primary-forest"
+            >
+              <PencilIcon className="size-4" />
+              <span className="hidden sm:inline">Editar</span>
+            </Link>
+          </div>
         </div>
         {recipe.description && <p className="mt-2 text-text-secondary">{recipe.description}</p>}
 
@@ -65,13 +117,47 @@ export function RecipeDetail() {
           {totalMinutes > 0 && (
             <HeroStat icon={<ClockIcon className="size-5" />} value={totalMinutes} label="min" tone="orange" />
           )}
-          {recipe.servings && (
-            <HeroStat icon={<ServingsIcon className="size-5" />} value={recipe.servings} label="porções" tone="forest" />
+          {recipe.servings != null && desiredServings != null && (
+            <div className="flex items-center gap-2">
+              <span className="text-primary-forest">
+                <ServingsIcon className="size-5" />
+              </span>
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setDesiredServings((s) => Math.max(1, (s ?? 1) - 1))}
+                    className="flex size-6 shrink-0 items-center justify-center rounded-full bg-bg-sage text-primary-forest"
+                    aria-label="Menos uma porção"
+                  >
+                    <MinusIcon className="size-3.5" />
+                  </button>
+                  <span className="min-w-[1.5ch] text-center text-2xl font-bold leading-none text-text-primary sm:text-3xl">
+                    {desiredServings}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setDesiredServings((s) => (s ?? 1) + 1)}
+                    className="flex size-6 shrink-0 items-center justify-center rounded-full bg-bg-sage text-primary-forest"
+                    aria-label="Mais uma porção"
+                  >
+                    <PlusIcon className="size-3.5" />
+                  </button>
+                </div>
+                <div className="text-xs text-text-secondary">
+                  porções{desiredServings !== recipe.servings ? ` (original: ${recipe.servings})` : ''}
+                </div>
+              </div>
+            </div>
           )}
           {recipe.calories_kcal != null && (
             <HeroStat icon={<FlameIcon className="size-5" />} value={recipe.calories_kcal} label="kcal/porção" tone="forest" />
           )}
         </div>
+
+        {recipe.last_made_at && (
+          <p className="mt-2 text-xs text-text-secondary">Feita pela última vez em {formatLastMade(recipe.last_made_at)}.</p>
+        )}
 
         {(recipe.categories.length > 0 || recipe.tags.length > 0) && (
           <div className="mt-4 flex flex-wrap gap-1.5">
@@ -110,7 +196,12 @@ export function RecipeDetail() {
                     <span className="text-text-primary">{ing.name}</span>
                     {(ing.quantity || ing.unit) && (
                       <span className="shrink-0 text-text-secondary">
-                        {ing.quantity ?? ''} {ing.unit ?? ''}
+                        {ing.quantity != null
+                          ? recipe.servings && desiredServings
+                            ? formatQuantity(scaleQuantity(ing.quantity, recipe.servings, desiredServings))
+                            : ing.quantity
+                          : ''}{' '}
+                        {ing.unit ?? ''}
                       </span>
                     )}
                   </li>

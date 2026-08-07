@@ -1,14 +1,28 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { getRecipe } from '../api/recipes'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { getRecipe, markRecipeMade } from '../api/recipes'
 import type { Recipe } from '../api/types'
 import { ChevronLeftIcon } from '../components/icons'
 
 export function CookMode() {
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const [recipe, setRecipe] = useState<Recipe | null>(null)
   const [stepIndex, setStepIndex] = useState(0)
   const wakeLockRef = useRef<WakeLockSentinel | null>(null)
+
+  // Best-effort — marcar "feita" nunca deve impedir sair do Modo Cozinha,
+  // mesmo que a chamada falhe (offline na cozinha é o caso mais comum).
+  async function handleFinish() {
+    if (id) {
+      try {
+        await markRecipeMade(id)
+      } catch {
+        // segue na mesma para o Detalhe
+      }
+    }
+    navigate(`/receitas/${id}`)
+  }
 
   useEffect(() => {
     if (!id) return
@@ -105,12 +119,13 @@ export function CookMode() {
           Anterior
         </button>
         {isLast ? (
-          <Link
-            to={`/receitas/${recipe.id}`}
+          <button
+            type="button"
+            onClick={handleFinish}
             className="flex flex-1 items-center justify-center rounded-full bg-accent-orange py-4 font-semibold text-text-primary"
           >
             Concluir
-          </Link>
+          </button>
         ) : (
           <button
             type="button"

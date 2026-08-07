@@ -1,4 +1,5 @@
 import os
+import shutil
 import uuid
 
 import requests
@@ -65,6 +66,19 @@ def save_recipe_image_from_url(url: str, settings: Settings) -> str | None:
     with open(os.path.join(settings.images_dir, filename), "wb") as f:
         for chunk in chunks:
             f.write(chunk)
+    return filename
+
+
+def copy_recipe_image(image_path: str, settings: Settings) -> str | None:
+    """Copia a foto de uma receita para um ficheiro novo (nome uuid4 novo),
+    para que duplicar uma receita não deixe duas receitas a apontar para o
+    mesmo ficheiro — apagar uma apagaria a foto da outra."""
+    ext = os.path.splitext(image_path)[1]
+    src = os.path.join(settings.images_dir, image_path)
+    if not os.path.isfile(src):
+        return None
+    filename = f"{uuid.uuid4()}{ext}"
+    shutil.copyfile(src, os.path.join(settings.images_dir, filename))
     return filename
 
 

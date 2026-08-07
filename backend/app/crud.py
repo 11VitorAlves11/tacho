@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime, timezone
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
@@ -132,6 +133,57 @@ def set_recipe_image(
     db.commit()
     db.refresh(recipe)
     return recipe
+
+
+def mark_recipe_made(db: Session, workspace_id: uuid.UUID, recipe_id: uuid.UUID) -> models.Recipe | None:
+    recipe = get_recipe(db, workspace_id, recipe_id)
+    if recipe is None:
+        return None
+    recipe.last_made_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(recipe)
+    return recipe
+
+
+def duplicate_recipe(
+    db: Session, workspace_id: uuid.UUID, recipe_id: uuid.UUID, image_path: str | None
+) -> models.Recipe | None:
+    """Cria uma cópia independente da receita (novo id, sem last_made_at nem
+    fonte). `image_path` já vem resolvido pelo router — se a original tem
+    foto, o router copia o ficheiro para um nome novo antes de chamar esta
+    função, para que apagar uma receita nunca apague a foto da outra."""
+    original = get_recipe(db, workspace_id, recipe_id)
+    if original is None:
+        return None
+
+    copy = models.Recipe(
+        workspace_id=workspace_id,
+        title=f"{original.title} (cópia)",
+        description=original.description,
+        servings=original.servings,
+        prep_minutes=original.prep_minutes,
+        cook_minutes=original.cook_minutes,
+        source_url=original.source_url,
+        notes=original.notes,
+        image_path=image_path,
+        calories_kcal=original.calories_kcal,
+        protein_g=original.protein_g,
+        carbs_g=original.carbs_g,
+        fat_g=original.fat_g,
+        ingredients=[
+            models.Ingredient(
+                position=ing.position, name=ing.name, quantity=ing.quantity, unit=ing.unit, is_header=ing.is_header
+            )
+            for ing in original.ingredients
+        ],
+        steps=[models.Step(position=step.position, instruction=step.instruction) for step in original.steps],
+        categories=list(original.categories),
+        tags=list(original.tags),
+    )
+    db.add(copy)
+    db.commit()
+    db.refresh(copy)
+    return copy
 
 
 def delete_recipe(db: Session, workspace_id: uuid.UUID, recipe_id: uuid.UUID) -> bool:

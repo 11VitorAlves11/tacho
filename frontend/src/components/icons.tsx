@@ -71,6 +71,23 @@ export function PlusIcon(props: SVGProps<SVGSVGElement>) {
   )
 }
 
+export function MinusIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M5 12h14" />
+    </svg>
+  )
+}
+
+export function CopyIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base} {...props}>
+      <rect x="8.5" y="8.5" width="11" height="11" rx="1.5" />
+      <path d="M15.5 8.5V6.5A1.5 1.5 0 0 0 14 5H6a1.5 1.5 0 0 0-1.5 1.5v8A1.5 1.5 0 0 0 6 16h2" />
+    </svg>
+  )
+}
+
 export function LinkIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <svg {...base} {...props}>

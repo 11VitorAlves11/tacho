@@ -27,6 +27,16 @@ export async function deleteRecipe(id: string) {
   await api.delete(`/recipes/${id}`)
 }
 
+export async function duplicateRecipe(id: string) {
+  const { data } = await api.post<Recipe>(`/recipes/${id}/duplicate`)
+  return data
+}
+
+export async function markRecipeMade(id: string) {
+  const { data } = await api.post<Recipe>(`/recipes/${id}/mark-made`)
+  return data
+}
+
 export async function uploadRecipeImage(id: string, file: File) {
   const formData = new FormData()
   formData.append('file', file)

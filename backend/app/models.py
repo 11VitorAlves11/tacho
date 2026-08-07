@@ -77,6 +77,8 @@ class Recipe(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
+    # Marcado ao concluir o Modo Cozinha (PRD 5.1, alimenta a métrica M3).
+    last_made_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
     workspace: Mapped["Workspace"] = relationship(back_populates="recipes")
     ingredients: Mapped[list["Ingredient"]] = relationship(

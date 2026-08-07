@@ -103,9 +103,13 @@ concluída** quando todos estes estiverem verificados.
       padrão para o agrupamento por corredor.
 - [ ] **Mais destinos no bottom nav** — hoje só "Receitas"/"Adicionar" contra os
       4–5 que o design descreve; desbloqueia quando os ecrãs acima existirem.
-- [ ] **Escalar porções no Detalhe** — sem mudanças no backend; padrão do
-      Mealie (recalcular `quantity` em runtime a partir de `servings` desejado
-      / original).
+- [x] **Escalar porções no Detalhe** — sem mudanças no backend; stepper +/−
+      junto ao hero de porções recalcula `quantity` em runtime (padrão
+      Mealie). Só afeta ingredientes com `quantity` estruturado — receitas
+      importadas por URL não escalam porque a linha scraped ainda fica
+      inteira em `Ingredient.name` (ver "Parsing de ingredientes" abaixo).
+      Testado no browser (Playwright): "Arroz Doce" 150g→200g ao subir de
+      6 para 8 porções, sem erros de consola.
 - [ ] **Pesquisa full-text** — hoje `ILIKE` sobre o título. Postgres `tsvector`
       é o caminho óbvio (é o que o Tandoor usa).
 - [ ] **Parsing de ingredientes da importação** — a linha scraped fica inteira
@@ -134,9 +138,19 @@ concluída** quando todos estes estiverem verificados.
 - [ ] **Tamanho de letra ajustável** no Modo Cozinha (toggle A/A⁺).
 - [ ] **Notas pós-confeção** — ao concluir o Modo Cozinha, nota rápida opcional
       ("menos sal, +10 min de forno"), guardada com data e visível no Detalhe.
-- [ ] **"Última vez feita"** — `last_made = now()` ao concluir o Modo Cozinha.
-      Barato, e alimenta a métrica M3 do PRD.
-- [ ] **Duplicar receita** — estava no âmbito original e caiu; repor.
+- [x] **"Última vez feita"** — `Recipe.last_made_at` (migração Alembic
+      aditiva), marcado via `POST /recipes/{id}/mark-made` ao carregar em
+      "Concluir" no Modo Cozinha (best-effort: falha em silêncio, nunca
+      impede sair, útil offline na cozinha). Visível no Detalhe. Alimenta a
+      métrica M3 do PRD. Testado no browser (Playwright): concluir o Modo
+      Cozinha faz aparecer a data no Detalhe, sem erros de consola.
+- [x] **Duplicar receita** — `POST /recipes/{id}/duplicate`, botão no
+      Detalhe junto a "Editar"; a cópia leva título com sufixo "(cópia)",
+      ingredientes/passos/categorias/tags, e a própria foto (ficheiro
+      copiado para um nome novo — apagar uma das duas nunca apaga a foto da
+      outra, testado). Não copia `last_made_at`. Navega direto para o editor
+      da cópia, para renomear logo (ex. "Bolo de cenoura" → "... sem
+      lactose", o caso de uso do PRD). Testado no browser (Playwright).
 - [ ] **Tempos separados** prep / cozedura / total (hoje só existe "tempo").
 - [ ] **Favoritos** — o design tem "Favoritos" na navegação desde o início mas
       nunca foi especificado. Até haver contas, o favorito é do Workspace.

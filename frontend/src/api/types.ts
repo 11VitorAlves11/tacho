@@ -54,6 +54,7 @@ export interface Recipe {
   fat_g: number | null
   created_at: string
   updated_at: string
+  last_made_at: string | null
   ingredients: Ingredient[]
   steps: Step[]
   categories: Category[]
