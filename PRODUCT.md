@@ -80,11 +80,9 @@ funcionalidades a replicar.
   Também por decidir: como convidar a segunda pessoa para o Workspace, já
   que o PRD assume um convite por email e não existe infraestrutura de envio
   de email em nenhum outro serviço do homelab.
-- Gap identificado durante a construção (06-08): o modelo `Recipe` ainda não
-  tem campo de imagem — "Fotos por receita" está no âmbito da v1.0 (PRD
-  4.1), mas ainda não foi implementado (nem upload próprio nem
-  armazenamento). Fica registado para não ser esquecido antes de ligar as
-  fotos migradas do Tandoor.
+- ~~Gap identificado durante a construção (06-08): o modelo `Recipe` ainda não
+  tem campo de imagem~~ — **resolvido em 07-08**: `Recipe.image_path`,
+  upload pela UI, storage em disco. Ver TODO.md.
 
 ## Evidence on Hand
 

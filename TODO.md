@@ -8,6 +8,11 @@ Ponto de situação a 2026-08-07. Ver `PRD-app-receitas-v3.2.md`, `PRODUCT.md` e
 > `backend/scripts/migrate_from_tandoor.py` ficou obsoleto e pode ser removido
 > ou arquivado. Vários itens abaixo perderam a urgência que vinha de "corrigir
 > antes da migração".
+>
+> **2026-08-07 — v1.0 concluída.** Os 5 critérios de aceitação da Secção 11.1
+> do PRD estão todos cumpridos, incluindo o deploy: o Tacho substituiu o
+> Tandoor na CT 202 do homelab (`https://receitas.alveslab.dev`). Ver a
+> secção "v1.0 — fechar a fase" abaixo para o detalhe de cada critério.
 
 ---
 
@@ -78,9 +83,20 @@ concluída** quando todos estes estiverem verificados.
       Rule" — laranja fica exclusivo de tempo/Modo Cozinha, também para
       dados nutricionais). Cálculo automático fica para a v2, com Open Food
       Facts como base (ver v2 abaixo) — não LLM. Testado no browser.
-- [ ] **Deploy definitivo no homelab** — ver decisão #4. Inclui backup
-      automático configurado **e um restauro testado com sucesso**, e desligar
-      o Tandoor (CT 202).
+- [x] **Deploy definitivo no homelab** — ver decisão #4, autorizada
+      explicitamente em 2026-08-07: substituir o Tandoor, reutilizando o
+      mesmo container (CT 202, `192.168.1.202`), sem novo VMID. Tandoor
+      confirmado sem receitas guardadas antes de substituir (0 linhas em
+      `cookbook_recipe`) — sem migração de dados. Backend passou a servir o
+      frontend compilado diretamente (`Dockerfile` multi-stage na raiz do
+      repo + `docker-compose.prod.yml`), sem container nginx dedicado, para
+      poupar RAM no host. Acessível em `https://receitas.alveslab.dev`,
+      protegido por Authentik forward-auth (o Tacho não tem login próprio —
+      v1.2 — por isso mantém-se o mesmo nível de proteção que o Tandoor já
+      tinha, em vez de expor sem autenticação). Backup diário automático
+      (BD + fotos) configurado e **restauro testado com sucesso**. Dashboard
+      Homepage do homelab atualizado (Tandoor → Tacho). Detalhe completo em
+      `homelab/inventory.md`, secção "CT 202 — tacho".
 
 ---
 

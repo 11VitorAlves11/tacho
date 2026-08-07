@@ -4,7 +4,7 @@
 **Data:** Agosto 2026
 **Estado:** v3.2 — substitui a v3.1 (migração do Tandoor removida: não existem receitas lá para migrar)
 **Ficheiro de design:** [Figma — Receitas App Design Revamp](https://www.figma.com/design/cOvlbDp3d0osvTcPT6TFSR)
-**Código:** `tacho_app` (backend + frontend), a correr no CT 111, ainda fora do `docker-compose.yml` principal do homelab
+**Código:** `tacho_app` (backend + frontend), repo privado em `github.com/11VitorAlves11/tacho_app`. Em produção na CT 202 do homelab (`https://receitas.alveslab.dev`) desde 2026-08-07; desenvolvimento continua na CT 111
 
 > **Papel deste documento:** fonte de verdade de âmbito e decisões de produto. O dia-a-dia (tarefas, gaps técnicos) vive no `TODO.md` do repositório; os tokens e componentes visuais vivem no `DESIGN.md`. Este PRD sincroniza-se com ambos periodicamente, mas não os substitui.
 
@@ -34,7 +34,8 @@ Utilizador doméstico (Vítor e Mariana), self-hosted no Proxmox, com acesso rem
 Resumo — o detalhe por funcionalidade está na Secção 5, com símbolo de estado em cada item (✅ feito · 🔶 parcial ou por testar · ⬜ por fazer).
 
 - **Backend** (FastAPI + PostgreSQL + Redis/Celery): modelos, CRUD de receitas/categorias/tags, importação por URL via Celery, `/health` e CORS — tudo testado ponta a ponta via HTTP. Existe também um script de migração do Tandoor (`migrate_from_tandoor.py`), entretanto tornado desnecessário — ver Secção 5.8.
-- **Frontend** (React + TS + Vite + Tailwind): Home, Detalhe, Modo Cozinha, Adicionar (link/manual), Editar/Apagar, menu de utilizador. O editor manual e o menu de utilizador passaram build e linter, mas **ainda não foram testados visualmente no browser**.
+- **Frontend** (React + TS + Vite + Tailwind): Home, Detalhe, Modo Cozinha, Adicionar (link/manual), Editar/Apagar, menu de utilizador — testado visualmente no browser.
+- **v1.0 concluída (2026-08-07):** todos os critérios da Secção 11.1 cumpridos, incluindo o deploy — ver Secção 11.1 e Decisão #4.
 
 ## 5. Âmbito — funcionalidades v1
 
@@ -163,6 +164,11 @@ Desenhados no Figma, já na paleta verde: Home, Detalhe, Modo Cozinha (mobile + 
 ## 9. Requisitos não-funcionais
 
 - **Segurança do deploy sem autenticação:** enquanto não existir autenticação real (v1.2), a app **só pode estar acessível dentro da tailnet** (Tailscale) — nunca exposta à LAN de convidados nem à internet. Este requisito resolve explicitamente o desalinhamento do roadmap (deploy na v1.0, auth só na v1.2): é aceitável implantar sem login **apenas** porque a superfície de acesso fica limitada à tailnet do agregado. Revisitar se alguma vez se quiser partilhar acesso fora dela.
+  **Atualização 2026-08-07:** implantado com uma camada extra em vez de tailnet-only puro —
+  `receitas.alveslab.dev` resolve para IP privado (sem port-forward, já não exposto à
+  internet) **e** fica atrás de Authentik forward-auth (mesmo padrão do `home.alveslab.dev`),
+  para manter o nível de proteção que o Tandoor já tinha com SSO nativo. O Tacho continua sem
+  código de autenticação próprio — o gate vive no proxy (NPM + Authentik), não na app.
 - Stack completo (frontend + backend + worker + PostgreSQL + Redis) deve correr confortavelmente no Mini PC N200/12GB, junto aos restantes CTs
 - Tempo de resposta da API < 200ms em rede local para operações comuns
 - Interface responsiva única para mobile e desktop
@@ -184,21 +190,22 @@ Reformuladas para serem verificáveis, com o momento de avaliação explícito:
 
 | Fase | Conteúdo | Estado |
 |---|---|---|
-| v1.0 (núcleo) | CRUD de receitas; importação por URL; Home, Detalhe, Modo Cozinha, Adicionar/Editar | 🔶 Construído; ver critérios de aceitação abaixo |
-| v1.0 (deploy) | Container definitivo no homelab, acessível só via tailnet; desligar Tandoor/Mealie | ⬜ Decisão #4 |
+| v1.0 (núcleo) | CRUD de receitas; importação por URL; Home, Detalhe, Modo Cozinha, Adicionar/Editar | ✅ Concluído, ver critérios de aceitação abaixo |
+| v1.0 (deploy) | Container definitivo no homelab; desligar Tandoor/Mealie | ✅ Concluído 2026-08-07 — ver Decisão #4 |
 | v1.1 | Planeamento de refeições + Lista de Compras (Figma + implementação); pesquisa full-text (`tsvector`); timers no Modo Cozinha; parsing de ingredientes e filtro de lixo na importação; **importação inteligente via Gemini (fallback de URL + importação por foto)**; duplicar receita; tempos prep/cozedura separados; favoritos; notas pós-confeção; PWA instalável; tamanho de letra ajustável no Modo Cozinha; dark mode; export schema.org JSON-LD | ⬜ |
 | v1.2 | Multi-utilizador real (contas, `fastapi-users`, associação ao Workspace), avaliação por estrelas, comentários, favoritos por utilizador | ⬜ Decisões #1, #2 e #5 condicionam o desenho |
 | v2 | Cálculo automático de nutrição, Modo Cozinha desktop e offline, fracções em unidades, Cookbooks (se não entrarem antes — Decisão #3), pesquisa por ingredientes disponíveis, galeria de fotos por receita, vista de impressão/PDF, custo por receita/porção, despensa/inventário básico, Authentik SSO | ⬜ |
 
 ### 11.1 Critérios de aceitação da v1.0 ("definição de pronto")
 
-A v1.0 só se considera concluída quando **todos** estes pontos estiverem verificados:
+A v1.0 só se considera concluída quando **todos** estes pontos estiverem verificados —
+**todos cumpridos em 2026-08-07**:
 
-1. Editor manual e menu de utilizador testados visualmente no browser (hoje só passaram build/linter)
-2. Cabeçalhos de secção nos ingredientes suportados no modelo e no editor
-3. Campo de imagem no modelo `Recipe`, com **upload/substituição de foto funcional na UI** (formulário de criar/editar) e a foto visível no card da Home e no hero do Detalhe
-4. Deploy definitivo feito, acessível apenas via tailnet (Secção 9), com Tandoor/Mealie desligados e **backup automático configurado + um restauro testado com sucesso**
-5. Informação nutricional com entrada manual disponível na UI *(mantém-se da definição original de v1.0; se for adiada para v1.1, registar como decisão explícita, não por omissão)*
+1. ✅ Editor manual e menu de utilizador testados visualmente no browser
+2. ✅ Cabeçalhos de secção nos ingredientes suportados no modelo e no editor
+3. ✅ Campo de imagem no modelo `Recipe`, com **upload/substituição de foto funcional na UI** (formulário de criar/editar) e a foto visível no card da Home e no hero do Detalhe
+4. ✅ Deploy definitivo feito (CT 202 do homelab, mesmo container que o Tandoor, `https://receitas.alveslab.dev`), Tandoor desligado, **backup automático configurado + um restauro testado com sucesso**. Protegido por Authentik forward-auth em vez de tailnet-only (Secção 9) — decisão tomada nesta ronda: o Tacho ainda não tem autenticação própria (v1.2), e o forward-auth mantém o mesmo nível de proteção que o Tandoor já tinha, sem regressão
+5. ✅ Informação nutricional com entrada manual disponível na UI
 
 ## 12. Decisões pendentes
 
@@ -207,7 +214,12 @@ Itens que só o Vítor pode resolver — bloqueiam trabalho a jusante.
 1. **`fastapi-users` + Workspace — bate mesmo certo com o Securo?** Assumido por analogia de stack, nunca confirmado contra o código real. Verificar no GitHub do `securo-finance` antes de construir a autenticação da v1.2.
 2. **Associação da segunda pessoa ao Workspace, sem SMTP no homelab.** O plano original assumia convite por email; não há infraestrutura de email montada. Alternativa: o dono cria a segunda conta diretamente. Verificar primeiro como o Tandoor resolve a associação de utilizadores a um espaço sem depender de email, e decidir entre os dois fluxos.
 3. **Cookbooks: em que fase entram, e em que modelo?** Lista manual (Tandoor) ou coleção por filtro inteligente (Mealie)? Hoje estão provisoriamente na v2 do roadmap — confirmar ou antecipar.
-4. **Deploy definitivo.** Decidir VMID/IP novo segundo a convenção do `homelab/CLAUDE.md`; ação de infraestrutura partilhada, não tomada sem autorização explícita. Inclui desligar o Tandoor (e Mealie, se instalado) depois de o Tacho estar no ar. - sim troca o tandoor por esta app, mas esta app deve ser feito o deploy pelo docker
+4. ✅ **Deploy definitivo — resolvida em 2026-08-07.** Sem VMID/IP novo: reutilizado o
+   mesmo container do Tandoor (CT 202, `192.168.1.202`), só o hostname mudou para `tacho`.
+   Deploy via Docker, como pedido — `Dockerfile` multi-stage (backend serve o frontend
+   compilado, sem nginx dedicado) + `docker-compose.prod.yml`. Tandoor desligado (confirmado
+   sem receitas guardadas antes de apagar os dados). Detalhe em `homelab/inventory.md`,
+   secção "CT 202 — tacho".
 
 5. **Menu de utilizador.** Confirmar se o placeholder atual ("Vítor & Mariana" fixo, sem "Sair") é o comportamento desejado até à v1.2, ou se deve ficar mais escondido até haver autenticação real. - pode ficar assim para já
 
