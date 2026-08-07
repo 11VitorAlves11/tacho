@@ -1,0 +1,8 @@
+.env
+backend/.venv/
+backend/__pycache__/
+backend/**/__pycache__/
+node_modules/
+dist/
+.impeccable/screenshots/
+backend/imports/
