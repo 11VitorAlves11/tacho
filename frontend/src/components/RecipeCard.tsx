@@ -1,21 +1,43 @@
 import { Link } from 'react-router-dom'
 import { recipeImageUrl } from '../api/recipes'
 import type { RecipeSummary } from '../api/types'
-import { ClockIcon, PotIcon, ServingsIcon } from './icons'
+import { ClockIcon, HeartIcon, PotIcon, ServingsIcon } from './icons'
 
 function totalTime(r: RecipeSummary) {
   const total = (r.prep_minutes ?? 0) + (r.cook_minutes ?? 0)
   return total > 0 ? total : null
 }
 
-export function RecipeCard({ recipe }: { recipe: RecipeSummary }) {
+export function RecipeCard({
+  recipe,
+  onToggleFavorite,
+}: {
+  recipe: RecipeSummary
+  onToggleFavorite: (id: string) => void
+}) {
   const time = totalTime(recipe)
 
   return (
     <Link
       to={`/receitas/${recipe.id}`}
-      className="group flex gap-4 rounded-2xl bg-card-white p-4 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)] transition-shadow hover:shadow-[0_8px_24px_-4px_rgba(28,43,31,0.22)]"
+      className="group relative flex gap-4 rounded-2xl bg-card-white p-4 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)] transition-shadow hover:shadow-[0_8px_24px_-4px_rgba(28,43,31,0.22)]"
     >
+      <button
+        type="button"
+        onClick={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          onToggleFavorite(recipe.id)
+        }}
+        aria-label={recipe.is_favorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+        aria-pressed={recipe.is_favorite}
+        className={`absolute right-3 top-3 flex size-8 items-center justify-center rounded-full transition-colors ${
+          recipe.is_favorite ? 'text-accent-leaf' : 'text-text-secondary/50 hover:text-accent-leaf'
+        }`}
+      >
+        <HeartIcon className="size-5" fill={recipe.is_favorite ? 'currentColor' : 'none'} />
+      </button>
+
       {recipe.image_path ? (
         <img
           src={recipeImageUrl(recipe.image_path)}
@@ -28,7 +50,7 @@ export function RecipeCard({ recipe }: { recipe: RecipeSummary }) {
         </div>
       )}
 
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 pr-8">
         <h3 className="truncate font-semibold text-text-primary group-hover:text-primary-forest">
           {recipe.title}
         </h3>

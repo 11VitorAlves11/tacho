@@ -80,6 +80,7 @@ class RecipeSummary(BaseModel):
     prep_minutes: int | None
     cook_minutes: int | None
     image_path: str | None
+    is_favorite: bool
     categories: list[CategoryOut]
     tags: list[TagOut]
 
@@ -107,6 +108,7 @@ class RecipeOut(BaseModel):
     source_url: str | None
     notes: str | None
     image_path: str | None
+    is_favorite: bool
     calories_kcal: int | None
     protein_g: float | None
     carbs_g: float | None

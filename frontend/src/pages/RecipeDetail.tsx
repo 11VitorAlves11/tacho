@@ -1,12 +1,13 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { duplicateRecipe, getRecipe, recipeImageUrl } from '../api/recipes'
+import { duplicateRecipe, getRecipe, recipeImageUrl, toggleFavorite } from '../api/recipes'
 import type { Recipe } from '../api/types'
 import { PageShell } from '../components/PageShell'
 import {
   ClockIcon,
   CopyIcon,
   FlameIcon,
+  HeartIcon,
   MinusIcon,
   PencilIcon,
   PlayIcon,
@@ -58,6 +59,12 @@ export function RecipeDetail() {
     }
   }
 
+  async function handleToggleFavorite() {
+    if (!id) return
+    const updated = await toggleFavorite(id)
+    setRecipe((prev) => (prev ? { ...prev, is_favorite: updated.is_favorite } : prev))
+  }
+
   if (notFound) {
     return (
       <PageShell>
@@ -93,6 +100,18 @@ export function RecipeDetail() {
         <div className={`flex items-start justify-between gap-3 ${recipe.image_path ? 'mt-5' : ''}`}>
           <h1 className="text-2xl font-bold text-text-primary sm:text-3xl">{recipe.title}</h1>
           <div className="flex shrink-0 gap-2">
+            <button
+              type="button"
+              onClick={handleToggleFavorite}
+              aria-pressed={recipe.is_favorite}
+              aria-label={recipe.is_favorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+              className={`flex items-center gap-1.5 rounded-full bg-card-white px-3 py-1.5 text-sm font-medium shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)] ${
+                recipe.is_favorite ? 'text-accent-leaf' : 'text-text-secondary hover:text-accent-leaf'
+              }`}
+            >
+              <HeartIcon className="size-4" fill={recipe.is_favorite ? 'currentColor' : 'none'} />
+              <span className="hidden sm:inline">Favorito</span>
+            </button>
             <button
               type="button"
               onClick={handleDuplicate}

@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
-import { listCategories, listRecipes, listTags } from '../api/recipes'
+import { listCategories, listRecipes, listTags, toggleFavorite } from '../api/recipes'
 import type { Category, RecipeSummary, Tag } from '../api/types'
 import { PageShell } from '../components/PageShell'
 import { RecipeCard } from '../components/RecipeCard'
-import { SearchIcon } from '../components/icons'
+import { HeartIcon, SearchIcon } from '../components/icons'
 
 export function Home() {
   const [recipes, setRecipes] = useState<RecipeSummary[] | null>(null)
@@ -12,6 +12,7 @@ export function Home() {
   const [q, setQ] = useState('')
   const [categoryId, setCategoryId] = useState<string | null>(null)
   const [tagId, setTagId] = useState<string | null>(null)
+  const [favoriteOnly, setFavoriteOnly] = useState(false)
   const [error, setError] = useState(false)
 
   useEffect(() => {
@@ -22,14 +23,26 @@ export function Home() {
   useEffect(() => {
     const handle = setTimeout(() => {
       setError(false)
-      listRecipes({ q: q || undefined, categoryId: categoryId ?? undefined, tagId: tagId ?? undefined })
+      listRecipes({ q: q || undefined, categoryId: categoryId ?? undefined, tagId: tagId ?? undefined, favorite: favoriteOnly || undefined })
         .then(setRecipes)
         .catch(() => setError(true))
     }, 250)
     return () => clearTimeout(handle)
-  }, [q, categoryId, tagId])
+  }, [q, categoryId, tagId, favoriteOnly])
 
-  const hasFilters = categories.length > 0 || tags.length > 0
+  async function handleToggleFavorite(id: string) {
+    const updated = await toggleFavorite(id)
+    setRecipes((prev) => {
+      if (!prev) return prev
+      // Na vista "Favoritos", desfavoritar remove logo da lista.
+      if (favoriteOnly && !updated.is_favorite) {
+        return prev.filter((r) => r.id !== id)
+      }
+      return prev.map((r) => (r.id === id ? { ...r, is_favorite: updated.is_favorite } : r))
+    })
+  }
+
+  const hasCategoryOrTagFilters = categories.length > 0 || tags.length > 0
 
   return (
     <PageShell>
@@ -50,27 +63,40 @@ export function Home() {
           />
         </label>
 
-        {hasFilters && (
-          <div className="mt-3 flex flex-wrap gap-2">
-            <FilterChip label="Todas" active={!categoryId && !tagId} onClick={() => { setCategoryId(null); setTagId(null) }} />
-            {categories.map((c) => (
-              <FilterChip
-                key={c.id}
-                label={c.name}
-                active={categoryId === c.id}
-                onClick={() => { setCategoryId(categoryId === c.id ? null : c.id); setTagId(null) }}
-              />
-            ))}
-            {tags.map((t) => (
-              <FilterChip
-                key={t.id}
-                label={`#${t.name}`}
-                active={tagId === t.id}
-                onClick={() => { setTagId(tagId === t.id ? null : t.id); setCategoryId(null) }}
-              />
-            ))}
-          </div>
-        )}
+        <div className="mt-3 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setFavoriteOnly((v) => !v)}
+            aria-pressed={favoriteOnly}
+            className={`flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+              favoriteOnly ? 'bg-card-white text-accent-leaf' : 'bg-card-white/15 text-card-white hover:bg-card-white/25'
+            }`}
+          >
+            <HeartIcon className="size-3.5" fill={favoriteOnly ? 'currentColor' : 'none'} />
+            Favoritos
+          </button>
+          {hasCategoryOrTagFilters && (
+            <>
+              <FilterChip label="Todas" active={!categoryId && !tagId} onClick={() => { setCategoryId(null); setTagId(null) }} />
+              {categories.map((c) => (
+                <FilterChip
+                  key={c.id}
+                  label={c.name}
+                  active={categoryId === c.id}
+                  onClick={() => { setCategoryId(categoryId === c.id ? null : c.id); setTagId(null) }}
+                />
+              ))}
+              {tags.map((t) => (
+                <FilterChip
+                  key={t.id}
+                  label={`#${t.name}`}
+                  active={tagId === t.id}
+                  onClick={() => { setTagId(tagId === t.id ? null : t.id); setCategoryId(null) }}
+                />
+              ))}
+            </>
+          )}
+        </div>
       </section>
 
       {error && (
@@ -83,17 +109,23 @@ export function Home() {
 
       {!error && recipes !== null && recipes.length === 0 && (
         <div className="rounded-2xl bg-card-white p-8 text-center">
-          <p className="font-medium text-text-primary">Ainda não há receitas por aqui.</p>
-          <p className="mt-1 text-sm text-text-secondary">
-            Usa o botão "Adicionar" para importar a primeira por URL.
-          </p>
+          {favoriteOnly ? (
+            <p className="font-medium text-text-primary">Ainda não marcaste nenhuma receita como favorita.</p>
+          ) : (
+            <>
+              <p className="font-medium text-text-primary">Ainda não há receitas por aqui.</p>
+              <p className="mt-1 text-sm text-text-secondary">
+                Usa o botão "Adicionar" para importar a primeira por URL.
+              </p>
+            </>
+          )}
         </div>
       )}
 
       {recipes && recipes.length > 0 && (
         <div className="grid gap-3 sm:grid-cols-2">
           {recipes.map((r) => (
-            <RecipeCard key={r.id} recipe={r} />
+            <RecipeCard key={r.id} recipe={r} onToggleFavorite={handleToggleFavorite} />
           ))}
         </div>
       )}

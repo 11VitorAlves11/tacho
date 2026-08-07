@@ -110,8 +110,16 @@ concluída** quando todos estes estiverem verificados.
       inteira em `Ingredient.name` (ver "Parsing de ingredientes" abaixo).
       Testado no browser (Playwright): "Arroz Doce" 150g→200g ao subir de
       6 para 8 porções, sem erros de consola.
-- [ ] **Pesquisa full-text** — hoje `ILIKE` sobre o título. Postgres `tsvector`
-      é o caminho óbvio (é o que o Tandoor usa).
+- [x] **Pesquisa full-text** — `ILIKE` substituído por `tsvector`/`tsquery`
+      Postgres (config `portuguese`), índice GIN (`ix_recipes_title_tsv`,
+      registado em `models.py::Recipe.__table_args__` para o autogenerate
+      não voltar a assinalá-lo como removido — já aconteceu duas vezes).
+      Query construída como prefixo por palavra (`"bacal fri"` →
+      `"bacal:* & fri:*"`) para funcionar enquanto se escreve, não só em
+      palavras completas; input do utilizador passa por `\w+` antes de ir
+      para o Postgres (nunca sintaxe de tsquery crua). Testado pela API
+      (prefixo, multi-palavra, sem resultados, caracteres especiais) e no
+      browser (Playwright).
 - [ ] **Parsing de ingredientes da importação** — a linha scraped fica inteira
       em `Ingredient.name`, sem separar quantidade/unidade. Desbloqueia o custo
       por porção e a pesquisa por ingredientes (v2).
@@ -148,6 +156,40 @@ concluída** quando todos estes estiverem verificados.
       (Playwright), sem erros de consola.
 - [ ] **Notas pós-confeção** — ao concluir o Modo Cozinha, nota rápida opcional
       ("menos sal, +10 min de forno"), guardada com data e visível no Detalhe.
+      **A meio, interrompido por falta de tokens em 2026-08-07.** Feito e
+      testado (`alembic upgrade head` já corrido, sem drift):
+      `models.py::CookNote` (tabela `cook_notes`, FK `recipe_id` cascade,
+      `text`, `created_at`), migração `4d0d5fd85a2d`, relação
+      `Recipe.cook_notes` (ordenada por `created_at.desc()` — histórico,
+      mais recente primeiro; conceito diferente de `Recipe.notes`, que é um
+      campo único editável no formulário). **Por fazer, nesta ordem:**
+      1. `schemas.py` — `CookNoteOut` (id, text, created_at,
+         `from_attributes=True`) e acrescentar `cook_notes:
+         list[CookNoteOut]` a `RecipeOut` (não a `RecipeSummary`).
+      2. `crud.py` — `add_cook_note(db, workspace_id, recipe_id, text) ->
+         Recipe | None` (padrão de `mark_recipe_made`: `get_recipe` primeiro,
+         404 se `None`, `db.add(models.CookNote(recipe_id=recipe.id,
+         text=text))`, commit, refresh do `recipe`).
+      3. `routers/recipes.py` — `POST /recipes/{id}/notes` com payload
+         `{text: str}` (novo `schemas.CookNoteIn` ou inline), devolve
+         `RecipeOut`. Sem endpoint de apagar/editar (fora do âmbito
+         especificado).
+      4. Frontend `types.ts` — `CookNote {id, text, created_at}`,
+         `Recipe.cook_notes: CookNote[]`.
+      5. Frontend `api/recipes.ts` — `addCookNote(id, text)`.
+      6. `CookMode.tsx::handleFinish` — depois de `markRecipeMade`,
+         `window.prompt('Alguma nota para a próxima vez? (opcional)')`
+         (mesmo padrão de `window.confirm` já usado em `EditRecipe.tsx`
+         para apagar); se o utilizador escrever algo (trim não vazio),
+         `addCookNote(id, texto)`. Best-effort, `try/catch` a engolir erro
+         — uma nota falhada nunca deve impedir sair do Modo Cozinha (mesmo
+         raciocínio do `markRecipeMade`).
+      7. `RecipeDetail.tsx` — nova secção "Notas" (só se `cook_notes.length
+         > 0`), lista com data (`formatLastMade` já existe e serve) + texto,
+         mais recente primeiro (a relação já vem ordenada do backend).
+      8. Testar no browser (Playwright): concluir o Modo Cozinha, escrever
+         uma nota, confirmar que aparece no Detalhe.
+      9. Atualizar este item do TODO.md para `[x]` com o resumo do testado.
 - [x] **"Última vez feita"** — `Recipe.last_made_at` (migração Alembic
       aditiva), marcado via `POST /recipes/{id}/mark-made` ao carregar em
       "Concluir" no Modo Cozinha (best-effort: falha em silêncio, nunca
@@ -167,8 +209,16 @@ concluída** quando todos estes estiverem verificados.
       `DESIGN.md` — "Hierarchy": um único hero number por métrica; a
       repartição fica como legenda pequena por baixo, só quando os dois
       tempos são conhecidos). Testado no browser (Playwright).
-- [ ] **Favoritos** — o design tem "Favoritos" na navegação desde o início mas
-      nunca foi especificado. Até haver contas, o favorito é do Workspace.
+- [x] **Favoritos** — `Recipe.is_favorite` (bool, Workspace inteiro, não por
+      utilizador — decisão já tomada aqui mesmo antes de haver contas).
+      `POST /recipes/{id}/favorite` (toggle), `GET /recipes?favorite=true`.
+      Coração no `RecipeCard` (Home) e no Detalhe; cor `accent-leaf` — **não**
+      `accent-orange`, que o `DESIGN.md` reserva exclusivamente a
+      tempo/Modo Cozinha ("The One Role Rule"). Chip "Favoritos" na Home,
+      combina com categoria/tag (AND) e com a pesquisa. Não implementado
+      como destino do bottom nav (esse item continua bloqueado — "Mais
+      destinos no bottom nav" abaixo). Testado no browser (Playwright):
+      favoritar no card, filtrar, desfavoritar no Detalhe.
 - [ ] **Dark mode** — variante escura dos tokens do `DESIGN.md`,
       `prefers-color-scheme` com override manual.
 - [ ] **PWA instalável** — manifest + service worker básico.

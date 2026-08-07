@@ -5,12 +5,14 @@ from sqlalchemy import (
     Boolean,
     DateTime,
     ForeignKey,
+    Index,
     Numeric,
     Table,
     Text,
     UniqueConstraint,
     Column,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -51,6 +53,17 @@ class Workspace(Base):
 
 class Recipe(Base):
     __tablename__ = "recipes"
+    # Criado via op.execute na migração f8210117be6a; registado aqui só
+    # para o autogenerate parar de o assinalar como "removido" em todas as
+    # migrações seguintes (já aconteceu duas vezes — 2fbf5b821d94 e
+    # 4d0d5fd85a2d tiveram de remover um op.drop_index espúrio à mão).
+    __table_args__ = (
+        Index(
+            "ix_recipes_title_tsv",
+            text("to_tsvector('portuguese', title)"),
+            postgresql_using="gin",
+        ),
+    )
 
     id: Mapped[uuid.UUID] = _uuid_pk()
     workspace_id: Mapped[uuid.UUID] = mapped_column(
@@ -79,6 +92,9 @@ class Recipe(Base):
     )
     # Marcado ao concluir o Modo Cozinha (PRD 5.1, alimenta a métrica M3).
     last_made_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Favorito do Workspace (agregado), não por utilizador — não há contas
+    # individuais antes da v1.2 (TODO.md).
+    is_favorite: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
 
     workspace: Mapped["Workspace"] = relationship(back_populates="recipes")
     ingredients: Mapped[list["Ingredient"]] = relationship(
@@ -89,6 +105,9 @@ class Recipe(Base):
     )
     categories: Mapped[list["Category"]] = relationship(secondary=recipe_categories, back_populates="recipes")
     tags: Mapped[list["Tag"]] = relationship(secondary=recipe_tags, back_populates="recipes")
+    cook_notes: Mapped[list["CookNote"]] = relationship(
+        back_populates="recipe", cascade="all, delete-orphan", order_by="CookNote.created_at.desc()"
+    )
 
 
 class Ingredient(Base):
@@ -114,6 +133,21 @@ class Step(Base):
     instruction: Mapped[str] = mapped_column(Text)
 
     recipe: Mapped["Recipe"] = relationship(back_populates="steps")
+
+
+class CookNote(Base):
+    """Nota rápida opcional ao concluir o Modo Cozinha (PRD 5.1) — histórico
+    com data, não um campo único sobrescrevível (esse já existe como
+    Recipe.notes, editável no formulário; conceito diferente)."""
+
+    __tablename__ = "cook_notes"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    recipe_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("recipes.id", ondelete="CASCADE"))
+    text: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    recipe: Mapped["Recipe"] = relationship(back_populates="cook_notes")
 
 
 class Category(Base):

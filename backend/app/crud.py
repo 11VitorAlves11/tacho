@@ -1,10 +1,23 @@
+import re
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app import models, schemas
+
+
+def _prefix_tsquery(q: str) -> str | None:
+    """Constrói um tsquery de prefixo por palavra (ex. "bacal fri" ->
+    "bacal:* & fri:*"), para a pesquisa funcionar enquanto se escreve — um
+    plainto_tsquery normal só casa palavras completas. `\\w+` isola só
+    caracteres de palavra do input do utilizador, para nunca passar
+    sintaxe de tsquery (`&`, `:`, aspas) para o Postgres."""
+    words = re.findall(r"\w+", q, re.UNICODE)
+    if not words:
+        return None
+    return " & ".join(f"{word}:*" for word in words)
 
 
 def _recipe_query(workspace_id: uuid.UUID):
@@ -26,14 +39,23 @@ def list_recipes(
     category_id: uuid.UUID | None = None,
     tag_id: uuid.UUID | None = None,
     q: str | None = None,
+    favorite_only: bool = False,
 ) -> list[models.Recipe]:
     query = _recipe_query(workspace_id)
     if category_id is not None:
         query = query.where(models.Recipe.categories.any(models.Category.id == category_id))
     if tag_id is not None:
         query = query.where(models.Recipe.tags.any(models.Tag.id == tag_id))
+    if favorite_only:
+        query = query.where(models.Recipe.is_favorite.is_(True))
     if q:
-        query = query.where(models.Recipe.title.ilike(f"%{q}%"))
+        tsquery = _prefix_tsquery(q)
+        if tsquery is not None:
+            query = query.where(
+                func.to_tsvector("portuguese", models.Recipe.title).op("@@")(
+                    func.to_tsquery("portuguese", tsquery)
+                )
+            )
     return list(db.scalars(query.order_by(models.Recipe.title)))
 
 
@@ -130,6 +152,16 @@ def set_recipe_image(
     if recipe is None:
         return None
     recipe.image_path = image_path
+    db.commit()
+    db.refresh(recipe)
+    return recipe
+
+
+def toggle_recipe_favorite(db: Session, workspace_id: uuid.UUID, recipe_id: uuid.UUID) -> models.Recipe | None:
+    recipe = get_recipe(db, workspace_id, recipe_id)
+    if recipe is None:
+        return None
+    recipe.is_favorite = not recipe.is_favorite
     db.commit()
     db.refresh(recipe)
     return recipe

@@ -33,6 +33,7 @@ export interface RecipeSummary {
   prep_minutes: number | null
   cook_minutes: number | null
   image_path: string | null
+  is_favorite: boolean
   categories: Category[]
   tags: Tag[]
 }
@@ -48,6 +49,7 @@ export interface Recipe {
   source_url: string | null
   notes: string | null
   image_path: string | null
+  is_favorite: boolean
   calories_kcal: number | null
   protein_g: number | null
   carbs_g: number | null

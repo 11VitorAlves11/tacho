@@ -1,9 +1,9 @@
 import { api } from './client'
 import type { Category, ImportStatus, Recipe, RecipeInput, RecipeSummary, Tag } from './types'
 
-export async function listRecipes(params?: { categoryId?: string; tagId?: string; q?: string }) {
+export async function listRecipes(params?: { categoryId?: string; tagId?: string; q?: string; favorite?: boolean }) {
   const { data } = await api.get<RecipeSummary[]>('/recipes', {
-    params: { category_id: params?.categoryId, tag_id: params?.tagId, q: params?.q },
+    params: { category_id: params?.categoryId, tag_id: params?.tagId, q: params?.q, favorite: params?.favorite },
   })
   return data
 }
@@ -34,6 +34,11 @@ export async function duplicateRecipe(id: string) {
 
 export async function markRecipeMade(id: string) {
   const { data } = await api.post<Recipe>(`/recipes/${id}/mark-made`)
+  return data
+}
+
+export async function toggleFavorite(id: string) {
+  const { data } = await api.post<Recipe>(`/recipes/${id}/favorite`)
   return data
 }
 
