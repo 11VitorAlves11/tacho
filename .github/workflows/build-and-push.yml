@@ -9,11 +9,25 @@ name: Build and push images
 #   `:latest` em produção; docker-compose.prod.yml fixa sempre uma versão
 #   concreta (mesmo padrão do Securo no homelab — atualizar de propósito,
 #   nunca por acidente num restart).
+# - Manual (workflow_dispatch, inputs ref+version): compila um commit/tag
+#   antigo à força, útil para publicar retroactivamente uma versão cujo
+#   commit é anterior à existência deste workflow (o push normal da tag
+#   não dispara nada nesse caso — o GitHub resolve o ficheiro do workflow
+#   a partir do próprio ref que fez o push, e esse ref antigo nunca chegou
+#   a ter este ficheiro).
 
 on:
   push:
     branches: [master]
     tags: ["v*.*.*"]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Git ref a compilar (tag, branch ou sha)"
+        required: true
+      version:
+        description: "Tag da imagem a publicar (ex. v1.0.0)"
+        required: true
 
 env:
   # GHCR exige nomes em minúsculas — github.repository ("11VitorAlves11/tacho_app")
@@ -30,6 +44,8 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.ref || github.ref }}
 
       - uses: docker/setup-buildx-action@v3
 
@@ -39,10 +55,14 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Calcular tags a partir do tipo de push
+      - name: Calcular tags a partir do tipo de evento
         id: tags
         run: |
-          if [ "${{ github.ref_type }}" = "tag" ]; then
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+            echo "web=${{ env.WEB_IMAGE }}:$VERSION" >> "$GITHUB_OUTPUT"
+            echo "celery=${{ env.CELERY_IMAGE }}:$VERSION" >> "$GITHUB_OUTPUT"
+          elif [ "${{ github.ref_type }}" = "tag" ]; then
             VERSION="${{ github.ref_name }}"
             echo "web=${{ env.WEB_IMAGE }}:$VERSION" >> "$GITHUB_OUTPUT"
             echo "celery=${{ env.CELERY_IMAGE }}:$VERSION" >> "$GITHUB_OUTPUT"
