@@ -26,6 +26,12 @@ export interface Step {
   instruction: string
 }
 
+export interface CookNote {
+  id: string
+  text: string
+  created_at: string
+}
+
 export interface RecipeSummary {
   id: string
   title: string
@@ -61,6 +67,7 @@ export interface Recipe {
   steps: Step[]
   categories: Category[]
   tags: Tag[]
+  cook_notes: CookNote[]
 }
 
 export interface RecipeInput {

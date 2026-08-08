@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { getRecipe, markRecipeMade } from '../api/recipes'
+import { addCookNote, getRecipe, markRecipeMade } from '../api/recipes'
 import type { Recipe } from '../api/types'
 import { ChevronLeftIcon } from '../components/icons'
 
@@ -28,6 +28,14 @@ export function CookMode() {
         await markRecipeMade(id)
       } catch {
         // segue na mesma para o Detalhe
+      }
+      const note = window.prompt('Alguma nota para a próxima vez? (opcional)')
+      if (note && note.trim()) {
+        try {
+          await addCookNote(id, note.trim())
+        } catch {
+          // uma nota falhada nunca deve impedir sair do Modo Cozinha
+        }
       }
     }
     navigate(`/receitas/${id}`)

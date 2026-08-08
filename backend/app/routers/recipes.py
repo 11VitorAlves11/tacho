@@ -139,6 +139,19 @@ def mark_recipe_made(
     return recipe
 
 
+@router.post("/{recipe_id}/notes", response_model=schemas.RecipeOut)
+def add_cook_note(
+    recipe_id: uuid.UUID,
+    payload: schemas.CookNoteIn,
+    db: Session = Depends(get_db),
+    workspace_id: uuid.UUID = Depends(get_workspace_id),
+):
+    recipe = crud.add_cook_note(db, workspace_id, recipe_id, payload.text)
+    if recipe is None:
+        raise HTTPException(status_code=404, detail="Receita não encontrada")
+    return recipe
+
+
 @router.delete("/{recipe_id}", status_code=204)
 def delete_recipe(
     recipe_id: uuid.UUID,

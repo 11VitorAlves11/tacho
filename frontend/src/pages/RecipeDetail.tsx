@@ -271,6 +271,20 @@ export function RecipeDetail() {
           </section>
         )}
 
+        {recipe.cook_notes.length > 0 && (
+          <section className="mt-8">
+            <h2 className="text-lg font-semibold text-text-primary">Notas</h2>
+            <ul className="mt-3 space-y-3">
+              {recipe.cook_notes.map((note) => (
+                <li key={note.id} className="rounded-2xl bg-card-white p-4 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)]">
+                  <p className="text-sm text-text-primary">{note.text}</p>
+                  <p className="mt-1 text-xs text-text-secondary">{formatLastMade(note.created_at)}</p>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
         {recipe.source_url && (
           <p className="mt-8 text-xs text-text-secondary">
             Fonte:{' '}

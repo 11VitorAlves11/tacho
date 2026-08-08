@@ -85,6 +85,18 @@ class RecipeSummary(BaseModel):
     tags: list[TagOut]
 
 
+class CookNoteOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    text: str
+    created_at: datetime
+
+
+class CookNoteIn(BaseModel):
+    text: str
+
+
 class ImportRequest(BaseModel):
     url: HttpUrl
 
@@ -120,3 +132,4 @@ class RecipeOut(BaseModel):
     steps: list[StepOut]
     categories: list[CategoryOut]
     tags: list[TagOut]
+    cook_notes: list[CookNoteOut]

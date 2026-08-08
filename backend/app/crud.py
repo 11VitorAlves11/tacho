@@ -177,6 +177,16 @@ def mark_recipe_made(db: Session, workspace_id: uuid.UUID, recipe_id: uuid.UUID)
     return recipe
 
 
+def add_cook_note(db: Session, workspace_id: uuid.UUID, recipe_id: uuid.UUID, text: str) -> models.Recipe | None:
+    recipe = get_recipe(db, workspace_id, recipe_id)
+    if recipe is None:
+        return None
+    db.add(models.CookNote(recipe_id=recipe.id, text=text))
+    db.commit()
+    db.refresh(recipe)
+    return recipe
+
+
 def duplicate_recipe(
     db: Session, workspace_id: uuid.UUID, recipe_id: uuid.UUID, image_path: str | None
 ) -> models.Recipe | None:

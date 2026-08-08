@@ -42,6 +42,11 @@ export async function toggleFavorite(id: string) {
   return data
 }
 
+export async function addCookNote(id: string, text: string) {
+  const { data } = await api.post<Recipe>(`/recipes/${id}/notes`, { text })
+  return data
+}
+
 export async function uploadRecipeImage(id: string, file: File) {
   const formData = new FormData()
   formData.append('file', file)

@@ -154,42 +154,22 @@ concluída** quando todos estes estiverem verificados.
       superior direito). Persistido em `localStorage` — uma vez ligado, não
       volta ao tamanho normal a cada receita nova. Testado no browser
       (Playwright), sem erros de consola.
-- [ ] **Notas pós-confeção** — ao concluir o Modo Cozinha, nota rápida opcional
+- [x] **Notas pós-confeção** — ao concluir o Modo Cozinha, nota rápida opcional
       ("menos sal, +10 min de forno"), guardada com data e visível no Detalhe.
-      **A meio, interrompido por falta de tokens em 2026-08-07.** Feito e
-      testado (`alembic upgrade head` já corrido, sem drift):
       `models.py::CookNote` (tabela `cook_notes`, FK `recipe_id` cascade,
       `text`, `created_at`), migração `4d0d5fd85a2d`, relação
       `Recipe.cook_notes` (ordenada por `created_at.desc()` — histórico,
       mais recente primeiro; conceito diferente de `Recipe.notes`, que é um
-      campo único editável no formulário). **Por fazer, nesta ordem:**
-      1. `schemas.py` — `CookNoteOut` (id, text, created_at,
-         `from_attributes=True`) e acrescentar `cook_notes:
-         list[CookNoteOut]` a `RecipeOut` (não a `RecipeSummary`).
-      2. `crud.py` — `add_cook_note(db, workspace_id, recipe_id, text) ->
-         Recipe | None` (padrão de `mark_recipe_made`: `get_recipe` primeiro,
-         404 se `None`, `db.add(models.CookNote(recipe_id=recipe.id,
-         text=text))`, commit, refresh do `recipe`).
-      3. `routers/recipes.py` — `POST /recipes/{id}/notes` com payload
-         `{text: str}` (novo `schemas.CookNoteIn` ou inline), devolve
-         `RecipeOut`. Sem endpoint de apagar/editar (fora do âmbito
-         especificado).
-      4. Frontend `types.ts` — `CookNote {id, text, created_at}`,
-         `Recipe.cook_notes: CookNote[]`.
-      5. Frontend `api/recipes.ts` — `addCookNote(id, text)`.
-      6. `CookMode.tsx::handleFinish` — depois de `markRecipeMade`,
-         `window.prompt('Alguma nota para a próxima vez? (opcional)')`
-         (mesmo padrão de `window.confirm` já usado em `EditRecipe.tsx`
-         para apagar); se o utilizador escrever algo (trim não vazio),
-         `addCookNote(id, texto)`. Best-effort, `try/catch` a engolir erro
-         — uma nota falhada nunca deve impedir sair do Modo Cozinha (mesmo
-         raciocínio do `markRecipeMade`).
-      7. `RecipeDetail.tsx` — nova secção "Notas" (só se `cook_notes.length
-         > 0`), lista com data (`formatLastMade` já existe e serve) + texto,
-         mais recente primeiro (a relação já vem ordenada do backend).
-      8. Testar no browser (Playwright): concluir o Modo Cozinha, escrever
-         uma nota, confirmar que aparece no Detalhe.
-      9. Atualizar este item do TODO.md para `[x]` com o resumo do testado.
+      campo único editável no formulário). `schemas.CookNoteOut`/`CookNoteIn`
+      e `RecipeOut.cook_notes` (não `RecipeSummary`); `crud.add_cook_note`
+      (padrão de `mark_recipe_made`); `POST /recipes/{id}/notes`. Frontend:
+      `CookMode.tsx::handleFinish` pede `window.prompt` opcional depois de
+      `markRecipeMade` (mesmo padrão best-effort, nunca impede sair do Modo
+      Cozinha); secção "Notas" nova em `RecipeDetail.tsx`, só visível quando
+      há notas. Testado no browser (Playwright): receita "Bacalhau à Brás",
+      Modo Cozinha até ao fim, nota "Menos sal da próxima vez, ficou
+      salgado." aceite no prompt, aparece no Detalhe com data, sem erros de
+      consola.
 - [x] **"Última vez feita"** — `Recipe.last_made_at` (migração Alembic
       aditiva), marcado via `POST /recipes/{id}/mark-made` ao carregar em
       "Concluir" no Modo Cozinha (best-effort: falha em silêncio, nunca
