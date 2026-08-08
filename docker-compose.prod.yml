@@ -1,6 +1,12 @@
-# Compose de produção — usa a imagem única (Dockerfile na raiz, backend a
-# servir também o frontend compilado). Para desenvolvimento local usa-se
-# docker-compose.yml (vite dev + hot reload), não este ficheiro.
+# Compose de produção — imagens pré-compiladas do GHCR (publicadas por
+# .github/workflows/build-and-push.yml a cada push para master), não build
+# local. Para desenvolvimento local usa-se docker-compose.yml (vite dev +
+# hot reload, build local), não este ficheiro.
+#
+# Imagens privadas (o Dockerfile faz COPY . ., a imagem carrega o
+# código-fonte tal como o repo) — o host que faz `pull` precisa de sessão
+# no GHCR (`docker login ghcr.io`, PAT com read:packages). Ver
+# homelab/inventory.md, CT 202, para o token e o fluxo de deploy completo.
 #
 # Sem chave `name:` de topo de propósito — incompatível com o
 # docker-compose 1.29.2 do homelab (ver homelab/CLAUDE.md, "Docker",
@@ -36,9 +42,7 @@ services:
       retries: 10
 
   web:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: ghcr.io/11vitoralves11/tacho_app-web:latest
     restart: unless-stopped
     env_file: .env
     environment:
@@ -55,7 +59,7 @@ services:
         condition: service_healthy
 
   celery-worker:
-    build: ./backend
+    image: ghcr.io/11vitoralves11/tacho_app-celery-worker:latest
     restart: unless-stopped
     env_file: .env
     environment:
