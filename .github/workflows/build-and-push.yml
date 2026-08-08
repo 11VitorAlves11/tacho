@@ -1,13 +1,19 @@
 name: Build and push images
 
 # Publica as duas imagens de produção no GHCR (privado — o Dockerfile faz
-# COPY . ., a imagem carrega o código-fonte tal como o repo) a cada push
-# para master. O deploy no homelab passa a ser só `docker compose pull` +
-# `up -d` no CT 202 (ver homelab/inventory.md, CT 202).
+# COPY . ., a imagem carrega o código-fonte tal como o repo).
+#
+# - Push para master: tags `:latest` + `:<sha>`.
+# - Push de uma tag `vX.Y.Z`: tag `:vX.Y.Z` (build a partir do código nessa
+#   tag, não de master — permite publicar versões retroativas). Nunca usar
+#   `:latest` em produção; docker-compose.prod.yml fixa sempre uma versão
+#   concreta (mesmo padrão do Securo no homelab — atualizar de propósito,
+#   nunca por acidente num restart).
 
 on:
   push:
     branches: [master]
+    tags: ["v*.*.*"]
 
 env:
   # GHCR exige nomes em minúsculas — github.repository ("11VitorAlves11/tacho_app")
@@ -33,15 +39,25 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Calcular tags a partir do tipo de push
+        id: tags
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            VERSION="${{ github.ref_name }}"
+            echo "web=${{ env.WEB_IMAGE }}:$VERSION" >> "$GITHUB_OUTPUT"
+            echo "celery=${{ env.CELERY_IMAGE }}:$VERSION" >> "$GITHUB_OUTPUT"
+          else
+            echo "web=${{ env.WEB_IMAGE }}:latest,${{ env.WEB_IMAGE }}:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+            echo "celery=${{ env.CELERY_IMAGE }}:latest,${{ env.CELERY_IMAGE }}:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Build and push web (imagem única — backend serve o frontend)
         uses: docker/build-push-action@v6
         with:
           context: .
           file: Dockerfile
           push: true
-          tags: |
-            ${{ env.WEB_IMAGE }}:latest
-            ${{ env.WEB_IMAGE }}:${{ github.sha }}
+          tags: ${{ steps.tags.outputs.web }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -51,8 +67,6 @@ jobs:
           context: ./backend
           file: ./backend/Dockerfile
           push: true
-          tags: |
-            ${{ env.CELERY_IMAGE }}:latest
-            ${{ env.CELERY_IMAGE }}:${{ github.sha }}
+          tags: ${{ steps.tags.outputs.celery }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

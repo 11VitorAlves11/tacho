@@ -1,7 +1,12 @@
 # Compose de produção — imagens pré-compiladas do GHCR (publicadas por
-# .github/workflows/build-and-push.yml a cada push para master), não build
-# local. Para desenvolvimento local usa-se docker-compose.yml (vite dev +
-# hot reload, build local), não este ficheiro.
+# .github/workflows/build-and-push.yml), não build local. Para
+# desenvolvimento local usa-se docker-compose.yml (vite dev + hot reload,
+# build local), não este ficheiro.
+#
+# Imagens fixadas numa versão concreta (vX.Y.Z), nunca `:latest` — para
+# um deploy ser sempre deliberado (`git tag vX.Y.Z && git push --tags`,
+# esperar o workflow publicar, só depois mudar a tag aqui), nunca por
+# acidente num restart. Mesmo padrão do Securo no homelab.
 #
 # Imagens privadas (o Dockerfile faz COPY . ., a imagem carrega o
 # código-fonte tal como o repo) — o host que faz `pull` precisa de sessão
@@ -42,7 +47,7 @@ services:
       retries: 10
 
   web:
-    image: ghcr.io/11vitoralves11/tacho_app-web:latest
+    image: ghcr.io/11vitoralves11/tacho_app-web:v1.1.2
     restart: unless-stopped
     env_file: .env
     environment:
@@ -59,7 +64,7 @@ services:
         condition: service_healthy
 
   celery-worker:
-    image: ghcr.io/11vitoralves11/tacho_app-celery-worker:latest
+    image: ghcr.io/11vitoralves11/tacho_app-celery-worker:v1.1.2
     restart: unless-stopped
     env_file: .env
     environment:
