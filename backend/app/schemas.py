@@ -20,6 +20,7 @@ class IngredientOut(IngredientIn):
 
 class StepIn(BaseModel):
     instruction: str
+    duration_minutes: int | None = None
 
 
 class StepOut(StepIn):

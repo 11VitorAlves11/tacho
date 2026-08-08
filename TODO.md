@@ -149,7 +149,16 @@ concluída** quando todos estes estiverem verificados.
       (sem chave, a app funciona na mesma).
       ⚠️ Validar cedo com fotos reais (livros PT, letra manuscrita) — risco de
       o LLM "corrigir" quantidades silenciosamente.
-- [ ] **Timers por passo** no Modo Cozinha.
+- [x] **Timers por passo** no Modo Cozinha — `Step.duration_minutes` opcional
+      (migração `ab0f3fc87c29`, aditiva), campo de minutos no editor manual
+      (`RecipeForm.tsx`, ao lado de cada passo). Quando o passo atual tem
+      duração, `CookMode.tsx` mostra "Iniciar temporizador" com o
+      `ClockIcon` em laranja (o papel de tempo já reservado pelo
+      `DESIGN.md`); a contrair mostra `mm:ss`, e ao chegar a zero passa a
+      pílula laranja cheia "Tempo!" (`animate-pulse`) com opção de repor;
+      vibração best-effort (`navigator.vibrate`). Estado reinicia por passo
+      via `key={step.id}`. Testado no browser (Playwright), incluindo a
+      contagem completa até "Tempo!" (não só a meio), sem erros de consola.
 - [x] **Tamanho de letra ajustável** no Modo Cozinha (toggle A/A⁺, canto
       superior direito). Persistido em `localStorage` — uma vez ligado, não
       volta ao tamanho normal a cada receita nova. Testado no browser

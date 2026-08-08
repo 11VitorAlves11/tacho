@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { addCookNote, getRecipe, markRecipeMade } from '../api/recipes'
 import type { Recipe } from '../api/types'
-import { ChevronLeftIcon } from '../components/icons'
+import { ChevronLeftIcon, ClockIcon } from '../components/icons'
 
 const LARGE_TEXT_KEY = 'tacho:cook-mode-large-text'
 
@@ -128,13 +128,16 @@ export function CookMode() {
           {stepIndex + 1}
         </span>
         {step ? (
-          <p
-            className={`relative max-w-2xl text-center font-semibold leading-snug ${
-              largeText ? 'text-4xl sm:text-6xl' : 'text-3xl sm:text-5xl'
-            }`}
-          >
-            {step.instruction}
-          </p>
+          <div className="relative flex flex-col items-center gap-4">
+            <p
+              className={`max-w-2xl text-center font-semibold leading-snug ${
+                largeText ? 'text-4xl sm:text-6xl' : 'text-3xl sm:text-5xl'
+              }`}
+            >
+              {step.instruction}
+            </p>
+            {step.duration_minutes != null && <StepTimer key={step.id} minutes={step.duration_minutes} />}
+          </div>
         ) : (
           <p className="relative text-lg text-card-white/80">Esta receita ainda não tem passos registados.</p>
         )}
@@ -167,6 +170,65 @@ export function CookMode() {
           </button>
         )}
       </footer>
+    </div>
+  )
+}
+
+// `key={step.id}` no chamador garante que o estado reinicia a cada passo —
+// mais simples do que sincronizar manualmente via useEffect.
+function StepTimer({ minutes }: { minutes: number }) {
+  const [remaining, setRemaining] = useState<number | null>(null)
+  const [running, setRunning] = useState(false)
+
+  useEffect(() => {
+    if (!running || remaining === null) return
+    if (remaining <= 0) {
+      setRunning(false)
+      navigator.vibrate?.(200)
+      return
+    }
+    const timeout = setTimeout(() => setRemaining((r) => (r ?? 0) - 1), 1000)
+    return () => clearTimeout(timeout)
+  }, [running, remaining])
+
+  if (remaining === null) {
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          setRemaining(minutes * 60)
+          setRunning(true)
+        }}
+        className="flex items-center gap-2 rounded-full bg-card-white/10 px-4 py-2 text-sm font-medium text-card-white"
+      >
+        <ClockIcon className="size-4 text-accent-orange" />
+        Iniciar temporizador · {minutes} min
+      </button>
+    )
+  }
+
+  const done = remaining === 0
+  const mm = Math.floor(remaining / 60)
+  const ss = remaining % 60
+
+  return (
+    <div
+      className={`flex items-center gap-3 rounded-full px-4 py-2 ${
+        done ? 'animate-pulse bg-accent-orange text-text-primary' : 'bg-card-white/10 text-card-white'
+      }`}
+    >
+      <ClockIcon className={`size-4 ${done ? 'text-text-primary' : 'text-accent-orange'}`} />
+      <span className="font-semibold tabular-nums">{done ? 'Tempo!' : `${mm}:${ss.toString().padStart(2, '0')}`}</span>
+      <button
+        type="button"
+        onClick={() => {
+          setRemaining(null)
+          setRunning(false)
+        }}
+        className="text-xs underline"
+      >
+        {done ? 'Repor' : 'Parar'}
+      </button>
     </div>
   )
 }

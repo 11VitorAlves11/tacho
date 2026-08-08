@@ -100,7 +100,10 @@ def create_recipe(db: Session, workspace_id: uuid.UUID, payload: schemas.RecipeC
             )
             for i, ing in enumerate(payload.ingredients)
         ],
-        steps=[models.Step(position=i, instruction=step.instruction) for i, step in enumerate(payload.steps)],
+        steps=[
+            models.Step(position=i, instruction=step.instruction, duration_minutes=step.duration_minutes)
+            for i, step in enumerate(payload.steps)
+        ],
         categories=_resolve_categories(db, workspace_id, payload.category_ids),
         tags=_resolve_tags(db, workspace_id, payload.tag_ids),
     )
@@ -135,7 +138,8 @@ def update_recipe(
         for i, ing in enumerate(payload.ingredients)
     ]
     recipe.steps = [
-        models.Step(position=i, instruction=step.instruction) for i, step in enumerate(payload.steps)
+        models.Step(position=i, instruction=step.instruction, duration_minutes=step.duration_minutes)
+        for i, step in enumerate(payload.steps)
     ]
     recipe.categories = _resolve_categories(db, workspace_id, payload.category_ids)
     recipe.tags = _resolve_tags(db, workspace_id, payload.tag_ids)
@@ -218,7 +222,10 @@ def duplicate_recipe(
             )
             for ing in original.ingredients
         ],
-        steps=[models.Step(position=step.position, instruction=step.instruction) for step in original.steps],
+        steps=[
+            models.Step(position=step.position, instruction=step.instruction, duration_minutes=step.duration_minutes)
+            for step in original.steps
+        ],
         categories=list(original.categories),
         tags=list(original.tags),
     )

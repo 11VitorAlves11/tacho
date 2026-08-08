@@ -12,6 +12,7 @@ interface IngredientRow {
 
 interface StepRow {
   instruction: string
+  durationMinutes: string
 }
 
 function toIngredientRows(recipe?: Recipe): IngredientRow[] {
@@ -25,8 +26,8 @@ function toIngredientRows(recipe?: Recipe): IngredientRow[] {
 }
 
 function toStepRows(recipe?: Recipe): StepRow[] {
-  if (!recipe || recipe.steps.length === 0) return [{ instruction: '' }]
-  return recipe.steps.map((s) => ({ instruction: s.instruction }))
+  if (!recipe || recipe.steps.length === 0) return [{ instruction: '', durationMinutes: '' }]
+  return recipe.steps.map((s) => ({ instruction: s.instruction, durationMinutes: s.duration_minutes?.toString() ?? '' }))
 }
 
 export function RecipeForm({
@@ -88,8 +89,8 @@ export function RecipeForm({
     setIngredients((rows) => (rows.length > 1 ? rows.filter((_, i) => i !== index) : rows))
   }
 
-  function updateStep(index: number, instruction: string) {
-    setSteps((rows) => rows.map((row, i) => (i === index ? { instruction } : row)))
+  function updateStep(index: number, patch: Partial<StepRow>) {
+    setSteps((rows) => rows.map((row, i) => (i === index ? { ...row, ...patch } : row)))
   }
 
   function removeStep(index: number) {
@@ -160,7 +161,10 @@ export function RecipeForm({
             })),
           steps: steps
             .filter((row) => row.instruction.trim())
-            .map((row) => ({ instruction: row.instruction.trim() })),
+            .map((row) => ({
+              instruction: row.instruction.trim(),
+              duration_minutes: row.durationMinutes ? Number(row.durationMinutes) : null,
+            })),
           category_ids: categoryIds,
           tag_ids: tagIds,
         },
@@ -380,10 +384,19 @@ export function RecipeForm({
               </span>
               <textarea
                 value={row.instruction}
-                onChange={(e) => updateStep(i, e.target.value)}
+                onChange={(e) => updateStep(i, { instruction: e.target.value })}
                 placeholder={`Passo ${i + 1}`}
                 rows={1}
                 className={fieldClass}
+              />
+              <input
+                value={row.durationMinutes}
+                onChange={(e) => updateStep(i, { durationMinutes: e.target.value })}
+                type="number"
+                min={0}
+                placeholder="min"
+                aria-label={`Duração do passo ${i + 1} em minutos`}
+                className={`${fieldClass} w-16 shrink-0 text-center`}
               />
               <button
                 type="button"
@@ -398,7 +411,7 @@ export function RecipeForm({
         </div>
         <button
           type="button"
-          onClick={() => setSteps((rows) => [...rows, { instruction: '' }])}
+          onClick={() => setSteps((rows) => [...rows, { instruction: '', durationMinutes: '' }])}
           className="mt-3 flex items-center gap-1 text-sm font-medium text-primary-forest"
         >
           <PlusIcon className="size-4" />

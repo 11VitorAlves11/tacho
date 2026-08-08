@@ -131,6 +131,7 @@ class Step(Base):
     recipe_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("recipes.id", ondelete="CASCADE"))
     position: Mapped[int]
     instruction: Mapped[str] = mapped_column(Text)
+    duration_minutes: Mapped[int | None]
 
     recipe: Mapped["Recipe"] = relationship(back_populates="steps")
 

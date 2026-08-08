@@ -24,6 +24,7 @@ export interface Step {
   id: string
   position: number
   instruction: string
+  duration_minutes: number | null
 }
 
 export interface CookNote {
@@ -83,7 +84,7 @@ export interface RecipeInput {
   carbs_g?: number | null
   fat_g?: number | null
   ingredients: { name: string; quantity?: number | null; unit?: string | null; is_header?: boolean }[]
-  steps: { instruction: string }[]
+  steps: { instruction: string; duration_minutes?: number | null }[]
   category_ids: string[]
   tag_ids: string[]
 }
