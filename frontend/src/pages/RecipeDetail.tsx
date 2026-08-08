@@ -69,7 +69,7 @@ export function RecipeDetail() {
     return (
       <PageShell>
         <p className="text-text-secondary">Receita não encontrada.</p>
-        <Link to="/" className="mt-2 inline-block font-medium text-primary-forest">
+        <Link to="/" className="mt-2 inline-block font-medium text-forest-text">
           Voltar às receitas
         </Link>
       </PageShell>
@@ -105,7 +105,7 @@ export function RecipeDetail() {
               onClick={handleToggleFavorite}
               aria-pressed={recipe.is_favorite}
               aria-label={recipe.is_favorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
-              className={`flex items-center gap-1.5 rounded-full bg-card-white px-3 py-1.5 text-sm font-medium shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)] ${
+              className={`flex items-center gap-1.5 rounded-full bg-surface px-3 py-1.5 text-sm font-medium shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)] ${
                 recipe.is_favorite ? 'text-accent-leaf' : 'text-text-secondary hover:text-accent-leaf'
               }`}
             >
@@ -116,14 +116,14 @@ export function RecipeDetail() {
               type="button"
               onClick={handleDuplicate}
               disabled={duplicating}
-              className="flex items-center gap-1.5 rounded-full bg-card-white px-3 py-1.5 text-sm font-medium text-text-secondary shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)] hover:text-primary-forest disabled:opacity-50"
+              className="flex items-center gap-1.5 rounded-full bg-surface px-3 py-1.5 text-sm font-medium text-text-secondary shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)] hover:text-forest-text disabled:opacity-50"
             >
               <CopyIcon className="size-4" />
               <span className="hidden sm:inline">Duplicar</span>
             </button>
             <Link
               to={`/receitas/${recipe.id}/editar`}
-              className="flex items-center gap-1.5 rounded-full bg-card-white px-3 py-1.5 text-sm font-medium text-text-secondary shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)] hover:text-primary-forest"
+              className="flex items-center gap-1.5 rounded-full bg-surface px-3 py-1.5 text-sm font-medium text-text-secondary shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)] hover:text-forest-text"
             >
               <PencilIcon className="size-4" />
               <span className="hidden sm:inline">Editar</span>
@@ -132,13 +132,13 @@ export function RecipeDetail() {
         </div>
         {recipe.description && <p className="mt-2 text-text-secondary">{recipe.description}</p>}
 
-        <div className="mt-5 flex gap-6 rounded-2xl bg-card-white p-5 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)]">
+        <div className="mt-5 flex gap-6 rounded-2xl bg-surface p-5 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)]">
           {totalMinutes > 0 && (
             <HeroStat icon={<ClockIcon className="size-5" />} value={totalMinutes} label="min" tone="orange" />
           )}
           {recipe.servings != null && desiredServings != null && (
             <div className="flex items-center gap-2">
-              <span className="text-primary-forest">
+              <span className="text-forest-text">
                 <ServingsIcon className="size-5" />
               </span>
               <div>
@@ -146,7 +146,7 @@ export function RecipeDetail() {
                   <button
                     type="button"
                     onClick={() => setDesiredServings((s) => Math.max(1, (s ?? 1) - 1))}
-                    className="flex size-6 shrink-0 items-center justify-center rounded-full bg-bg-sage text-primary-forest"
+                    className="flex size-6 shrink-0 items-center justify-center rounded-full bg-bg-sage text-forest-text"
                     aria-label="Menos uma porção"
                   >
                     <MinusIcon className="size-3.5" />
@@ -157,7 +157,7 @@ export function RecipeDetail() {
                   <button
                     type="button"
                     onClick={() => setDesiredServings((s) => (s ?? 1) + 1)}
-                    className="flex size-6 shrink-0 items-center justify-center rounded-full bg-bg-sage text-primary-forest"
+                    className="flex size-6 shrink-0 items-center justify-center rounded-full bg-bg-sage text-forest-text"
                     aria-label="Mais uma porção"
                   >
                     <PlusIcon className="size-3.5" />
@@ -190,7 +190,7 @@ export function RecipeDetail() {
         {(recipe.categories.length > 0 || recipe.tags.length > 0) && (
           <div className="mt-4 flex flex-wrap gap-1.5">
             {recipe.categories.map((c) => (
-              <span key={c.id} className="rounded-full bg-primary-forest/10 px-2.5 py-0.5 text-xs font-medium text-primary-forest">
+              <span key={c.id} className="rounded-full bg-primary-forest/10 px-2.5 py-0.5 text-xs font-medium text-forest-text">
                 {c.name}
               </span>
             ))}
@@ -246,7 +246,7 @@ export function RecipeDetail() {
             <ol className="mt-3 space-y-4">
               {recipe.steps.map((step, i) => (
                 <li key={step.id} className="flex gap-3 text-sm">
-                  <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-bg-sage text-xs font-semibold text-primary-forest">
+                  <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-bg-sage text-xs font-semibold text-forest-text">
                     {i + 1}
                   </span>
                   <span className="text-text-primary">{step.instruction}</span>
@@ -260,7 +260,7 @@ export function RecipeDetail() {
         </div>
 
         {(recipe.protein_g != null || recipe.carbs_g != null || recipe.fat_g != null) && (
-          <section className="mt-8 rounded-2xl bg-card-white p-5 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)]">
+          <section className="mt-8 rounded-2xl bg-surface p-5 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)]">
             <h2 className="text-lg font-semibold text-text-primary">Informação nutricional</h2>
             <p className="mt-1 text-xs text-text-secondary">Por porção, entrada manual.</p>
             <div className="mt-3 grid grid-cols-3 gap-3 text-center">
@@ -276,7 +276,7 @@ export function RecipeDetail() {
             <h2 className="text-lg font-semibold text-text-primary">Notas</h2>
             <ul className="mt-3 space-y-3">
               {recipe.cook_notes.map((note) => (
-                <li key={note.id} className="rounded-2xl bg-card-white p-4 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)]">
+                <li key={note.id} className="rounded-2xl bg-surface p-4 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)]">
                   <p className="text-sm text-text-primary">{note.text}</p>
                   <p className="mt-1 text-xs text-text-secondary">{formatLastMade(note.created_at)}</p>
                 </li>
@@ -318,7 +318,7 @@ function HeroStat({
   label: string
   tone: 'orange' | 'forest'
 }) {
-  const iconClass = tone === 'orange' ? 'text-accent-orange' : 'text-primary-forest'
+  const iconClass = tone === 'orange' ? 'text-accent-orange' : 'text-forest-text'
   return (
     <div className="flex items-center gap-2">
       <span className={iconClass}>{icon}</span>

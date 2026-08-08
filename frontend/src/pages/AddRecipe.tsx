@@ -59,7 +59,7 @@ export function AddRecipe() {
     <PageShell>
       <h1 className="text-2xl font-bold text-text-primary">Adicionar receita</h1>
 
-      <div className="mt-4 inline-flex rounded-full bg-card-white p-1 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)]">
+      <div className="mt-4 inline-flex rounded-full bg-surface p-1 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)]">
         <TabButton active={tab === 'link'} onClick={() => setTab('link')}>
           Por link
         </TabButton>
@@ -76,7 +76,7 @@ export function AddRecipe() {
 
           <form
             onSubmit={handleImport}
-            className="mt-6 rounded-2xl bg-card-white p-5 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)]"
+            className="mt-6 rounded-2xl bg-surface p-5 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)]"
           >
             <label className="flex items-center gap-2 rounded-full border border-black/10 bg-bg-sage px-4 py-3 ring-2 ring-transparent transition-shadow focus-within:border-accent-leaf focus-within:ring-accent-leaf/30">
               <LinkIcon className="size-4 shrink-0 text-text-secondary" />

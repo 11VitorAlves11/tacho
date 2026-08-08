@@ -20,6 +20,39 @@
   --color-accent-orange: #f2994a;
   --color-text-primary: #1c2b1f;
   --color-text-secondary: #5c6b5e;
+
+  /* Tokens adaptáveis ao tema (dark mode) — ver bloco mais abaixo.
+     --color-card-white NÃO entra aqui de propósito: é usado tanto como
+     fundo de card como texto/overlay branco fixo sobre o hero e o Modo
+     Cozinha (que nunca mudam de cor), por isso fica sempre #FFFFFF.
+     --color-surface é o equivalente que muda com o tema, só para cards. */
+  --color-surface: #ffffff;
+  --color-forest-text: #2d5f3f;
+}
+
+/* Dark mode — variante escura dos tokens neutros do DESIGN.md, nunca das
+   cores de marca usadas como fundo (primary-forest, accent-leaf,
+   accent-orange, o gradiente do hero) — essas mantêm-se, só o contexto à
+   volta escurece. --color-forest-text é a exceção: verde-floresta como
+   TEXTO sobre uma superfície escura falha o contraste WCAG (~2.1:1), por
+   isso ganha uma variante mais clara só para esse uso; accent-leaf não
+   precisa (já passa, ~5.3:1, mantém-se igual nos dois temas). */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-bg-sage: #141f17;
+    --color-surface: #1e2a21;
+    --color-text-primary: #eaf0e7;
+    --color-text-secondary: #9aaa9c;
+    --color-forest-text: #5fa97c;
+  }
+}
+
+:root[data-theme="dark"] {
+  --color-bg-sage: #141f17;
+  --color-surface: #1e2a21;
+  --color-text-primary: #eaf0e7;
+  --color-text-secondary: #9aaa9c;
+  --color-forest-text: #5fa97c;
 }
 
 body {

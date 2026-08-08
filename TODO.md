@@ -208,8 +208,22 @@ concluída** quando todos estes estiverem verificados.
       como destino do bottom nav (esse item continua bloqueado — "Mais
       destinos no bottom nav" abaixo). Testado no browser (Playwright):
       favoritar no card, filtrar, desfavoritar no Detalhe.
-- [ ] **Dark mode** — variante escura dos tokens do `DESIGN.md`,
-      `prefers-color-scheme` com override manual.
+- [x] **Dark mode** — variante escura dos tokens neutros do `DESIGN.md`
+      (nova secção "Dark Mode" nesse ficheiro tem o detalhe completo),
+      `prefers-color-scheme` com override manual persistido em
+      `localStorage` (seletor Sistema/Claro/Escuro no menu de utilizador,
+      `theme.ts`). Cores de marca como fundo (forest/leaf/orange, gradiente
+      do hero) não mudam; só `bg-sage`, o novo `surface` (fundo de card,
+      distinto de `card-white` que fica sempre branco) e `text-primary`/
+      `text-secondary` invertem. Verde-floresta como texto ganhou uma
+      variante clara nova (`forest-text`, `#5FA97C`) porque a original falha
+      o contraste WCAG sobre superfície escura (~2.1:1, medido); leaf não
+      precisou (já passa, ~5.3:1). Modo Cozinha fica pixel-idêntico nos dois
+      temas (tokens fixados localmente, protege o texto escuro obrigatório
+      sobre os CTAs laranja). Testado no browser (Playwright): claro,
+      escuro por preferência do sistema, e toggle manual nos dois sentidos
+      (incluindo forçar claro com o sistema em escuro) — Home, Detalhe,
+      Adicionar receita (manual) e Modo Cozinha, sem erros de consola.
 - [x] **PWA instalável** — `manifest.webmanifest` (nome, cores, ícone a partir
       do `favicon.svg` existente) e `sw.js` básico registado em `main.tsx`
       (best-effort, sem suporte a app funciona igual). O service worker só

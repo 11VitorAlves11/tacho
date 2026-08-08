@@ -93,6 +93,60 @@ Paleta de dois verdes e um único acento quente, sobre um fundo neutro muito cla
 ### Named Rules
 **The One Voice Rule.** Verde-floresta é a única cor de ação/CTA em todo o sistema. Verde-folha organiza (tags, foco), nunca convida a agir.
 
+## Dark Mode
+
+Variante escura dos tokens **neutros** apenas — as cores de marca usadas como
+fundo (verde-floresta, verde-folha, laranja, o gradiente do hero) nunca
+mudam com o tema, só o contexto à volta escurece. Ativa por
+`prefers-color-scheme: dark`, com override manual persistido
+(`localStorage`, seletor no menu de utilizador: Sistema/Claro/Escuro).
+
+### Tokens
+
+| Token | Claro | Escuro |
+|---|---|---|
+| `bg-sage` (fundo de página) | `#EAF0E7` | `#141F17` |
+| `surface` (fundo de card — **novo**, não confundir com `card-white`) | `#FFFFFF` | `#1E2A21` |
+| `text-primary` | `#1C2B1F` | `#EAF0E7` |
+| `text-secondary` | `#5C6B5E` | `#9AAA9C` |
+| `forest-text` (verde-floresta como texto/ícone — **novo**) | `#2D5F3F` | `#5FA97C` |
+
+`accent-leaf` (`#4CAF50`) não precisa de variante — já dá ~5.3:1 de
+contraste sobre a superfície escura, mantém-se igual nos dois temas.
+
+### Porque `card-white` não muda e `surface` é um token novo
+
+`card-white` faz hoje dupla função: fundo de card **e** texto/overlay branco
+fixo sobre o hero e o Modo Cozinha (que nunca mudam de cor, mesmo no tema
+escuro). Se `card-white` escurecesse, o texto branco sobre o hero/Modo
+Cozinha escureceria também e ficaria ilegível. Por isso `card-white` fica
+**sempre `#FFFFFF`**, e `surface` é o token que de facto muda com o tema —
+usado só nos cards que vivem sobre o fundo `bg-sage` (grid de receitas,
+formulários, cards do Detalhe, dropdown do menu, bottom nav), nunca nos
+elementos que vivem sobre o hero/header/Modo Cozinha (esses continuam a
+usar `card-white`, propositadamente inalterado).
+
+### Porque `forest-text` é um token novo, e não `primary-forest` a mudar
+
+Verde-floresta (`#2D5F3F`) como **texto** sobre a superfície escura
+(`surface` `#1E2A21`) dá **~2.1:1** de contraste — falha bem abaixo do
+mínimo WCAG AA (4.5:1 texto normal, 3:1 UI/texto grande). `#5FA97C` (mesma
+família, mais claro) dá ~5.75:1 sobre `surface` e ~6.4:1 sobre `bg-sage`.
+`primary-forest` continua inalterado como **fundo** de botão/CTA (texto
+branco fixo sobre forest tem sempre ~7.6:1, nos dois temas) — só o uso como
+cor de texto/ícone é que precisa da variante clara.
+
+### Modo Cozinha fica sempre igual
+
+O Modo Cozinha já é, por design, "o modo escuro" da app (o único lugar onde
+a marca vira fundo cheio — ver Componentes). Fica pixel-idêntico
+independentemente do tema: o componente fixa os tokens adaptáveis
+(`text-primary`, `text-secondary`, `bg-sage`, `surface`, `forest-text`) aos
+valores de tema claro via custom properties inline, para nunca herdar a
+variante escura do `:root` — protege sobretudo o texto escuro obrigatório
+sobre os CTAs laranja ("Seguinte"/"Concluir"), que precisa de se manter
+escuro nos dois temas (ver Do's and Don'ts).
+
 ## Typography
 
 **Corpo e display:** Inter (400/500/600/700), self-hosted via `@fontsource` — pinada pelo PRD (Secção 6.2: "mantém-se"), não é o fallback de sistema.

@@ -181,7 +181,7 @@ export function RecipeForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="rounded-2xl bg-card-white p-5 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)]">
+      <div className="rounded-2xl bg-surface p-5 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)]">
         <input
           ref={imageInputRef}
           type="file"
@@ -300,7 +300,7 @@ export function RecipeForm({
         />
       </div>
 
-      <div className="rounded-2xl bg-card-white p-5 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)]">
+      <div className="rounded-2xl bg-surface p-5 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)]">
         <h2 className="text-lg font-semibold text-text-primary">Ingredientes</h2>
         <div className="mt-3 space-y-2">
           {ingredients.map((row, i) =>
@@ -358,7 +358,7 @@ export function RecipeForm({
           <button
             type="button"
             onClick={() => setIngredients((rows) => [...rows, { name: '', quantity: '', unit: '', isHeader: false }])}
-            className="flex items-center gap-1 text-sm font-medium text-primary-forest"
+            className="flex items-center gap-1 text-sm font-medium text-forest-text"
           >
             <PlusIcon className="size-4" />
             Adicionar ingrediente
@@ -374,12 +374,12 @@ export function RecipeForm({
         </div>
       </div>
 
-      <div className="rounded-2xl bg-card-white p-5 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)]">
+      <div className="rounded-2xl bg-surface p-5 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)]">
         <h2 className="text-lg font-semibold text-text-primary">Preparação</h2>
         <div className="mt-3 space-y-2">
           {steps.map((row, i) => (
             <div key={i} className="flex gap-2">
-              <span className="mt-2 flex size-6 shrink-0 items-center justify-center rounded-full bg-bg-sage text-xs font-semibold text-primary-forest">
+              <span className="mt-2 flex size-6 shrink-0 items-center justify-center rounded-full bg-bg-sage text-xs font-semibold text-forest-text">
                 {i + 1}
               </span>
               <textarea
@@ -412,14 +412,14 @@ export function RecipeForm({
         <button
           type="button"
           onClick={() => setSteps((rows) => [...rows, { instruction: '', durationMinutes: '' }])}
-          className="mt-3 flex items-center gap-1 text-sm font-medium text-primary-forest"
+          className="mt-3 flex items-center gap-1 text-sm font-medium text-forest-text"
         >
           <PlusIcon className="size-4" />
           Adicionar passo
         </button>
       </div>
 
-      <div className="rounded-2xl bg-card-white p-5 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)]">
+      <div className="rounded-2xl bg-surface p-5 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)]">
         <h2 className="text-lg font-semibold text-text-primary">Categorias e tags</h2>
 
         <p className="mt-3 text-sm font-medium text-text-secondary">Categorias</p>
@@ -439,7 +439,7 @@ export function RecipeForm({
         </div>
       </div>
 
-      <div className="rounded-2xl bg-card-white p-5 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)]">
+      <div className="rounded-2xl bg-surface p-5 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)]">
         <h2 className="text-lg font-semibold text-text-primary">Informação nutricional</h2>
         <p className="mt-1 text-xs text-text-secondary">
           Por porção, opcional e à mão — sem cálculo automático por agora.

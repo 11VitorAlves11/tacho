@@ -100,7 +100,7 @@ export function Home() {
       </section>
 
       {error && (
-        <p className="rounded-xl bg-card-white p-4 text-sm text-text-secondary">
+        <p className="rounded-xl bg-surface p-4 text-sm text-text-secondary">
           Não foi possível ligar ao backend. Confirma se está a correr em {import.meta.env.VITE_API_URL}.
         </p>
       )}
@@ -108,7 +108,7 @@ export function Home() {
       {!error && recipes === null && <p className="text-sm text-text-secondary">A carregar…</p>}
 
       {!error && recipes !== null && recipes.length === 0 && (
-        <div className="rounded-2xl bg-card-white p-8 text-center">
+        <div className="rounded-2xl bg-surface p-8 text-center">
           {favoriteOnly ? (
             <p className="font-medium text-text-primary">Ainda não marcaste nenhuma receita como favorita.</p>
           ) : (

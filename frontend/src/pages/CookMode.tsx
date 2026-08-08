@@ -1,10 +1,23 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { addCookNote, getRecipe, markRecipeMade } from '../api/recipes'
 import type { Recipe } from '../api/types'
 import { ChevronLeftIcon, ClockIcon } from '../components/icons'
 
 const LARGE_TEXT_KEY = 'tacho:cook-mode-large-text'
+
+// O Modo Cozinha já é, por design, o "modo escuro" da app (DESIGN.md: o
+// único lugar onde a marca vira fundo cheio) — fica sempre igual,
+// independentemente do tema claro/escuro do resto da app. Fixa aqui os
+// tokens adaptáveis aos valores de tema claro, para nunca herdar as
+// variantes escuras do :root.
+const FIXED_LIGHT_TOKENS = {
+  '--color-text-primary': '#1c2b1f',
+  '--color-text-secondary': '#5c6b5e',
+  '--color-bg-sage': '#eaf0e7',
+  '--color-surface': '#ffffff',
+  '--color-forest-text': '#2d5f3f',
+} as CSSProperties
 
 export function CookMode() {
   const { id } = useParams<{ id: string }>()
@@ -74,7 +87,7 @@ export function CookMode() {
 
   if (!recipe) {
     return (
-      <div className="flex min-h-svh items-center justify-center bg-primary-forest text-card-white">
+      <div className="flex min-h-svh items-center justify-center bg-primary-forest text-card-white" style={FIXED_LIGHT_TOKENS}>
         <p className="text-sm">A carregar…</p>
       </div>
     )
@@ -85,7 +98,7 @@ export function CookMode() {
   const isLast = stepIndex === steps.length - 1
 
   return (
-    <div className="flex min-h-svh flex-col bg-primary-forest text-card-white">
+    <div className="flex min-h-svh flex-col bg-primary-forest text-card-white" style={FIXED_LIGHT_TOKENS}>
       <header className="flex items-center justify-between px-4 py-4">
         <Link
           to={`/receitas/${recipe.id}`}

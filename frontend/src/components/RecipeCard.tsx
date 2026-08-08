@@ -20,7 +20,7 @@ export function RecipeCard({
   return (
     <Link
       to={`/receitas/${recipe.id}`}
-      className="group relative flex gap-4 rounded-2xl bg-card-white p-4 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)] transition-shadow hover:shadow-[0_8px_24px_-4px_rgba(28,43,31,0.22)]"
+      className="group relative flex gap-4 rounded-2xl bg-surface p-4 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)] transition-shadow hover:shadow-[0_8px_24px_-4px_rgba(28,43,31,0.22)]"
     >
       <button
         type="button"
@@ -45,13 +45,13 @@ export function RecipeCard({
           className="size-14 shrink-0 rounded-xl object-cover"
         />
       ) : (
-        <div className="flex size-14 shrink-0 items-center justify-center rounded-xl bg-bg-sage text-primary-forest">
+        <div className="flex size-14 shrink-0 items-center justify-center rounded-xl bg-bg-sage text-forest-text">
           <PotIcon className="size-7" />
         </div>
       )}
 
       <div className="min-w-0 flex-1 pr-8">
-        <h3 className="truncate font-semibold text-text-primary group-hover:text-primary-forest">
+        <h3 className="truncate font-semibold text-text-primary group-hover:text-forest-text">
           {recipe.title}
         </h3>
 
@@ -73,7 +73,7 @@ export function RecipeCard({
         {(recipe.categories.length > 0 || recipe.tags.length > 0) && (
           <div className="mt-2 flex flex-wrap gap-1.5">
             {recipe.categories.map((c) => (
-              <span key={c.id} className="rounded-full bg-primary-forest/10 px-2.5 py-0.5 text-xs font-medium text-primary-forest">
+              <span key={c.id} className="rounded-full bg-primary-forest/10 px-2.5 py-0.5 text-xs font-medium text-forest-text">
                 {c.name}
               </span>
             ))}
