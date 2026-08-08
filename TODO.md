@@ -101,6 +101,29 @@ concluída** quando todos estes estiverem verificados.
       Desenhar primeiro no Figma (ainda não existem estes ecrãs).
       Referência de schema: `Food.supermarket_category` do Tandoor é um bom
       padrão para o agrupamento por corredor.
+- [ ] **Atualizar o Figma com o novo estilo + criar os ecrãs em falta** —
+      trabalho em curso no ficheiro `Receitas App — Design Revamp`
+      (`cOvlbDp3d0osvTcPT6TFSR`), **bloqueado pela quota mensal do MCP do
+      Figma** (plano Starter, seat View, 6 chamadas/mês — ver
+      `file://figma/docs/rate-limits-access.md` do servidor MCP). Plano
+      completo em `/root/.claude/plans/atualiza-o-figma-com-keen-quiche.md`.
+      **Já feito** (verificado por screenshot): 3 páginas (`Design System`,
+      `v1.0 — Ecrãs atuais`, `v1.1 — Planeamento & Compras`); fundação
+      completa (9 variáveis de cor, 5 estilos de texto, 4 estilos de
+      efeito/sombra, todos batendo certo com `DESIGN.md`/`index.css`); 20
+      ícones importados via SVG a partir de `icons.tsx`; componentes `Chip`
+      (categoria/tag/filtro ativo/inativo), `Button` (primary/cook-mode/
+      ghost), `RecipeCard` (card horizontal fiel ao real, não o vertical do
+      mockup antigo), `HeroStat`. **Por fazer, nesta ordem:** (1) Header
+      desktop/mobile + BottomNav (2 itens v1.0, 4 itens v1.1-alvo) — script
+      já escrito, falhou a meio por limite de quota, nada ficou partido; (2)
+      reconstruir os 5 frames existentes (Home, Detalhe, Modo Cozinha,
+      mobile+desktop) fiéis ao código, substituindo o mockup antigo
+      (sidebar desktop errada, emoji em vez de ícones, cores erradas); (3)
+      criar Adicionar receita e Editar receita no Figma (já existem na app,
+      nunca desenhados); (4) criar Planeamento de refeições (grelha semanal)
+      e Lista de Compras (gerar da semana + itens manuais) em `v1.1`; (5)
+      verificação final por screenshot contra a checklist do plano.
 - [ ] **Mais destinos no bottom nav** — hoje só "Receitas"/"Adicionar" contra os
       4–5 que o design descreve; desbloqueia quando os ecrãs acima existirem.
 - [x] **Escalar porções no Detalhe** — sem mudanças no backend; stepper +/−
