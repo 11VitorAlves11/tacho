@@ -1,0 +1,10 @@
+{
+  "name": "Tacho",
+  "short_name": "Tacho",
+  "description": "App de receitas do agregado.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#EAF0E7",
+  "theme_color": "#2D5F3F",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

@@ -201,7 +201,15 @@ concluída** quando todos estes estiverem verificados.
       favoritar no card, filtrar, desfavoritar no Detalhe.
 - [ ] **Dark mode** — variante escura dos tokens do `DESIGN.md`,
       `prefers-color-scheme` com override manual.
-- [ ] **PWA instalável** — manifest + service worker básico.
+- [x] **PWA instalável** — `manifest.webmanifest` (nome, cores, ícone a partir
+      do `favicon.svg` existente) e `sw.js` básico registado em `main.tsx`
+      (best-effort, sem suporte a app funciona igual). O service worker só
+      intercepta `GET /assets/*` (bundles JS/CSS do Vite, com hash no nome —
+      seguro cachear cache-first); tudo o resto passa direto à rede, incluindo
+      a API, porque em produção o backend serve o frontend no mesmo domínio
+      (`VITE_API_URL=""`) sem prefixo `/api` a distinguir das rotas. Testado
+      no browser (Playwright): manifest e `sw.js` servidos com 200, service
+      worker fica `active`, sem erros de consola.
 - [x] **Export schema.org Recipe (JSON-LD)** — `GET /recipes/{id}/export`
       (`app/schema_org.py`), `application/ld+json`. Cabeçalhos de secção não
       têm equivalente em `recipeIngredient` (schema.org espera lista plana)
