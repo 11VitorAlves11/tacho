@@ -402,8 +402,64 @@ concluída** quando todos estes estiverem verificados.
 
 ## v1.2
 
-- [ ] **Multi-utilizador real + autenticação** — nada construído além do
-      Workspace único semeado. Ver decisões #1 e #2.
+- [x] **Multi-utilizador real + autenticação** — implementado seguindo as
+      decisões #1 e #2 (resolvidas contra o código real do Securo, ver
+      acima). `fastapi-users[sqlalchemy]` + modelos `User`
+      (`SQLAlchemyBaseUserTableUUID`) e `WorkspaceMember` (`workspace_id`,
+      `user_id`, sem coluna de papel/role — o Tacho tem sempre duas
+      pessoas e uma única workspace, ao contrário do Securo), migração
+      `65564d5e86e1`. **Motor assíncrono isolado só para autenticação**
+      (`app/auth.py::async_engine`, driver `asyncpg`,
+      `Settings.async_database_url` deriva de `database_url` trocando só o
+      driver) — `fastapi_users_db_sqlalchemy` não tem variante síncrona
+      (decisão #1); todo o resto da app (`crud.py`, todos os routers)
+      continua 100% síncrono sobre o `Session` de sempre, mesma BD. Sessão
+      por cookie httpOnly + JWT (`CookieTransport`/`JWTStrategy`,
+      `Settings.auth_secret`/`auth_cookie_secure` — este último `false` por
+      omissão para o dev local em `http://`, produção tem de o pôr `true`
+      no `.env` do CT 202). `deps.get_workspace_id()` deixou de devolver a
+      constante fixa — passa a resolver a partir de `current_active_user`
+      + a linha em `workspace_members`; como todos os endpoints de
+      receitas/planeamento/taxonomia já dependiam de
+      `Depends(get_workspace_id)`, ficaram todos protegidos
+      transitivamente sem tocar em `recipes.py`/`taxonomy.py`/
+      `planning.py` (só `GET /recipes/import/{task_id}`, que não usava
+      workspace_id, precisou de `Depends(current_active_user)` explícito).
+      **Bootstrap sem SMTP** (decisão #2): `POST /setup` cria a primeira
+      conta e liga-a ao `Workspace` já semeado (`DEFAULT_WORKSPACE_ID`,
+      nunca cria uma workspace nova), só funciona enquanto existirem zero
+      utilizadores; `POST /workspace/members` deixa qualquer membro já
+      autenticado juntar a segunda pessoa fornecendo email+password
+      diretamente — mesmo padrão do `invite_member` do Securo, sem os
+      extras (moeda/preferências/workspace pessoal) que só fazem sentido
+      lá. Frontend: `AuthContext` (verifica `GET /users/me` +
+      `GET /setup/status` no arranque), `App.tsx` só monta as rotas da app
+      quando há sessão válida, `pages/Setup.tsx` + `pages/Login.tsx`,
+      `UserMenu.tsx` mostra o email real da sessão (já não "VM" fixo),
+      lista o agregado e tem "Adicionar pessoa" + "Sair" reais. **Dois
+      bugs apanhados e corrigidos só no teste no browser** (não apareciam
+      nos testes via curl): (1) depois do `/setup`, o `AuthContext` não
+      atualizava `needsSetup`, criando um ciclo de redireção infinito
+      entre `/login` e `/setup` — corrigido chamando `refresh()` antes do
+      `navigate`; (2) o menu do utilizador (`position: absolute`, sem
+      `z-index`) ficava a pintar por baixo dos cards de receita (`position:
+      relative`) sempre que o conteúdo do menu crescia — CSS pinta
+      elementos posicionados sem `z-index` explícito por ordem do DOM, e o
+      `<header>` vem antes do `<main>` — tornava o botão "Sair" clicável
+      "no ar" mas fisicamente por baixo de outro elemento; corrigido com
+      `z-30` explícito no painel do menu. **Authentik mantém-se em
+      produção** (decisão do utilizador) — continua a proteger o acesso à
+      CT 202 (defesa em profundidade), o login do Tacho identifica Vítor
+      vs Mariana dentro da app, não substitui o forward-auth. Testado via
+      curl (setup, login, logout, password errada, adicionar segundo
+      membro, todos os routers 401 sem sessão) e no browser via Playwright
+      ponta a ponta (setup → login → adicionar pessoa → logout → rota
+      protegida bloqueada → login da segunda conta → workspace partilhado
+      confirmado visualmente, 2 contas de teste `vitor@example.com`/
+      `mariana@example.com` deixadas na BD local — sem elas a app fica
+      inacessível). **Falta para produção**: definir `AUTH_SECRET` e
+      `AUTH_COOKIE_SECURE=true` no `.env` do CT 202 antes do próximo
+      deploy (os valores por omissão são só para dev local).
 - [ ] **Favoritos por utilizador** — evolução do item da v1.1, padrão
       `favorited_by` do Mealie.
 - [ ] **Avaliação por estrelas** — padrão do Mealie (`rating`), não do Tandoor.

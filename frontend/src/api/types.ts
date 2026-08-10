@@ -111,3 +111,21 @@ export interface ShoppingListItem {
   is_checked: boolean
   created_at: string
 }
+
+export interface CurrentUser {
+  id: string
+  email: string
+  is_active: boolean
+  is_superuser: boolean
+  is_verified: boolean
+}
+
+export interface WorkspaceMember {
+  id: string
+  email: string
+  joined_at: string
+}
+
+export interface SetupStatus {
+  needs_setup: boolean
+}

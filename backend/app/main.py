@@ -6,8 +6,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from app.auth import auth_backend, fastapi_users
 from app.config import get_settings
+from app.routers import auth as auth_router
 from app.routers import planning, recipes, taxonomy
+from app.schemas import UserRead, UserUpdate
 
 settings = get_settings()
 
@@ -16,10 +19,17 @@ app = FastAPI(title="Tacho API", version="0.1.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins,
+    # Cookie de sessão (app/auth.py) só viaja entre origens diferentes
+    # (frontend :5173, backend :8000 em dev) com isto ligado — sem ele o
+    # browser aceita o Set-Cookie no login mas nunca o reenvia.
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+app.include_router(fastapi_users.get_auth_router(auth_backend), prefix="/auth/cookie", tags=["auth"])
+app.include_router(fastapi_users.get_users_router(UserRead, UserUpdate), prefix="/users", tags=["users"])
+app.include_router(auth_router.router)
 app.include_router(recipes.router)
 app.include_router(taxonomy.router)
 app.include_router(planning.router)

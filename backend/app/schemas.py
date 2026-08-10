@@ -1,7 +1,8 @@
 import uuid
 from datetime import date, datetime
 
-from pydantic import BaseModel, ConfigDict, HttpUrl
+from fastapi_users import schemas as fu_schemas
+from pydantic import BaseModel, ConfigDict, EmailStr, HttpUrl
 
 
 class IngredientIn(BaseModel):
@@ -174,3 +175,31 @@ class GenerateShoppingListRequest(BaseModel):
     # Segunda-feira da semana a agregar — o frontend calcula-a localmente
     # (ver nota sobre fuso horário em MealPlan.tsx) e envia-a já resolvida.
     week_start: date
+
+
+class UserRead(fu_schemas.BaseUser[uuid.UUID]):
+    pass
+
+
+class UserUpdate(fu_schemas.BaseUserUpdate):
+    pass
+
+
+class SetupStatus(BaseModel):
+    needs_setup: bool
+
+
+class SetupRequest(BaseModel):
+    email: EmailStr
+    password: str
+
+
+class MemberInvite(BaseModel):
+    email: EmailStr
+    password: str
+
+
+class MemberOut(BaseModel):
+    id: uuid.UUID
+    email: str
+    joined_at: datetime

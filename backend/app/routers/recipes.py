@@ -6,10 +6,12 @@ from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from app import crud, schemas
+from app.auth import current_active_user
 from app.celery_app import celery_app
 from app.config import get_settings
 from app.database import get_db
 from app.deps import get_workspace_id
+from app.models import User
 from app.images import copy_recipe_image, delete_recipe_image, save_recipe_image
 from app.schema_org import recipe_to_schema_org
 from app.tasks import import_recipe_from_url
@@ -51,7 +53,7 @@ def import_recipe(
 
 
 @router.get("/import/{task_id}", response_model=schemas.ImportStatus)
-def get_import_status(task_id: str):
+def get_import_status(task_id: str, user: User = Depends(current_active_user)):
     result = AsyncResult(task_id, app=celery_app)
     if result.failed():
         raise HTTPException(status_code=422, detail=f"Falha ao importar: {result.result}")

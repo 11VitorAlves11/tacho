@@ -15,6 +15,7 @@ from sqlalchemy import (
     func,
     text,
 )
+from fastapi_users_db_sqlalchemy import SQLAlchemyBaseUserTableUUID
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -56,6 +57,41 @@ class Workspace(Base):
     shopping_list_items: Mapped[list["ShoppingListItem"]] = relationship(
         back_populates="workspace", cascade="all, delete-orphan"
     )
+    members: Mapped[list["WorkspaceMember"]] = relationship(
+        back_populates="workspace", cascade="all, delete-orphan"
+    )
+
+
+class User(SQLAlchemyBaseUserTableUUID, Base):
+    """Conta de utilizador (fastapi-users) — `id`/`email`/`hashed_password`/
+    `is_active`/`is_superuser`/`is_verified` vêm do mixin
+    `SQLAlchemyBaseUserTableUUID`. Só é consultada pelo motor assíncrono
+    (`app/auth.py`) — `fastapi_users_db_sqlalchemy` exige `AsyncSession`,
+    sem variante síncrona (verificado no código-fonte da lib, TODO.md
+    decisão #1). O resto da app (workspace_members incluído) continua a
+    usar o `Session` síncrono de sempre — é a mesma tabela, só acedida por
+    dois motores diferentes."""
+
+    __tablename__ = "users"
+
+
+class WorkspaceMember(Base):
+    """Liga um User a um Workspace. Sem coluna de papel/role — ao
+    contrário do Securo (owner/editor/viewer, várias workspaces por
+    utilizador), o Tacho tem duas pessoas e uma única workspace, para
+    sempre (decisão #1 do TODO.md); qualquer membro tem acesso total."""
+
+    __tablename__ = "workspace_members"
+    __table_args__ = (UniqueConstraint("workspace_id", "user_id", name="uq_workspace_member"),)
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    workspace_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE")
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"))
+    joined_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    workspace: Mapped["Workspace"] = relationship(back_populates="members")
 
 
 class Recipe(Base):
