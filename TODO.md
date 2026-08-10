@@ -440,15 +440,44 @@ concluída** quando todos estes estiverem verificados.
 
 ## Coisas que precisas de decidir tu
 
-1. **`fastapi-users` + modelo "Workspace" — bate mesmo certo com o Securo?**
-   Assumido por analogia de stack (FastAPI+Postgres+Redis+Celery, confirmado no
-   `inventory.md`), mas nunca confirmado contra o código real.
-   → **verificar no GitHub do `securo-finance`** antes de construir a auth da v1.2.
+1. ~~`fastapi-users` + modelo "Workspace" — bate mesmo certo com o Securo?~~
+   **Resolvido, 2026-08-10, verificado contra o código real** (repositório
+   `securo-finance/securo`, fork do utilizador em `11VitorAlves11/securo`):
+   sim, bate certo. `backend/pyproject.toml` confirma `fastapi-users
+   [sqlalchemy]>=13.0.0` + `sqlalchemy>=2.0.0`; `app/models/workspace.py` tem
+   `Workspace`/`WorkspaceMember` (roles `owner`/`editor`/`viewer`,
+   `UniqueConstraint(workspace_id, user_id)`); `app/services/
+   workspace_service.py::require_membership` é o padrão de permissão. **Mas
+   a forma do Securo é maior do que o Tacho precisa** — várias workspaces
+   por utilizador, `managed_by_user_id` (gestor externo sem ser membro),
+   roles com tabela de ranking, arquivo com guarda de "última workspace".
+   O Tacho tem duas pessoas e uma workspace, para sempre (`PRODUCT.md`,
+   `UserMenu.tsx` já diz "Vítor & Mariana") — nada disto se aplica; construir
+   à imagem do Securo seria sobre-engenharia. **Descoberta nova, decisiva
+   para o plano:** `fastapi_users_db_sqlalchemy` (a versão atual, 7.0.0, a
+   única compatível com `fastapi-users` 15.x, que é o que o PyPI resolve
+   contra o `fastapi` 0.141.1 já pinado aqui) só suporta `AsyncSession` —
+   `SQLAlchemyUserDatabase.session: AsyncSession`, todos os métodos `async
+   def`, sem variante síncrona (confirmado a extrair o wheel e inspecionar
+   o código-fonte, não assumido pela documentação). O `crud.py`/routers
+   atuais do Tacho são 100% síncronos (`Session`, `db.scalars(...)`). Adotar
+   `fastapi-users` não obriga a reescrever a app toda para async, mas obriga
+   a uma segunda ligação assíncrona à mesma BD (motor `asyncpg` ou
+   `psycopg[async]`) só para o subsistema de autenticação — um custo real,
+   não trivial, que fica por decidir no início da implementação da v1.2.
 
-2. **Como associar a segunda pessoa ao Workspace, sem SMTP no homelab.**
-   O plano assumia convite por email; não há infraestrutura de email montada.
-   Alternativa mais simples: o dono cria a segunda conta diretamente.
-   → **verificar como o Tandoor resolve isto** e decidir entre os dois fluxos.
+2. ~~Como associar a segunda pessoa ao Workspace, sem SMTP no homelab.~~
+   **Resolvido, 2026-08-10, verificado contra o código real do Securo** (não
+   contra o Tandoor, que nunca teve multi-utilizador de facto): a
+   alternativa mais simples já prevista aqui — "o dono cria a segunda conta
+   diretamente" — é exatamente o que o Securo faz. `POST /api/workspaces/
+   {id}/members` (`app/api/workspaces.py::invite_member`) recebe email +
+   password fornecidos pelo dono da workspace; se o email não corresponde a
+   nenhum utilizador existente, cria a conta ali mesmo
+   (`fastapi_users.schemas.BaseUserCreate` + `user_manager.create(...)`),
+   sem enviar nenhum email — nada de SMTP, nada de token de convite por
+   link. Padrão a copiar para o Tacho, sem os extras (moeda/preferências/
+   workspace pessoal automática) que só fazem sentido no domínio do Securo.
 
 3. **Cookbooks: em que fase entram, e em que modelo?** Lista manual (Tandoor) ou
    coleção por filtro inteligente (Mealie, mais trabalho mas mais útil a prazo)?
