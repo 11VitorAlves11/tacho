@@ -245,6 +245,66 @@ concluída** quando todos estes estiverem verificados.
       item da secção "Já feito" desta lista que continua por desenhar é
       "Mais destinos no bottom nav" na app real, que é trabalho de código,
       não de Figma (ver item abaixo).
+      **2026-08-10, continuação via Figwright** (plano
+      `/root/.claude/plans/continua-o-design-da-toasty-bunny.md`): três
+      frentes novas, construídas em paralelo por três agentes e verificadas
+      por screenshot no fim (9 variáveis/5 estilos de texto/4 de efeito
+      confirmados intactos). **Desktop de Adicionar/Editar receita**
+      (`Desktop - Adicionar receita`/`Desktop - Editar receita`, novos na
+      página `v1.0`) — só as duas diferenças responsivas reais do código
+      (`PageShell.tsx`: padding; `RecipeForm.tsx:447`: grelha de nutrição
+      2→4 colunas), confirmado por grep que não há mais nenhuma classe
+      `md:`/`lg:` em `AddRecipe.tsx`/`EditRecipe.tsx`/`RecipeForm.tsx`.
+      **Ecrãs de v1.2 — Setup, Login, Gestão de membros** (página `v1.0`,
+      prefixo `v1.2 —`): descoberta feita antes de desenhar — o backend de
+      autenticação **já está em desenvolvimento, sem commit**
+      (`backend/app/auth.py`, `backend/app/routers/auth.py`, migração
+      `65564d5e86e1`, `models.py`/`schemas.py`/`main.py` modificados),
+      contrato real (`GET/POST /setup`, `GET/POST /workspace/members`,
+      `SetupRequest`/`MemberInvite` = só email+password, `MemberOut` =
+      id/email/joined_at, sem nome) usado como base do desenho em vez de
+      especulação. Construído também, pela primeira vez, o estado aberto do
+      dropdown do `UserMenu` (`component/UserMenu-Dropdown-Aberto`, página
+      `Design System`) com os dois blocos novos "Gestão de membros" e
+      "Sair" — na altura em que foi desenhado, o `UserMenu.tsx` real só
+      tinha "Agregado" + seletor de tema, sem estes dois. Corrigido depois
+      da construção: o `BottomNav` do ecrã "Gestão de membros" tinha
+      "Receitas" marcado como activo por engano (era só o clone base) —
+      passou a ambos os itens inactivos, já que não há destino de nav
+      próprio para esta página. **Atualização, ainda 2026-08-10:** o
+      backend de autenticação usado como contrato (não commitado quando
+      este desenho começou) **foi committado entretanto, em paralelo, por
+      outra sessão** (commits `0810e03`/`48a5981`, "autenticação
+      multi-utilizador real (v1.2)") — ver esse item na secção v1.2 acima.
+      A implementação real diverge do desenho Figma num ponto: "Gestão de
+      membros" ficou **dentro do próprio dropdown do `UserMenu`** (lista +
+      formulário "Adicionar pessoa" inline), não como página própria com
+      `Header`+`BottomNav`. Os ecrãs `v1.2 — Setup`/`v1.2 — Login` batem
+      certo com `pages/Setup.tsx`/`pages/Login.tsx` reais; o ecrã
+      `v1.2 — Gestão de membros` como página autónoma fica então como
+      conceito alternativo, não como documentação do que existe — por
+      reconciliar com o Figma numa próxima passagem, não urgente.
+      **Ecrãs de v2 — Cookbooks/coleções** (página `v1.0`, prefixo
+      `v2 — Cookbooks —`): a frente mais especulativa, sem modelo
+      `Cookbook` em lado nenhum do backend na altura do desenho — decisão
+      de produto (lista manual, estilo Tandoor, em vez de coleção por
+      filtro inteligente estilo Mealie) foi recomendação aplicada no
+      desenho e **entretanto confirmada** (item #3 da secção "Coisas que
+      precisas de decidir tu" abaixo, resolvido a 2026-08-10 — modelo a
+      implementar: `Cookbook` + tabela de associação `Cookbook`↔`Recipe`
+      many-to-many, sem filtro automático). Entrada a partir da Home por
+      um link de texto "Coleções →"
+      por baixo dos chips de filtro (mobile e desktop), não por um novo
+      destino do `BottomNav` — regra do `DESIGN.md` de não adicionar nav
+      antes do ecrã existir a sério no código, mesmo padrão já seguido para
+      "Favoritos". Dois ecrãs novos, mobile+desktop: "Coleções" (lista,
+      cards com nome + contagem de receitas) e "Detalhe da coleção"
+      (reutiliza o `RecipeGrid` tal e qual). Deliberadamente **não**
+      tocado: o `ActionsGroup` (favorito/duplicar/editar) do Detalhe da
+      Receita, já fechado e sem largura livre para um 4.º item — a
+      afordância "adicionar a esta coleção" fica só documentada por nota de
+      texto como trabalho pendente, para não arriscar partir um ecrã já
+      verificado.
 - [x] **Mais destinos no bottom nav** — `BottomNav.tsx` passou de 2 para 4
       itens (Receitas/Lista/Plano/Adicionar), agora que os ecrãs de
       Planeamento e Lista de Compras existem de facto (ver item acima).
@@ -467,6 +527,117 @@ concluída** quando todos estes estiverem verificados.
       inacessível). **Falta para produção**: definir `AUTH_SECRET` e
       `AUTH_COOKIE_SECURE=true` no `.env` do CT 202 antes do próximo
       deploy (os valores por omissão são só para dev local).
+- [x] **Secção de perfil no `UserMenu`** — resolve a decisão #5 (comparação
+      com o menu de utilizador do Mealie/Tandoor: perfil com nome/email/
+      password próprios, sem trazer o que não se aplica ao Tacho — idioma
+      fixo PT, sem admin/spaces/roles/tokens). Três acrescentos: **alterar
+      password** (`PATCH /users/me`, endpoint do `fastapi-users` que já
+      existia sem UI própria), **alterar email** (mesmo endpoint, `safe=True`
+      do `BaseUserManager.update` deixa mudar email/password mas não
+      `is_superuser`/`is_verified`/`is_active` por esta via — confirmado no
+      código-fonte da lib, não assumido), e **nome próprio** — `User` não
+      tinha nenhum campo de nome (só os herdados do mixin do
+      `fastapi-users`), coluna `name` nova (opcional, migração aditiva
+      `b1d85af98dd0`), `UserRead`/`UserUpdate`/`MemberOut` estendidos.
+      Iniciais do avatar (`initials()`) passam a usar o nome quando existe
+      (duas iniciais, primeira+última palavra) em vez das duas primeiras
+      letras do email. Frontend: `InlineEditField`, um componente pequeno
+      partilhado pelas 3 formas (nome/email/password são o mesmo padrão —
+      link que abre um campo, guarda, mostra confirmação — só muda o tipo
+      de input e a chamada à API); `AuthContext.refresh()` chamado depois
+      de guardar nome/email para o header atualizar sem recarregar a
+      página (password não precisa, não afeta o que é mostrado). **Remover
+      pessoa do agregado** também implementado (não estava na decisão #5,
+      mas era a assimetria óbvia de só dar para adicionar) —
+      `DELETE /workspace/members/{user_id}` apaga a conta por completo via
+      `user_manager.delete` (não só a linha de `workspace_members`, que tem
+      `ondelete=CASCADE` e desaparece sozinha), para o email ficar livre
+      outra vez em vez de reservado para sempre; nunca permite
+      auto-remoção (400), 404 se o membro não pertencer à workspace atual.
+      Testado pela API com duas contas de teste descartáveis criadas via
+      `UserManager` diretamente (token JWT assinado à mão com
+      `get_jwt_strategy()`, sem depender das passwords das contas
+      `vitor`/`mariana` já existentes, que este teste não tocou): nome/
+      email/password mudam e o novo login funciona, email duplicado dá 400
+      (`UPDATE_USER_EMAIL_ALREADY_EXISTS`), auto-remoção dá 400, remover
+      outro membro dá 204 e desaparece da lista, repetir dá 404 — contas de
+      teste apagadas no fim, confirmado por `GET /workspace/members` que só
+      sobram `vitor@example.com`/`mariana@example.com`. **Testado também no
+      browser** (Playwright, instalado ad-hoc num diretório à parte — não
+      ficou como dependência do projeto): sessão injetada via cookie
+      `tacho_session` assinado à mão (mesma técnica dos testes pela API,
+      para não tocar nas passwords reais de `vitor`/`mariana`), duas contas
+      descartáveis (`pw-primary-*`/`pw-secondary-*`). Fluxo completo sem
+      erros de consola: alterar nome (painel e iniciais do avatar atualizam
+      para "PT" sem reload, `AuthContext.refresh()` a funcionar), alterar
+      email, alterar password, agregado a mostrar `vitor`/`mariana` +
+      conta secundária, sem botão de remover na própria linha, remover a
+      conta secundária (desaparece da lista sem reload), toggle de tema.
+      Contas de teste apagadas no fim, confirmado por consulta direta à
+      tabela `users` que só sobram as duas reais.
+- [x] **Login silencioso via forward-auth do Authentik** — decisão do
+      utilizador, 2026-08-10: **não** um botão OIDC como o do Securo
+      (comparação feita com o código real do Securo, `oidc_auth.py`, fluxo
+      Authorization Code + PKCE completo com Redis para o state) — em
+      produção o CT 202 já está atrás do Authentik forward-auth ao nível do
+      NPM (`homelab/inventory.md:57`), um botão OIDC faria um segundo
+      round-trip a pedir a mesma coisa outra vez. Em vez disso: se o
+      pedido já chega autenticado (header de email do forward-auth), o
+      Tacho inicia sessão sozinho, sem mostrar o login. Muito mais simples
+      que o Securo — sem Redis, sem PKCE/JWKS/nonce, sem auto-registo nem
+      criação de workspace (o Tacho não faz nenhuma dessas coisas para
+      login normal também). `POST /auth/forward-login`
+      (`routers/auth.py`): só confia no header de email
+      (`Settings.forward_auth_email_header`, omissão `X-authentik-email`)
+      se vier acompanhado de um segredo partilhado
+      (`Settings.forward_auth_secret`) — sem isto, qualquer pedido que
+      contornasse o NPM (outro container na mesma LAN, por exemplo)
+      conseguia forjar o header e entrar como qualquer pessoa; **só o NPM
+      pode injetar o segredo, nunca o Authentik em si** (ver checklist
+      abaixo). Nunca cria conta nem workspace — só inicia sessão para
+      quem já é membro do agregado (`WorkspaceMember` na
+      `DEFAULT_WORKSPACE_ID`), mesmo padrão fechado das decisões #1/#2;
+      devolve 404 tanto para email desconhecido como para email sem
+      membership, para não revelar qual dos dois é o caso. Desligado por
+      omissão (`Settings.trust_forward_auth = False`) — inerte em dev e em
+      produção até se configurar o NPM. Frontend: `tryForwardLogin()`
+      (`api/auth.ts`), chamado por `AuthContext.refresh()` só quando
+      `GET /users/me` falha — best-effort, silencioso, sem UI nova
+      nenhuma (nem botão nem ecrã — é invisível quando funciona).
+      **Testado no browser** (Playwright, backend arrancado com
+      `TRUST_FORWARD_AUTH=true`/`FORWARD_AUTH_SECRET` de teste, headers
+      simulados via `extraHTTPHeaders` do Playwright — não foi possível
+      testar contra o Authentik real, ver nota abaixo): headers válidos →
+      entra direto na app sem ver o login; sem headers → login normal;
+      email sem conta Tacho → login normal; segredo errado → login normal
+      (não entra como a conta real, confirma que forjar só o header do
+      email não chega). Sem erros de JavaScript em nenhum cenário (só o
+      aviso normal do Chrome para os pedidos 401/404 esperados do próprio
+      padrão de "verificar sessão em silêncio", já presente antes disto no
+      `GET /users/me` do carregamento normal do `/login`). **Não testado
+      contra o Authentik/NPM reais** — isso precisa de configuração do
+      lado da infraestrutura partilhada, fora do que este trabalho pode
+      fazer sozinho (mesma fronteira da decisão #4). **Checklist para
+      produção** (por fazer no NPM + Authentik, não no código):
+      1. No Authentik, confirmar que o Provider/Outpost que protege
+         `receitas.alveslab.dev` tem a opção de enviar os headers
+         `X-authentik-*` ativada (nem todos os outposts do Authentik
+         mandam isto por omissão).
+      2. No Nginx Proxy Manager (CT 207), na config avançada do host
+         `receitas.alveslab.dev`, adicionar
+         `proxy_set_header X-Tacho-Forward-Secret "<valor secreto>";`
+         — só o NPM injeta isto, por isso um pedido direto ao CT 202 que
+         contorne o NPM nunca o consegue forjar.
+      3. No `.env` do CT 202, definir `TRUST_FORWARD_AUTH=true` e
+         `FORWARD_AUTH_SECRET=<o mesmo valor do passo 2>` (junta-se aos
+         outros três já pendentes — `AUTH_SECRET`, `AUTH_COOKIE_SECURE`,
+         `PUBLIC_BASE_URL`).
+      4. Confirmar que o NPM não filtra o header `X-authentik-email` a
+         caminho do CT 202 (comportamento por omissão, mas vale confirmar).
+      5. Testar com as duas contas reais (`vitor`/`mariana`) — o email da
+         conta Authentik de cada um tem de bater certo com o email da
+         conta Tacho correspondente, senão cai no login normal (por
+         omissão, sem revelar qual dos dois falhou).
 - [ ] **Favoritos por utilizador** — evolução do item da v1.1, padrão
       `favorited_by` do Mealie.
 - [ ] **Avaliação por estrelas** — padrão do Mealie (`rating`), não do Tandoor.
@@ -497,7 +668,6 @@ concluída** quando todos estes estiverem verificados.
 - [ ] Galeria de fotos por receita (várias fotos, uma marcada como capa).
 - [ ] Vista de impressão / PDF por receita.
 - [ ] Fracções em unidades ("½ chávena" em vez de "0.5 chávena").
-- [ ] Authentik SSO.
 
 ---
 
@@ -542,9 +712,13 @@ concluída** quando todos estes estiverem verificados.
    link. Padrão a copiar para o Tacho, sem os extras (moeda/preferências/
    workspace pessoal automática) que só fazem sentido no domínio do Securo.
 
-3. **Cookbooks: em que fase entram, e em que modelo?** Lista manual (Tandoor) ou
-   coleção por filtro inteligente (Mealie, mais trabalho mas mais útil a prazo)?
-   Hoje estão provisoriamente na v2.
+3. ~~Cookbooks: em que fase entram, e em que modelo?~~ **Resolvido, 2026-08-10:**
+   lista manual, estilo Tandoor (não coleção por filtro inteligente estilo
+   Mealie) — confirma a recomendação já aplicada no desenho Figma (ver
+   "v1.1" acima, "Ecrãs de v2 — Cookbooks/coleções"). Fica ainda na v2 (fase
+   por confirmar se avança já ou continua em backlog); modelo a implementar:
+   `Cookbook` (nome) + tabela de associação `Cookbook`↔`Recipe` (many-to-many,
+   uma receita pode estar em várias coleções), sem filtro automático.
 
 4. **Quando/como implantar no homelab a sério.** Ainda corre só no CT 111, fora
    do `docker-compose.yml`. Falta decidir VMID/IP novo seguindo a convenção do
@@ -553,10 +727,12 @@ concluída** quando todos estes estiverem verificados.
    ⚠️ Enquanto não houver autenticação (v1.2), a app **só pode estar acessível
    dentro da tailnet** — nunca exposta à LAN de convidados nem à internet.
 
-5. **O conteúdo do menu de utilizador está bem assim?** Por não haver contas
-   reais, mostra só "Vítor & Mariana" com nota de que contas individuais chegam
-   na v1.2 — sem fingir um "Sair" que não funciona. Confirma se preferes outra
-   coisa (ou nada, até haver auth a sério).
+5. ~~O conteúdo do menu de utilizador está bem assim?~~ **Resolvido,
+   2026-08-10**, por comparação com Mealie/Tandoor (ver "v1.2" acima,
+   "Secção de perfil no `UserMenu`"): ficou com sessão (nome/email/
+   password editáveis), agregado (listar/adicionar/remover), tema, sair —
+   sem trazer o que é próprio de apps multi-tenant e não se aplica aqui
+   (idioma, admin, spaces, tokens de API).
 
 ---
 

@@ -178,11 +178,11 @@ class GenerateShoppingListRequest(BaseModel):
 
 
 class UserRead(fu_schemas.BaseUser[uuid.UUID]):
-    pass
+    name: str | None = None
 
 
 class UserUpdate(fu_schemas.BaseUserUpdate):
-    pass
+    name: str | None = None
 
 
 class SetupStatus(BaseModel):
@@ -202,4 +202,5 @@ class MemberInvite(BaseModel):
 class MemberOut(BaseModel):
     id: uuid.UUID
     email: str
+    name: str | None
     joined_at: datetime

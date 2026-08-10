@@ -115,6 +115,7 @@ export interface ShoppingListItem {
 export interface CurrentUser {
   id: string
   email: string
+  name: string | null
   is_active: boolean
   is_superuser: boolean
   is_verified: boolean
@@ -123,6 +124,7 @@ export interface CurrentUser {
 export interface WorkspaceMember {
   id: string
   email: string
+  name: string | null
   joined_at: string
 }
 

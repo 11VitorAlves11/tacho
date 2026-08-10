@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
-import { getCurrentUser, getSetupStatus, logout as apiLogout } from '../api/auth'
+import { getCurrentUser, getSetupStatus, logout as apiLogout, tryForwardLogin } from '../api/auth'
 import { setUnauthorizedHandler } from '../api/client'
 import type { CurrentUser } from '../api/types'
 
@@ -20,7 +20,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function refresh() {
     const [userResult, statusResult] = await Promise.allSettled([getCurrentUser(), getSetupStatus()])
-    setUser(userResult.status === 'fulfilled' ? userResult.value : null)
+    let user = userResult.status === 'fulfilled' ? userResult.value : null
+
+    // Sem sessão própria ainda — tenta o login silencioso via forward-auth
+    // (produção, atrás do Authentik) antes de assumir que é preciso mostrar
+    // a página de login. Best-effort: em dev ou com forward-auth desligado
+    // no backend, isto dá sempre 404 e `user` continua null.
+    if (!user) {
+      const forwarded = await tryForwardLogin()
+      if (forwarded) user = await getCurrentUser().catch(() => null)
+    }
+
+    setUser(user)
     setNeedsSetup(statusResult.status === 'fulfilled' ? statusResult.value.needs_setup : false)
   }
 

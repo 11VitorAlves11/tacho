@@ -74,6 +74,8 @@ class User(SQLAlchemyBaseUserTableUUID, Base):
 
     __tablename__ = "users"
 
+    name: Mapped[str | None] = mapped_column(Text, nullable=True)
+
 
 class WorkspaceMember(Base):
     """Liga um User a um Workspace. Sem coluna de papel/role — ao
