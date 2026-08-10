@@ -524,9 +524,21 @@ concluída** quando todos estes estiverem verificados.
       protegida bloqueada → login da segunda conta → workspace partilhado
       confirmado visualmente, 2 contas de teste `vitor@example.com`/
       `mariana@example.com` deixadas na BD local — sem elas a app fica
-      inacessível). **Falta para produção**: definir `AUTH_SECRET` e
-      `AUTH_COOKIE_SECURE=true` no `.env` do CT 202 antes do próximo
-      deploy (os valores por omissão são só para dev local).
+      inacessível). **Deploy em produção feito em 2026-08-10** (release
+      `v1.2.0`, ver entrada própria mais abaixo) — `AUTH_SECRET` gerado
+      (`openssl rand -hex 32`), `AUTH_COOKIE_SECURE=true` e
+      `PUBLIC_BASE_URL=https://receitas.alveslab.dev` definidos no `.env`
+      do CT 202. **Falta que ficou registada só ao verificar em
+      produção, não prevista antes**: as três migrações Alembic desde a
+      última tag publicada (`1c5b13ed2ab2` planeamento,
+      `65564d5e86e1` auth, `b1d85af98dd0` nome) nunca tinham sido
+      aplicadas à BD de produção — não há passo de migração automática
+      no `Dockerfile` (só `CMD uvicorn`), fica sempre manual
+      (`docker-compose exec web alembic upgrade head`) depois de cada
+      deploy que traga migração nova. **Primeira vez que a auth corre em
+      produção**: `needs_setup` ficou `true` depois do deploy — a
+      primeira conta real (Vítor) precisa de ser criada em
+      `https://receitas.alveslab.dev/setup`, ainda por fazer.
 - [x] **Secção de perfil no `UserMenu`** — resolve a decisão #5 (comparação
       com o menu de utilizador do Mealie/Tandoor: perfil com nome/email/
       password próprios, sem trazer o que não se aplica ao Tacho — idioma
@@ -629,15 +641,32 @@ concluída** quando todos estes estiverem verificados.
          — só o NPM injeta isto, por isso um pedido direto ao CT 202 que
          contorne o NPM nunca o consegue forjar.
       3. No `.env` do CT 202, definir `TRUST_FORWARD_AUTH=true` e
-         `FORWARD_AUTH_SECRET=<o mesmo valor do passo 2>` (junta-se aos
-         outros três já pendentes — `AUTH_SECRET`, `AUTH_COOKIE_SECURE`,
-         `PUBLIC_BASE_URL`).
+         `FORWARD_AUTH_SECRET=<o mesmo valor do passo 2>` (os outros três
+         — `AUTH_SECRET`, `AUTH_COOKIE_SECURE`, `PUBLIC_BASE_URL` — já
+         ficaram definidos no deploy da `v1.2.0`, ver abaixo).
       4. Confirmar que o NPM não filtra o header `X-authentik-email` a
          caminho do CT 202 (comportamento por omissão, mas vale confirmar).
       5. Testar com as duas contas reais (`vitor`/`mariana`) — o email da
          conta Authentik de cada um tem de bater certo com o email da
          conta Tacho correspondente, senão cai no login normal (por
          omissão, sem revelar qual dos dois falhou).
+      **Release e deploy — 2026-08-10.** Tag `v1.2.0` publicada
+      (`ghcr.io/11vitoralves11/tacho_app-{web,celery-worker}:v1.2.0`,
+      workflow `build-and-push.yml`), `docker-compose.prod.yml` do
+      repositório e do CT 202 atualizados, containers `web`/
+      `celery-worker` recriados e confirmados a correr essa imagem
+      (`docker inspect` vs `docker image inspect`, IDs a bater certo).
+      Migrações pendentes aplicadas em produção (ver nota na entrada
+      "Multi-utilizador real" acima — não havia passo automático).
+      `AUTH_SECRET`/`AUTH_COOKIE_SECURE`/`PUBLIC_BASE_URL` definidos no
+      `.env` do CT 202 (estavam em falta desde o deploy anterior —
+      produção esteve a usar o `AUTH_SECRET` de omissão, público no
+      código, entre o deploy da auth e esta correção; sem sinal de
+      exploração, mas é uma janela real a registar). `needs_setup` ficou
+      `true` — primeira vez que a auth corre em produção, falta criar a
+      conta real do Vítor em `/setup`. Passos 1/2/4/5 da checklist acima
+      continuam por fazer (dependem do Authentik/NPM, fora do alcance
+      deste trabalho).
 - [ ] **Favoritos por utilizador** — evolução do item da v1.1, padrão
       `favorited_by` do Mealie.
 - [ ] **Avaliação por estrelas** — padrão do Mealie (`rating`), não do Tandoor.
