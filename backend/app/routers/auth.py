@@ -7,9 +7,10 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app import schemas
-from app.auth import UserManager, current_active_user, get_user_manager
+from app.auth import UserManager, get_user_manager
 from app.constants import DEFAULT_WORKSPACE_ID
 from app.database import get_db
+from app.deps import get_workspace_id
 from app.models import User, WorkspaceMember
 
 router = APIRouter(tags=["auth"])
@@ -47,12 +48,12 @@ async def setup(
 @router.get("/workspace/members", response_model=list[schemas.MemberOut])
 def list_workspace_members(
     db: Session = Depends(get_db),
-    user: User = Depends(current_active_user),
+    workspace_id: uuid.UUID = Depends(get_workspace_id),
 ):
     rows = db.execute(
         select(WorkspaceMember, User)
         .join(User, User.id == WorkspaceMember.user_id)
-        .where(WorkspaceMember.workspace_id == DEFAULT_WORKSPACE_ID)
+        .where(WorkspaceMember.workspace_id == workspace_id)
         .order_by(WorkspaceMember.joined_at)
     ).all()
     return [schemas.MemberOut(id=u.id, email=u.email, joined_at=m.joined_at) for m, u in rows]
@@ -62,7 +63,7 @@ def list_workspace_members(
 async def add_workspace_member(
     payload: schemas.MemberInvite,
     db: Session = Depends(get_db),
-    user: User = Depends(current_active_user),
+    workspace_id: uuid.UUID = Depends(get_workspace_id),
     user_manager: UserManager = Depends(get_user_manager),
 ):
     """Junta a segunda pessoa do agregado à mesma workspace — sem SMTP,
@@ -78,7 +79,7 @@ async def add_workspace_member(
     except fu_exceptions.UserAlreadyExists:
         raise HTTPException(status_code=409, detail="Já existe uma conta com este email")
 
-    membership = WorkspaceMember(workspace_id=DEFAULT_WORKSPACE_ID, user_id=new_user.id)
+    membership = WorkspaceMember(workspace_id=workspace_id, user_id=new_user.id)
     db.add(membership)
     db.commit()
     db.refresh(membership)

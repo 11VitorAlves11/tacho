@@ -396,7 +396,14 @@ concluída** quando todos estes estiverem verificados.
       deploy**, ou a imagem exportada continua errada lá. Validado com
       *round-trip* real: o próprio `recipe-scrapers` (`scrape_html`, modo
       genérico) consegue reimportar o JSON-LD exportado e devolve os
-      mesmos dados.
+      mesmos dados. **Atualização pós-autenticação (v1.2 abaixo):** este
+      endpoint passou a exigir sessão (cookie), como todos os outros —
+      já não é consumível externamente sem login, ao contrário do que a
+      validação original por round-trip fazia parecer (nessa altura ainda
+      não havia auth nenhuma). Só `/images/{ficheiro}` continua público,
+      sem exigir sessão — `StaticFiles`, protegido só por o nome do
+      ficheiro ser um UUID4 imprevisível, decisão deliberada para não
+      complicar o servir de imagens.
 
 ---
 

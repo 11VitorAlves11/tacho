@@ -15,8 +15,12 @@ settings = get_settings()
 # Motor assíncrono próprio, só para autenticação — ver nota em
 # `Settings.async_database_url` e a decisão #1 do TODO.md sobre porque
 # `fastapi_users_db_sqlalchemy` não tem variante síncrona. Mesma BD do
-# `Session` síncrono usado em todo o resto da app, driver diferente.
-async_engine = create_async_engine(settings.async_database_url)
+# `Session` síncrono usado em todo o resto da app, driver diferente. Pool
+# pequeno de propósito — só faz uma leitura por pedido (validar sessão),
+# nunca precisa da pool default (5+10 overflow) que dobraria as ligações
+# Postgres por worker num CT com RAM já apertada (Dockerfile sem nginx
+# por essa mesma razão).
+async_engine = create_async_engine(settings.async_database_url, pool_size=2, max_overflow=3)
 async_session_maker = async_sessionmaker(async_engine, expire_on_commit=False)
 
 
