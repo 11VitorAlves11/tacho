@@ -1,6 +1,6 @@
 import re
 import uuid
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
@@ -290,3 +290,165 @@ def delete_tag(db: Session, workspace_id: uuid.UUID, tag_id: uuid.UUID) -> bool:
     db.delete(tag)
     db.commit()
     return True
+
+
+def _meal_plan_query(workspace_id: uuid.UUID):
+    return (
+        select(models.MealPlanEntry)
+        .where(models.MealPlanEntry.workspace_id == workspace_id)
+        .options(
+            selectinload(models.MealPlanEntry.recipe).selectinload(models.Recipe.categories),
+            selectinload(models.MealPlanEntry.recipe).selectinload(models.Recipe.tags),
+        )
+    )
+
+
+def list_meal_plan_entries(
+    db: Session, workspace_id: uuid.UUID, start: date, end: date
+) -> list[models.MealPlanEntry]:
+    query = _meal_plan_query(workspace_id).where(
+        models.MealPlanEntry.day >= start, models.MealPlanEntry.day <= end
+    )
+    return list(db.scalars(query).unique())
+
+
+def upsert_meal_plan_entry(
+    db: Session, workspace_id: uuid.UUID, day: date, meal_type: str, recipe_id: uuid.UUID
+) -> models.MealPlanEntry | None:
+    """Atribui uma receita a um dia/refeição — substitui o que lá estivesse
+    (um slot só tem uma receita). `recipe_id` é validado como pertencente ao
+    workspace antes de gravar; devolve None se a receita não existir aqui."""
+    recipe = get_recipe(db, workspace_id, recipe_id)
+    if recipe is None:
+        return None
+
+    query = select(models.MealPlanEntry).where(
+        models.MealPlanEntry.workspace_id == workspace_id,
+        models.MealPlanEntry.day == day,
+        models.MealPlanEntry.meal_type == meal_type,
+    )
+    entry = db.scalars(query).first()
+    if entry is None:
+        entry = models.MealPlanEntry(workspace_id=workspace_id, day=day, meal_type=meal_type, recipe_id=recipe_id)
+        db.add(entry)
+    else:
+        entry.recipe_id = recipe_id
+    db.commit()
+
+    result_query = _meal_plan_query(workspace_id).where(models.MealPlanEntry.id == entry.id)
+    return db.scalars(result_query).first()
+
+
+def delete_meal_plan_entry(db: Session, workspace_id: uuid.UUID, day: date, meal_type: str) -> bool:
+    query = select(models.MealPlanEntry).where(
+        models.MealPlanEntry.workspace_id == workspace_id,
+        models.MealPlanEntry.day == day,
+        models.MealPlanEntry.meal_type == meal_type,
+    )
+    entry = db.scalars(query).first()
+    if entry is None:
+        return False
+    db.delete(entry)
+    db.commit()
+    return True
+
+
+def list_shopping_list_items(db: Session, workspace_id: uuid.UUID) -> list[models.ShoppingListItem]:
+    query = (
+        select(models.ShoppingListItem)
+        .where(models.ShoppingListItem.workspace_id == workspace_id)
+        .order_by(models.ShoppingListItem.created_at)
+    )
+    return list(db.scalars(query))
+
+
+def create_shopping_list_item(
+    db: Session, workspace_id: uuid.UUID, payload: schemas.ShoppingListItemIn
+) -> models.ShoppingListItem:
+    item = models.ShoppingListItem(workspace_id=workspace_id, name=payload.name, quantity=payload.quantity)
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+def update_shopping_list_item(
+    db: Session, workspace_id: uuid.UUID, item_id: uuid.UUID, payload: schemas.ShoppingListItemUpdate
+) -> models.ShoppingListItem | None:
+    query = select(models.ShoppingListItem).where(
+        models.ShoppingListItem.workspace_id == workspace_id, models.ShoppingListItem.id == item_id
+    )
+    item = db.scalars(query).first()
+    if item is None:
+        return None
+    if payload.name is not None:
+        item.name = payload.name
+    if payload.quantity is not None:
+        item.quantity = payload.quantity
+    if payload.is_checked is not None:
+        item.is_checked = payload.is_checked
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+def delete_shopping_list_item(db: Session, workspace_id: uuid.UUID, item_id: uuid.UUID) -> bool:
+    query = select(models.ShoppingListItem).where(
+        models.ShoppingListItem.workspace_id == workspace_id, models.ShoppingListItem.id == item_id
+    )
+    item = db.scalars(query).first()
+    if item is None:
+        return False
+    db.delete(item)
+    db.commit()
+    return True
+
+
+def _format_quantity(quantity, unit: str | None) -> str | None:
+    parts = []
+    if quantity is not None:
+        parts.append(f"{float(quantity):g}")
+    if unit:
+        parts.append(unit)
+    return " ".join(parts) if parts else None
+
+
+def generate_shopping_list(db: Session, workspace_id: uuid.UUID, week_start: date) -> list[models.ShoppingListItem]:
+    """Agrega os ingredientes de todas as receitas planeadas na semana
+    (week_start .. +6 dias) para a lista de compras. Um item por ingrediente
+    de nome distinto na semana — a quantidade fica a da primeira ocorrência
+    encontrada, as seguintes são descartadas (ex. bacalhau ao almoço e ao
+    jantar não soma 800g, fica só a quantidade de uma das duas); somar a
+    sério entre receitas exigiria conversão de unidades, fora de âmbito.
+    Cabeçalhos de secção (`is_header`) são ignorados, não são ingredientes
+    reais. Para gerar não duplicar ao carregar duas vezes, salta ingredientes
+    cujo nome já existe como item por marcar na lista — itens já comprados
+    (marcados) não bloqueiam, para poder voltar a gerar depois de esvaziar o
+    carrinho."""
+    week_end = week_start + timedelta(days=6)
+    entries = list_meal_plan_entries(db, workspace_id, week_start, week_end)
+
+    existing_query = select(models.ShoppingListItem.name).where(
+        models.ShoppingListItem.workspace_id == workspace_id, models.ShoppingListItem.is_checked.is_(False)
+    )
+    existing_names = set(db.scalars(existing_query))
+
+    new_items: list[models.ShoppingListItem] = []
+    seen_this_run: set[str] = set()
+    for entry in entries:
+        for ingredient in entry.recipe.ingredients:
+            if ingredient.is_header:
+                continue
+            if ingredient.name in existing_names or ingredient.name in seen_this_run:
+                continue
+            seen_this_run.add(ingredient.name)
+            item = models.ShoppingListItem(
+                workspace_id=workspace_id,
+                name=ingredient.name,
+                quantity=_format_quantity(ingredient.quantity, ingredient.unit),
+            )
+            db.add(item)
+            new_items.append(item)
+
+    db.commit()
+    return list_shopping_list_items(db, workspace_id)

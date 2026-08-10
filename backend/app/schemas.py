@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict, HttpUrl
 
@@ -134,3 +134,43 @@ class RecipeOut(BaseModel):
     categories: list[CategoryOut]
     tags: list[TagOut]
     cook_notes: list[CookNoteOut]
+
+
+class MealPlanEntryIn(BaseModel):
+    recipe_id: uuid.UUID
+
+
+class MealPlanEntryOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    day: date
+    meal_type: str
+    recipe: RecipeSummary
+
+
+class ShoppingListItemIn(BaseModel):
+    name: str
+    quantity: str | None = None
+
+
+class ShoppingListItemUpdate(BaseModel):
+    name: str | None = None
+    quantity: str | None = None
+    is_checked: bool | None = None
+
+
+class ShoppingListItemOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    name: str
+    quantity: str | None
+    is_checked: bool
+    created_at: datetime
+
+
+class GenerateShoppingListRequest(BaseModel):
+    # Segunda-feira da semana a agregar — o frontend calcula-a localmente
+    # (ver nota sobre fuso horário em MealPlan.tsx) e envia-a já resolvida.
+    week_start: date

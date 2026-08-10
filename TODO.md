@@ -97,35 +97,160 @@ concluída** quando todos estes estiverem verificados.
 
 ## v1.1
 
-- [ ] **Planeamento de refeições + Lista de compras** — nada construído.
-      Desenhar primeiro no Figma (ainda não existem estes ecrãs).
-      Referência de schema: `Food.supermarket_category` do Tandoor é um bom
-      padrão para o agrupamento por corredor.
-- [ ] **Atualizar o Figma com o novo estilo + criar os ecrãs em falta** —
+- [x] **Planeamento de refeições + Lista de compras** — implementado a partir
+      dos ecrãs desenhados no Figma (ver entrada abaixo). Backend:
+      `MealPlanEntry` (dia + `almoco`/`jantar`, `UniqueConstraint` por
+      workspace/dia/refeição, upsert substitui o que lá estivesse) e
+      `ShoppingListItem` (`name`, `quantity` texto livre já composto, ex.
+      "500 g", `is_checked`), migração `1c5b13ed2ab2`. `routers/planning.py`:
+      `GET/PUT/DELETE /meal-plan{,/…}`, `GET/POST /shopping-list`,
+      `PATCH/DELETE /shopping-list/{id}`, `POST /shopping-list/generate`
+      (registado antes de `/shopping-list/{item_id}` — mesmo cuidado de
+      ordem de rotas do `/recipes/import`). **A geração agrega dados que já
+      existem hoje** (`Ingredient.quantity`/`unit` já são colunas
+      estruturadas para receitas manuais, não é preciso esperar pelo
+      parsing de ingredientes da importação, que só afeta receitas trazidas
+      por URL) — corrige uma nota antiga do mockup Figma que dizia o
+      contrário. Um item por ingrediente da semana (sem somar quantidades
+      entre receitas, isso precisava de conversão de unidades, fora de
+      âmbito); gerar duas vezes não duplica itens por comprar, mas volta a
+      criar um item já marcado como comprado (para poder gerar de novo
+      depois de esvaziar o carrinho). Frontend: `pages/MealPlan.tsx`
+      (navegação por semana, 7 cards Segunda–Domingo × Almoço/Jantar,
+      `<select>` para atribuir, botão para remover), `pages/ShoppingList.tsx`
+      (botão "Gerar da semana", adicionar item à mão, marcar
+      comprado/riscado, apagar) — `lib/date.ts` centraliza a formatação de
+      data em fuso horário local (nunca `toISOString()`, que desloca a
+      meia-noite em Portugal para o dia anterior) e o cálculo da segunda-feira
+      da semana. **Simplificações face ao mockup Figma**: sem agrupamento
+      por corredor (`Food.supermarket_category` do Tandoor) — o modelo
+      `ShoppingListItem` não tem esse campo, fica para quando fizer falta a
+      sério; `BottomNav` real tem 4 destinos (Receitas/Lista/Plano/
+      Adicionar), sem "Favoritos" (o Figma `v1.1-alvo` mostrava 4 com
+      Favoritos em vez de Adicionar — não há ecrã de Favoritos na app real,
+      só um filtro na Home, por isso fica de fora até esse ecrã existir,
+      regra do `DESIGN.md`); slot preenchido mostra só o título da receita,
+      sem a mini-thumb que o mockup tinha (`MealPlanEntryOut.recipe` já traz
+      `image_path`, é só questão de desenhar o `<img>` quando quiser ficar
+      mais próximo do Figma). Testado pela API via curl (todos os endpoints,
+      incluindo 404s e a idempotência da geração) e no browser via
+      Playwright instalado nesta sessão (fluxo completo: atribuir/remover
+      receita num slot, navegar semana, adicionar/marcar/apagar item, gerar
+      lista, sem erros de consola); dados de teste apagados da BD local no
+      fim, para não poluir o ambiente de dev.
+- [x] **Atualizar o Figma com o novo estilo + criar os ecrãs em falta** —
       trabalho em curso no ficheiro `Receitas App — Design Revamp`
-      (`cOvlbDp3d0osvTcPT6TFSR`), **bloqueado pela quota mensal do MCP do
-      Figma** (plano Starter, seat View, 6 chamadas/mês — ver
-      `file://figma/docs/rate-limits-access.md` do servidor MCP). Plano
-      completo em `/root/.claude/plans/atualiza-o-figma-com-keen-quiche.md`.
+      (`cOvlbDp3d0osvTcPT6TFSR`). O MCP oficial do Figma ficou bloqueado pela
+      quota mensal (plano Starter, seat View, 6 chamadas/mês); **2026-08-09
+      — retomado via Figwright** (plugin Figma + servidor MCP local, sem
+      esse limite — precisa do plugin aberto no browser para funcionar,
+      liga/desliga com o browser). Plano atual em
+      `/root/.claude/plans/continuar-redesign-figma-via-figwright.md` (substitui
+      `/root/.claude/plans/atualiza-o-figma-com-keen-quiche.md`, que ainda
+      tem o histórico da fase MCP-oficial). Dark mode **fora de âmbito** no
+      Figma por decisão explícita — só documentado em nota de texto na
+      página `Design System`, sem frames escuros.
       **Já feito** (verificado por screenshot): 3 páginas (`Design System`,
       `v1.0 — Ecrãs atuais`, `v1.1 — Planeamento & Compras`); fundação
       completa (9 variáveis de cor, 5 estilos de texto, 4 estilos de
-      efeito/sombra, todos batendo certo com `DESIGN.md`/`index.css`); 20
-      ícones importados via SVG a partir de `icons.tsx`; componentes `Chip`
+      efeito/sombra, todos batendo certo com `DESIGN.md`/`index.css`); 18
+      ícones importados via SVG a partir de `icons.tsx` (inclui `UserIcon`,
+      não 20 como uma nota anterior dizia); componentes `Chip`
       (categoria/tag/filtro ativo/inativo), `Button` (primary/cook-mode/
       ghost), `RecipeCard` (card horizontal fiel ao real, não o vertical do
-      mockup antigo), `HeroStat`. **Por fazer, nesta ordem:** (1) Header
-      desktop/mobile + BottomNav (2 itens v1.0, 4 itens v1.1-alvo) — script
-      já escrito, falhou a meio por limite de quota, nada ficou partido; (2)
-      reconstruir os 5 frames existentes (Home, Detalhe, Modo Cozinha,
-      mobile+desktop) fiéis ao código, substituindo o mockup antigo
-      (sidebar desktop errada, emoji em vez de ícones, cores erradas); (3)
-      criar Adicionar receita e Editar receita no Figma (já existem na app,
-      nunca desenhados); (4) criar Planeamento de refeições (grelha semanal)
-      e Lista de Compras (gerar da semana + itens manuais) em `v1.1`; (5)
-      verificação final por screenshot contra a checklist do plano.
-- [ ] **Mais destinos no bottom nav** — hoje só "Receitas"/"Adicionar" contra os
-      4–5 que o design descreve; desbloqueia quando os ecrãs acima existirem.
+      mockup antigo), `HeroStat`. **2026-08-09, via Figwright:** `Header`
+      (variantes Mobile e Desktop, gradiente diagonal, logo, botão
+      "Adicionar receita" só desktop, avatar `UserMenu` "VM" + chevron) e
+      `BottomNav` (variante v1.0 real de 2 itens Receitas/Adicionar +
+      variante v1.1-alvo de 4 itens Receitas/Lista/Plano/Favoritos,
+      claramente anotada como estado-alvo — ícones de Lista/Plano são
+      placeholder, `Copy`/`Clock`, até existir iconografia dedicada); os 5
+      frames de `v1.0` deixaram de ter espaço reservado — **Home mobile e
+      desktop reconstruídos** fiéis ao `Home.tsx` (hero com copy real,
+      pesquisa, chip Favoritos + chips de categoria/tag, grid de
+      `RecipeCard` 1 col mobile / 2 col desktop). **2026-08-10, via
+      Figwright:** **Detalhe da Receita (mobile + desktop) e Modo Cozinha
+      (mobile) reconstruídos**, substituindo por completo o mockup antigo
+      nesses 3 frames (receita fictícia "Bowl Poke de Salmão", chip azul,
+      emoji `🍣🔥👥⏱←♡`, sidebar desktop de 240px inexistente no código
+      real). Receita canónica usada em todo o conteúdo: "Bacalhau à Brás"
+      (já usada no card da Home e no teste de nota pós-confeção), com dados
+      a exercitar todas as secções condicionais (tempos separados,
+      porções+stepper, calorias+macros, categoria+tag, cabeçalho de secção
+      nos ingredientes, nota pós-confeção, última vez feita, fonte).
+      Confirmado por inventário ao vivo (não por suposição) que nada no
+      ficheiro é `COMPONENT`/`INSTANCE` do Figma — os nós `component/X` são
+      `FRAME`s normais com essa convenção de nome; reconstrução feita por
+      `clone_node` a partir da biblioteca já existente na página
+      `Design System` (ícones, chips, botões, `HeroStat`, `Header`,
+      `BottomNav`), nunca redesenhada do zero. Decisão tomada e documentada
+      em nota de texto na página `Design System`: os tokens `surface` e
+      `forest-text` (só existem no código, sem variável Figma própria)
+      ficam ligados a `color/card-white` e `color/primary-forest`
+      respetivamente — em modo claro têm o mesmo valor, e assim a contagem
+      fica nas 9 variáveis/5 estilos de texto/4 de efeito originais,
+      confirmada intacta no fim. Desktop sem sidebar: `PageShell.tsx` real
+      é uma coluna única centrada `max-w-4xl` (896px), não duas colunas —
+      corrigido no Figma, grid Ingredientes/Preparação só a 2 colunas
+      dentro dessa coluna. Verificado por screenshot dos 3 frames.
+      **Adicionar receita e Editar receita criados** (mobile, novos no
+      Figma — não existiam antes): "Editar receita" tem o `RecipeForm.tsx`
+      completo pré-preenchido com "Bacalhau à Brás" (5 cards: foto+campos
+      principais, ingredientes com cabeçalho de secção e botões
+      "Adicionar ingrediente"/"Adicionar cabeçalho de secção", preparação
+      com duração por passo, categorias/tags com chips ativos/inativos e
+      `InlineAdd` de borda tracejada, nutrição em grid 2 colunas) mais o
+      cabeçalho com botão "Apagar" em laranja; "Adicionar receita" mostra
+      as tabs "Por link"/"À mão" (Por link ativo por omissão) com o card de
+      importação por URL (`LinkIcon`, botão "Importar receita", aviso sobre
+      confirmar depois de importar) — a tab "À mão" não foi duplicada,
+      fica anotada em nota de texto no próprio frame a apontar para o
+      formulário completo do ecrã Editar, para não repetir os 5 cards.
+      Desktop destes dois ecrãs não construído (o código só tem duas
+      diferenças responsivas nestes ficheiros — padding do `PageShell` e a
+      grelha de nutrição 2→4 colunas — por isso o mobile já documenta a
+      estrutura toda). **Planeamento de refeições e Lista de Compras
+      criados** (mobile, página `v1.1 — Planeamento & Compras`, ainda vazia
+      antes destes dois): "Planeamento" tem navegação por semana
+      (chevron/label/chevron) e um card por dia (Segunda a Domingo, datas
+      3–9 de agosto), cada um com secção Almoço e Jantar — vazio mostra pill
+      tracejada "+ Adicionar receita", preenchido mostra mini-card
+      horizontal (thumb + título, ex. "Bacalhau à Brás" na Segunda,
+      "Frango Assado com Batata" na Quinta); "Lista de Compras" tem o botão
+      "Gerar da semana", com os itens mostrados agrupados por corredor
+      (`Food.supermarket_category`: Peixe e Marisco, Hortícolas, Laticínios
+      e Ovos, Mercearia) com checkbox riscado/opacidade reduzida no estado
+      "comprado" (sem ícone de visto — nenhum existe em `icons.tsx`, a
+      indicação é só risco+opacidade, como o próprio plano previa) e uma
+      linha final "+ Adicionar item". **Nota da implementação real (ver
+      v1.1 acima):** a mockup tinha uma anotação a dizer que "Gerar da
+      semana" dependia do parsing estruturado de ingredientes — não
+      dependia (`Ingredient.quantity`/`unit` já são colunas próprias para
+      receitas manuais) e a versão implementada não agrupa por corredor
+      (`ShoppingListItem` não tem esse campo); o Figma em si não foi
+      corrigido, fica só esta nota a apontar a divergência. Ambos usam o `BottomNav-v1.1-alvo` (4
+      itens) com o destino correspondente ativo ("Plano"/"Lista"),
+      reaproveitado sem redesenhar, tal como os `Chip`/`Button`/`Header` já
+      existentes — nenhum componente novo na fundação, só instâncias novas
+      via `clone_node`. **Verificação final feita**: os 9 frames (Home
+      mobile+desktop, Detalhe mobile+desktop, Modo Cozinha, Adicionar,
+      Editar, Planeamento, Lista) revistos por screenshot contra a
+      checklist do plano — sem emoji; laranja só em relógio/progresso/CTAs
+      do Modo Cozinha (mais o botão "Apagar" do Editar, exceção já
+      documentada e fiel ao código); cards brancos sobre sage; sombra OU
+      contorno tracejado, nunca as duas na mesma peça; sem sidebar desktop.
+      Design system confirmado intacto no fim (9 variáveis de cor, 5
+      estilos de texto, 4 de efeito — os mesmos desde o início). O redesign
+      Figma fica assim concluído para o âmbito atual (v1.0 + v1.1); o único
+      item da secção "Já feito" desta lista que continua por desenhar é
+      "Mais destinos no bottom nav" na app real, que é trabalho de código,
+      não de Figma (ver item abaixo).
+- [x] **Mais destinos no bottom nav** — `BottomNav.tsx` passou de 2 para 4
+      itens (Receitas/Lista/Plano/Adicionar), agora que os ecrãs de
+      Planeamento e Lista de Compras existem de facto (ver item acima).
+      "Favoritos", que o Figma `v1.1-alvo` também mostrava, fica de fora —
+      não há ecrã de Favoritos, só um filtro na Home; volta a ficar em
+      aberto se algum dia se justificar um ecrã próprio.
 - [x] **Escalar porções no Detalhe** — sem mudanças no backend; stepper +/−
       junto ao hero de porções recalcula `quantity` em runtime (padrão
       Mealie). Só afeta ingredientes com `quantity` estruturado — receitas
@@ -351,3 +476,21 @@ Sem fase atribuída. Só passam ao roadmap com decisão explícita.
 - Conversão automática de unidades (chávenas ↔ gramas) — precisa de tabela de
   densidades por alimento; uma chávena de farinha e uma de açúcar não pesam o
   mesmo.
+- **Ligar receitas entre si (sub-receitas/componentes)** — hoje não há forma de
+  uma receita apontar para outra; uma "Lasanha" que leva "Molho de Tomate" e
+  "Molho Bechamel" como componentes só pode referenciar os nomes em texto
+  livre nos ingredientes/passos, sem link real nem reaproveitamento
+  automático de ingredientes/tempo. Caso real surgido a importar receitas do
+  Notion (2026-08-08). Padrão a inspirar: `Ingredient` do Tandoor pode
+  apontar para outra `Recipe` em vez de (ou além de) um `Food`.
+- **Repositório GitHub em inglês + nome só "Tacho"** — hoje é
+  `11VitorAlves11/tacho_app`, com documentação em PT. Passar todo o conteúdo
+  do repositório (README, docs como `DESIGN.md`/`PRODUCT.md`/`PRD-*`, este
+  `TODO.md`) para inglês, e renomear o repositório para só `Tacho` (sem o
+  sufixo `_app`). Por decidir antes de executar: se inclui também
+  comentários no código e strings da UI (a app em si está em pt-PT por
+  desenho, `DESIGN.md`/`PRODUCT.md` documentam isso como intencional) ou só
+  a documentação/README voltados para quem vê o repositório no GitHub. Um
+  rename de repositório no GitHub quebra URLs antigas (redireciona, mas
+  ações/webhooks/deploy que apontem para o nome antigo têm de ser
+  atualizados) — confirmar antes de executar.

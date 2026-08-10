@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom'
-import { PlusIcon, PotIcon } from './icons'
+import { CalendarIcon, CartIcon, PlusIcon, PotIcon } from './icons'
 
 const linkBase =
   'flex flex-1 flex-col items-center gap-1 rounded-full py-2 text-xs font-medium transition-colors'
@@ -19,6 +19,24 @@ export function BottomNav() {
       >
         <PotIcon className="size-5" />
         Receitas
+      </NavLink>
+      <NavLink
+        to="/lista-compras"
+        className={({ isActive }) =>
+          `${linkBase} ${isActive ? 'bg-primary-forest text-card-white' : 'text-text-secondary'}`
+        }
+      >
+        <CartIcon className="size-5" />
+        Lista
+      </NavLink>
+      <NavLink
+        to="/planeamento"
+        className={({ isActive }) =>
+          `${linkBase} ${isActive ? 'bg-primary-forest text-card-white' : 'text-text-secondary'}`
+        }
+      >
+        <CalendarIcon className="size-5" />
+        Plano
       </NavLink>
       <NavLink
         to="/adicionar"

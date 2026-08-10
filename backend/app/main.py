@@ -7,7 +7,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.config import get_settings
-from app.routers import recipes, taxonomy
+from app.routers import planning, recipes, taxonomy
 
 settings = get_settings()
 
@@ -22,6 +22,7 @@ app.add_middleware(
 
 app.include_router(recipes.router)
 app.include_router(taxonomy.router)
+app.include_router(planning.router)
 
 os.makedirs(settings.images_dir, exist_ok=True)
 app.mount("/images", StaticFiles(directory=settings.images_dir), name="images")

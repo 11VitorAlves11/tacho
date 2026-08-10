@@ -94,3 +94,20 @@ export interface ImportStatus {
   status: 'pending' | 'done' | string
   recipe_id: string | null
 }
+
+export type MealType = 'almoco' | 'jantar'
+
+export interface MealPlanEntry {
+  id: string
+  day: string
+  meal_type: MealType
+  recipe: RecipeSummary
+}
+
+export interface ShoppingListItem {
+  id: string
+  name: string
+  quantity: string | null
+  is_checked: boolean
+  created_at: string
+}

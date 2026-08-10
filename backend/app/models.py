@@ -1,8 +1,9 @@
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
 from sqlalchemy import (
     Boolean,
+    Date,
     DateTime,
     ForeignKey,
     Index,
@@ -49,6 +50,12 @@ class Workspace(Base):
     recipes: Mapped[list["Recipe"]] = relationship(back_populates="workspace", cascade="all, delete-orphan")
     categories: Mapped[list["Category"]] = relationship(back_populates="workspace", cascade="all, delete-orphan")
     tags: Mapped[list["Tag"]] = relationship(back_populates="workspace", cascade="all, delete-orphan")
+    meal_plan_entries: Mapped[list["MealPlanEntry"]] = relationship(
+        back_populates="workspace", cascade="all, delete-orphan"
+    )
+    shopping_list_items: Mapped[list["ShoppingListItem"]] = relationship(
+        back_populates="workspace", cascade="all, delete-orphan"
+    )
 
 
 class Recipe(Base):
@@ -177,3 +184,51 @@ class Tag(Base):
 
     workspace: Mapped["Workspace"] = relationship(back_populates="tags")
     recipes: Mapped[list["Recipe"]] = relationship(secondary=recipe_tags, back_populates="tags")
+
+
+class MealPlanEntry(Base):
+    """Uma receita atribuída a uma refeição (almoço/jantar) de um dia. A
+    ausência de linha para um dia/refeição é o estado "vazio" — não há um
+    valor nulo de receita, atribuir outra substitui a linha (upsert) e
+    remover apaga-a. Coluna chama-se `day`, não `date`, para não sombrear o
+    tipo `date` importado do datetime na anotação da classe."""
+
+    __tablename__ = "meal_plan_entries"
+    __table_args__ = (
+        UniqueConstraint("workspace_id", "day", "meal_type", name="uq_meal_plan_slot"),
+    )
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    workspace_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE")
+    )
+    day: Mapped[date] = mapped_column(Date)
+    # "almoco" | "jantar" — texto simples, sem enum na BD, consistente com o
+    # resto do modelo (nenhuma outra tabela usa enum do Postgres).
+    meal_type: Mapped[str] = mapped_column(Text)
+    recipe_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("recipes.id", ondelete="CASCADE"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    workspace: Mapped["Workspace"] = relationship(back_populates="meal_plan_entries")
+    recipe: Mapped["Recipe"] = relationship()
+
+
+class ShoppingListItem(Base):
+    """Item da lista de compras do workspace — sem semana/data associada,
+    é sempre "a lista atual" (PRD não pede histórico de listas). `quantity`
+    é texto livre já composto (ex. "500 g"), não número+unidade separados,
+    porque agrega quantidades de várias receitas/refeições sem conversão de
+    unidades (fora de âmbito — ver nota em crud.generate_shopping_list)."""
+
+    __tablename__ = "shopping_list_items"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    workspace_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE")
+    )
+    name: Mapped[str] = mapped_column(Text)
+    quantity: Mapped[str | None] = mapped_column(Text)
+    is_checked: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    workspace: Mapped["Workspace"] = relationship(back_populates="shopping_list_items")
