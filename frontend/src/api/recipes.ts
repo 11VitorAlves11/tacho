@@ -42,6 +42,11 @@ export async function toggleFavorite(id: string) {
   return data
 }
 
+export async function setRecipeRating(id: string, rating: number | null) {
+  const { data } = await api.patch<Recipe>(`/recipes/${id}/rating`, { rating })
+  return data
+}
+
 export async function addCookNote(id: string, text: string) {
   const { data } = await api.post<Recipe>(`/recipes/${id}/notes`, { text })
   return data

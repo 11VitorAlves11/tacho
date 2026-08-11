@@ -150,6 +150,10 @@ class Recipe(Base):
     )
     # Marcado ao concluir o Modo Cozinha (PRD 5.1, alimenta a métrica M3).
     last_made_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Avaliação por estrelas (1-5), padrão Mealie — do agregado, não por
+    # utilizador (ao contrário de is_favorite; ver TODO.md, "não do Tandoor",
+    # que não tem esta funcionalidade). Validação do intervalo em schemas.py.
+    rating: Mapped[int | None]
     # `is_favorite` NÃO é uma coluna — `app/crud.py` marca este atributo em
     # runtime consultando `recipe_favorites` para o utilizador do pedido
     # (ver comentário nessa tabela). Sem tipo declarado aqui de propósito;

@@ -2,7 +2,7 @@ import uuid
 from datetime import date, datetime
 
 from fastapi_users import schemas as fu_schemas
-from pydantic import BaseModel, ConfigDict, EmailStr, HttpUrl
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, HttpUrl
 
 
 class IngredientIn(BaseModel):
@@ -83,8 +83,13 @@ class RecipeSummary(BaseModel):
     cook_minutes: int | None
     image_path: str | None
     is_favorite: bool
+    rating: int | None
     categories: list[CategoryOut]
     tags: list[TagOut]
+
+
+class RecipeRatingIn(BaseModel):
+    rating: int | None = Field(default=None, ge=1, le=5)
 
 
 class CookNoteOut(BaseModel):
@@ -123,6 +128,7 @@ class RecipeOut(BaseModel):
     notes: str | None
     image_path: str | None
     is_favorite: bool
+    rating: int | None
     calories_kcal: int | None
     protein_g: float | None
     carbs_g: float | None

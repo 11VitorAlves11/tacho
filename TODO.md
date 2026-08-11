@@ -748,7 +748,25 @@ concluída** quando todos estes estiverem verificados.
       `?favorite=true` filtra por utilizador, `GET /meal-plan` (que aninha
       `RecipeSummary`) também leva `is_favorite` correto — dados de teste
       desfeitos no fim (nenhum favorito nem entrada de plano ficou na BD).
-- [ ] **Avaliação por estrelas** — padrão do Mealie (`rating`), não do Tandoor.
+- [x] **Avaliação por estrelas** — padrão do Mealie (`rating`), não do
+      Tandoor (que não tem esta funcionalidade). `Recipe.rating: int | None`
+      (1-5), coluna aditiva com `CHECK` na BD (`rating IS NULL OR rating
+      BETWEEN 1 AND 5`, defesa em profundidade — a validação principal é
+      `schemas.RecipeRatingIn` com `Field(ge=1, le=5)`), migração
+      `1124746a9f09`. **Do agregado, não por utilizador** — ao contrário de
+      `is_favorite` (evolução recente para per-user), este fica simples
+      como a maioria dos campos da receita (notas, calorias): qualquer
+      membro vê e muda a mesma avaliação. `PATCH /recipes/{id}/rating`
+      (`{"rating": 1..5}` ou `{"rating": null}` para limpar). Não copiado em
+      `duplicate_recipe` (mesma lógica de `last_made_at` — é avaliação de
+      uso, não conteúdo da receita). Frontend: `StarIcon` novo em
+      `icons.tsx` (mesmo estilo dos restantes, traço 24×24); widget de 5
+      estrelas em `RecipeDetail.tsx`, entre a descrição e o hero — clicar
+      numa estrela já preenchida desfavorita-a (toggle), reaproveita
+      `accent-leaf` (não `accent-orange`, reservado a tempo/Modo Cozinha).
+      Testado via curl (definir, limpar, 0 e 6 rejeitados com 422) e no
+      browser (Playwright): clicar na 4ª estrela preenche 4 de 5 sem
+      reload, sem erros de consola — dado de teste limpo no fim.
 - [ ] **Comentários** por receita.
 
 ---

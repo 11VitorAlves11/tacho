@@ -96,6 +96,14 @@ export function HeartIcon(props: SVGProps<SVGSVGElement>) {
   )
 }
 
+export function StarIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M12 3.5 14.3 9 20 9.6 15.7 13.4 17 19 12 15.9 7 19 8.3 13.4 4 9.6 9.7 9Z" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
 export function LinkIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <svg {...base} {...props}>

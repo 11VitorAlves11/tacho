@@ -200,6 +200,18 @@ def set_recipe_image(
     return recipe
 
 
+def set_recipe_rating(
+    db: Session, workspace_id: uuid.UUID, recipe_id: uuid.UUID, user_id: uuid.UUID, rating: int | None
+) -> models.Recipe | None:
+    recipe = get_recipe(db, workspace_id, recipe_id, user_id)
+    if recipe is None:
+        return None
+    recipe.rating = rating
+    db.commit()
+    db.refresh(recipe)
+    return recipe
+
+
 def toggle_recipe_favorite(
     db: Session, workspace_id: uuid.UUID, recipe_id: uuid.UUID, user_id: uuid.UUID
 ) -> models.Recipe | None:

@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { duplicateRecipe, getRecipe, recipeImageUrl, toggleFavorite } from '../api/recipes'
+import { duplicateRecipe, getRecipe, recipeImageUrl, setRecipeRating, toggleFavorite } from '../api/recipes'
 import type { Recipe } from '../api/types'
 import { PageShell } from '../components/PageShell'
 import {
@@ -13,6 +13,7 @@ import {
   PlayIcon,
   PlusIcon,
   ServingsIcon,
+  StarIcon,
 } from '../components/icons'
 
 // Recalcula a quantidade para o número de porções escolhido, sem persistir
@@ -63,6 +64,13 @@ export function RecipeDetail() {
     if (!id) return
     const updated = await toggleFavorite(id)
     setRecipe((prev) => (prev ? { ...prev, is_favorite: updated.is_favorite } : prev))
+  }
+
+  async function handleSetRating(value: number) {
+    if (!id || !recipe) return
+    const nextRating = recipe.rating === value ? null : value
+    const updated = await setRecipeRating(id, nextRating)
+    setRecipe((prev) => (prev ? { ...prev, rating: updated.rating } : prev))
   }
 
   if (notFound) {
@@ -131,6 +139,24 @@ export function RecipeDetail() {
           </div>
         </div>
         {recipe.description && <p className="mt-2 text-text-secondary">{recipe.description}</p>}
+
+        <div className="mt-2 flex items-center gap-0.5" role="radiogroup" aria-label="Avaliação por estrelas">
+          {[1, 2, 3, 4, 5].map((value) => {
+            const filled = recipe.rating != null && value <= recipe.rating
+            return (
+              <button
+                key={value}
+                type="button"
+                onClick={() => handleSetRating(value)}
+                aria-pressed={filled}
+                aria-label={`${value} estrela${value > 1 ? 's' : ''}`}
+                className={`p-0.5 ${filled ? 'text-accent-leaf' : 'text-text-secondary hover:text-accent-leaf'}`}
+              >
+                <StarIcon className="size-5" fill={filled ? 'currentColor' : 'none'} />
+              </button>
+            )
+          })}
+        </div>
 
         <div className="mt-5 flex gap-6 rounded-2xl bg-surface p-5 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)]">
           {totalMinutes > 0 && (

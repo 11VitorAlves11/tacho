@@ -133,6 +133,20 @@ def toggle_recipe_favorite(
     return recipe
 
 
+@router.patch("/{recipe_id}/rating", response_model=schemas.RecipeOut)
+def set_recipe_rating(
+    recipe_id: uuid.UUID,
+    payload: schemas.RecipeRatingIn,
+    db: Session = Depends(get_db),
+    workspace_id: uuid.UUID = Depends(get_workspace_id),
+    user: User = Depends(current_active_user),
+):
+    recipe = crud.set_recipe_rating(db, workspace_id, recipe_id, user.id, payload.rating)
+    if recipe is None:
+        raise HTTPException(status_code=404, detail="Receita não encontrada")
+    return recipe
+
+
 @router.post("/{recipe_id}/mark-made", response_model=schemas.RecipeOut)
 def mark_recipe_made(
     recipe_id: uuid.UUID,
