@@ -814,7 +814,19 @@ concluída** quando todos estes estiverem verificados.
 - [ ] Modo Cozinha offline (cache da receita ativa via service worker).
 - [ ] Galeria de fotos por receita (várias fotos, uma marcada como capa).
 - [ ] Vista de impressão / PDF por receita.
-- [ ] Fracções em unidades ("½ chávena" em vez de "0.5 chávena").
+- [x] **Fracções em unidades** ("½ chávena" em vez de "0.5 chávena") —
+      `RecipeDetail.tsx::formatQuantity`, só formatação de apresentação,
+      sem mudanças no backend nem no valor guardado (`Ingredient.quantity`
+      continua `0.5`). Reconhece ⅛/¼/⅓/⅜/½/⅝/⅔/¾/⅞ com tolerância 0.02 —
+      cobre o arredondamento a 2 casas do parser de importação (1/3 vira
+      0.33, não 0.333…) e o erro de vírgula flutuante ao escalar porções.
+      Funciona também com parte inteira ("1 ½ colher de sopa"); quando não
+      reconhece a fração cai no formato decimal de sempre. Testado com
+      script Node isolado (13 casos, incluindo escalar 0.5→1 ao dobrar
+      porções, que deve mostrar "1", não "1 ½") e no browser (Playwright,
+      receita de teste com farinha ½, açúcar ¼, manteiga 1 ½, sal 2 —
+      confirmado visualmente antes e depois de escalar 4→8 porções, receita
+      de teste apagada no fim).
 
 ---
 
