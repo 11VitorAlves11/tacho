@@ -6,8 +6,10 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from app import crud, schemas
+from app.auth import current_active_user
 from app.database import get_db
 from app.deps import get_workspace_id
+from app.models import User
 
 router = APIRouter(tags=["planning"])
 
@@ -20,8 +22,9 @@ def list_meal_plan(
     end: date,
     db: Session = Depends(get_db),
     workspace_id: uuid.UUID = Depends(get_workspace_id),
+    user: User = Depends(current_active_user),
 ):
-    return crud.list_meal_plan_entries(db, workspace_id, start, end)
+    return crud.list_meal_plan_entries(db, workspace_id, user.id, start, end)
 
 
 @router.put("/meal-plan/{day}/{meal_type}", response_model=schemas.MealPlanEntryOut)
@@ -31,8 +34,9 @@ def upsert_meal_plan_entry(
     payload: schemas.MealPlanEntryIn,
     db: Session = Depends(get_db),
     workspace_id: uuid.UUID = Depends(get_workspace_id),
+    user: User = Depends(current_active_user),
 ):
-    entry = crud.upsert_meal_plan_entry(db, workspace_id, day, meal_type, payload.recipe_id)
+    entry = crud.upsert_meal_plan_entry(db, workspace_id, user.id, day, meal_type, payload.recipe_id)
     if entry is None:
         raise HTTPException(status_code=404, detail="Receita não encontrada")
     return entry

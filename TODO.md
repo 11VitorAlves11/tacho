@@ -724,8 +724,30 @@ concluída** quando todos estes estiverem verificados.
       (sem overflow), screenshots de `/adicionar` (mobile, tab "À mão"),
       Home, Planeamento e Lista de Compras confirmam layout correto em
       320px/375px/1280px, `tsc -b` e `oxlint` sem erros novos.
-- [ ] **Favoritos por utilizador** — evolução do item da v1.1, padrão
-      `favorited_by` do Mealie.
+- [x] **Favoritos por utilizador** — evolução do favorito único do agregado
+      (v1.1) para `favorited_by` por utilizador, padrão Mealie. Tabela de
+      associação `recipe_favorites` (`recipe_id`, `user_id`, chave primária
+      composta, sem `relationship()` ORM para `User` — `crud.py` consulta-a
+      diretamente), migração `514ada9a40d4`; dado antigo migrado para
+      "favoritado por todos os membros atuais da workspace" em vez de
+      perdido (mais fiel ao comportamento anterior, que era do agregado
+      inteiro). **`Recipe.is_favorite` deixou de ser coluna** — passou a
+      atributo Python marcado em runtime por `crud._annotate_favorites`
+      para o utilizador do pedido (`GET /users/me`), antes de sair para o
+      schema; **API e frontend ficaram inalterados** (mesmo nome de campo,
+      mesmo endpoint `POST /recipes/{id}/favorite` a fazer toggle), só o
+      significado mudou de "favorito do agregado" para "favorito deste
+      utilizador" — zero alterações no frontend. Todas as funções de
+      `crud.py` que devolvem receitas à API (list/get/update/mark-made/
+      add-note/set-image/meal-plan) passaram a exigir `user_id` para
+      anotar; `duplicate_recipe`/`create_recipe` marcam `is_favorite=False`
+      diretamente (registo novo nunca está favoritado, não herda da
+      original). Testado ponta a ponta via curl com as duas contas reais
+      (`vitor`/`mariana`, sessão por forward-auth de teste): favoritar com
+      uma conta não afeta a outra (confirmado nos dois sentidos), listar
+      `?favorite=true` filtra por utilizador, `GET /meal-plan` (que aninha
+      `RecipeSummary`) também leva `is_favorite` correto — dados de teste
+      desfeitos no fim (nenhum favorito nem entrada de plano ficou na BD).
 - [ ] **Avaliação por estrelas** — padrão do Mealie (`rating`), não do Tandoor.
 - [ ] **Comentários** por receita.
 

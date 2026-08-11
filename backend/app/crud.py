@@ -33,9 +33,31 @@ def _recipe_query(workspace_id: uuid.UUID):
     )
 
 
+def _favorited_recipe_ids(db: Session, user_id: uuid.UUID, recipe_ids: list[uuid.UUID]) -> set[uuid.UUID]:
+    if not recipe_ids:
+        return set()
+    query = select(models.recipe_favorites.c.recipe_id).where(
+        models.recipe_favorites.c.user_id == user_id,
+        models.recipe_favorites.c.recipe_id.in_(recipe_ids),
+    )
+    return set(db.scalars(query))
+
+
+def _annotate_favorites(db: Session, user_id: uuid.UUID, recipes: list[models.Recipe]) -> list[models.Recipe]:
+    """`Recipe.is_favorite` não é coluna (ver models.py) — marcada aqui como
+    atributo Python antes de sair para o schema, sempre relativa a quem fez
+    o pedido. Todas as funções deste módulo que devolvem Recipe(s) à API
+    passam por aqui antes de devolver."""
+    favorited = _favorited_recipe_ids(db, user_id, [r.id for r in recipes])
+    for recipe in recipes:
+        recipe.is_favorite = recipe.id in favorited
+    return recipes
+
+
 def list_recipes(
     db: Session,
     workspace_id: uuid.UUID,
+    user_id: uuid.UUID,
     category_id: uuid.UUID | None = None,
     tag_id: uuid.UUID | None = None,
     q: str | None = None,
@@ -47,7 +69,11 @@ def list_recipes(
     if tag_id is not None:
         query = query.where(models.Recipe.tags.any(models.Tag.id == tag_id))
     if favorite_only:
-        query = query.where(models.Recipe.is_favorite.is_(True))
+        query = query.where(
+            models.Recipe.id.in_(
+                select(models.recipe_favorites.c.recipe_id).where(models.recipe_favorites.c.user_id == user_id)
+            )
+        )
     if q:
         tsquery = _prefix_tsquery(q)
         if tsquery is not None:
@@ -56,12 +82,24 @@ def list_recipes(
                     func.to_tsquery("portuguese", tsquery)
                 )
             )
-    return list(db.scalars(query.order_by(models.Recipe.title)))
+    recipes = list(db.scalars(query.order_by(models.Recipe.title)))
+    return _annotate_favorites(db, user_id, recipes)
 
 
-def get_recipe(db: Session, workspace_id: uuid.UUID, recipe_id: uuid.UUID) -> models.Recipe | None:
+def get_recipe(
+    db: Session, workspace_id: uuid.UUID, recipe_id: uuid.UUID, user_id: uuid.UUID | None = None
+) -> models.Recipe | None:
+    """`user_id` só é preciso quando a receita devolvida vai direta para o
+    schema da API (que exige `is_favorite`) — chamadas internas que só
+    verificam existência ou copiam campos (`duplicate_recipe`,
+    `delete_recipe`) podem omiti-lo."""
     query = _recipe_query(workspace_id).where(models.Recipe.id == recipe_id)
-    return db.scalars(query).first()
+    recipe = db.scalars(query).first()
+    if recipe is None:
+        return None
+    if user_id is not None:
+        recipe = _annotate_favorites(db, user_id, [recipe])[0]
+    return recipe
 
 
 def _resolve_categories(db: Session, workspace_id: uuid.UUID, category_ids: list[uuid.UUID]) -> list[models.Category]:
@@ -110,13 +148,14 @@ def create_recipe(db: Session, workspace_id: uuid.UUID, payload: schemas.RecipeC
     db.add(recipe)
     db.commit()
     db.refresh(recipe)
+    recipe.is_favorite = False  # receita nova, ninguém a favoritou ainda
     return recipe
 
 
 def update_recipe(
-    db: Session, workspace_id: uuid.UUID, recipe_id: uuid.UUID, payload: schemas.RecipeUpdate
+    db: Session, workspace_id: uuid.UUID, recipe_id: uuid.UUID, user_id: uuid.UUID, payload: schemas.RecipeUpdate
 ) -> models.Recipe | None:
-    recipe = get_recipe(db, workspace_id, recipe_id)
+    recipe = get_recipe(db, workspace_id, recipe_id, user_id)
     if recipe is None:
         return None
 
@@ -150,9 +189,9 @@ def update_recipe(
 
 
 def set_recipe_image(
-    db: Session, workspace_id: uuid.UUID, recipe_id: uuid.UUID, image_path: str
+    db: Session, workspace_id: uuid.UUID, recipe_id: uuid.UUID, user_id: uuid.UUID, image_path: str
 ) -> models.Recipe | None:
-    recipe = get_recipe(db, workspace_id, recipe_id)
+    recipe = get_recipe(db, workspace_id, recipe_id, user_id)
     if recipe is None:
         return None
     recipe.image_path = image_path
@@ -161,18 +200,29 @@ def set_recipe_image(
     return recipe
 
 
-def toggle_recipe_favorite(db: Session, workspace_id: uuid.UUID, recipe_id: uuid.UUID) -> models.Recipe | None:
-    recipe = get_recipe(db, workspace_id, recipe_id)
+def toggle_recipe_favorite(
+    db: Session, workspace_id: uuid.UUID, recipe_id: uuid.UUID, user_id: uuid.UUID
+) -> models.Recipe | None:
+    recipe = get_recipe(db, workspace_id, recipe_id)  # existência só, is_favorite calculado abaixo
     if recipe is None:
         return None
-    recipe.is_favorite = not recipe.is_favorite
+    already_favorited = recipe.id in _favorited_recipe_ids(db, user_id, [recipe.id])
+    if already_favorited:
+        db.execute(
+            models.recipe_favorites.delete().where(
+                models.recipe_favorites.c.recipe_id == recipe.id, models.recipe_favorites.c.user_id == user_id
+            )
+        )
+    else:
+        db.execute(models.recipe_favorites.insert().values(recipe_id=recipe.id, user_id=user_id))
     db.commit()
     db.refresh(recipe)
+    recipe.is_favorite = not already_favorited
     return recipe
 
 
-def mark_recipe_made(db: Session, workspace_id: uuid.UUID, recipe_id: uuid.UUID) -> models.Recipe | None:
-    recipe = get_recipe(db, workspace_id, recipe_id)
+def mark_recipe_made(db: Session, workspace_id: uuid.UUID, recipe_id: uuid.UUID, user_id: uuid.UUID) -> models.Recipe | None:
+    recipe = get_recipe(db, workspace_id, recipe_id, user_id)
     if recipe is None:
         return None
     recipe.last_made_at = datetime.now(timezone.utc)
@@ -181,8 +231,10 @@ def mark_recipe_made(db: Session, workspace_id: uuid.UUID, recipe_id: uuid.UUID)
     return recipe
 
 
-def add_cook_note(db: Session, workspace_id: uuid.UUID, recipe_id: uuid.UUID, text: str) -> models.Recipe | None:
-    recipe = get_recipe(db, workspace_id, recipe_id)
+def add_cook_note(
+    db: Session, workspace_id: uuid.UUID, recipe_id: uuid.UUID, user_id: uuid.UUID, text: str
+) -> models.Recipe | None:
+    recipe = get_recipe(db, workspace_id, recipe_id, user_id)
     if recipe is None:
         return None
     db.add(models.CookNote(recipe_id=recipe.id, text=text))
@@ -232,6 +284,7 @@ def duplicate_recipe(
     db.add(copy)
     db.commit()
     db.refresh(copy)
+    copy.is_favorite = False  # cópia nova, não herda favoritos da original
     return copy
 
 
@@ -304,16 +357,20 @@ def _meal_plan_query(workspace_id: uuid.UUID):
 
 
 def list_meal_plan_entries(
-    db: Session, workspace_id: uuid.UUID, start: date, end: date
+    db: Session, workspace_id: uuid.UUID, user_id: uuid.UUID, start: date, end: date
 ) -> list[models.MealPlanEntry]:
     query = _meal_plan_query(workspace_id).where(
         models.MealPlanEntry.day >= start, models.MealPlanEntry.day <= end
     )
-    return list(db.scalars(query).unique())
+    entries = list(db.scalars(query).unique())
+    # MealPlanEntryOut.recipe é um RecipeSummary — exige is_favorite, que só
+    # existe depois de anotado (ver models.py/_annotate_favorites).
+    _annotate_favorites(db, user_id, [e.recipe for e in entries])
+    return entries
 
 
 def upsert_meal_plan_entry(
-    db: Session, workspace_id: uuid.UUID, day: date, meal_type: str, recipe_id: uuid.UUID
+    db: Session, workspace_id: uuid.UUID, user_id: uuid.UUID, day: date, meal_type: str, recipe_id: uuid.UUID
 ) -> models.MealPlanEntry | None:
     """Atribui uma receita a um dia/refeição — substitui o que lá estivesse
     (um slot só tem uma receita). `recipe_id` é validado como pertencente ao
@@ -336,7 +393,10 @@ def upsert_meal_plan_entry(
     db.commit()
 
     result_query = _meal_plan_query(workspace_id).where(models.MealPlanEntry.id == entry.id)
-    return db.scalars(result_query).first()
+    result = db.scalars(result_query).first()
+    if result is not None:
+        _annotate_favorites(db, user_id, [result.recipe])
+    return result
 
 
 def delete_meal_plan_entry(db: Session, workspace_id: uuid.UUID, day: date, meal_type: str) -> bool:

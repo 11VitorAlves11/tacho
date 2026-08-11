@@ -27,8 +27,9 @@ def list_recipes(
     favorite: bool = False,
     db: Session = Depends(get_db),
     workspace_id: uuid.UUID = Depends(get_workspace_id),
+    user: User = Depends(current_active_user),
 ):
-    return crud.list_recipes(db, workspace_id, category_id=category_id, tag_id=tag_id, q=q, favorite_only=favorite)
+    return crud.list_recipes(db, workspace_id, user.id, category_id=category_id, tag_id=tag_id, q=q, favorite_only=favorite)
 
 
 @router.post("", response_model=schemas.RecipeOut, status_code=201)
@@ -67,8 +68,9 @@ def get_recipe(
     recipe_id: uuid.UUID,
     db: Session = Depends(get_db),
     workspace_id: uuid.UUID = Depends(get_workspace_id),
+    user: User = Depends(current_active_user),
 ):
-    recipe = crud.get_recipe(db, workspace_id, recipe_id)
+    recipe = crud.get_recipe(db, workspace_id, recipe_id, user.id)
     if recipe is None:
         raise HTTPException(status_code=404, detail="Receita não encontrada")
     return recipe
@@ -80,8 +82,9 @@ def update_recipe(
     payload: schemas.RecipeUpdate,
     db: Session = Depends(get_db),
     workspace_id: uuid.UUID = Depends(get_workspace_id),
+    user: User = Depends(current_active_user),
 ):
-    recipe = crud.update_recipe(db, workspace_id, recipe_id, payload)
+    recipe = crud.update_recipe(db, workspace_id, recipe_id, user.id, payload)
     if recipe is None:
         raise HTTPException(status_code=404, detail="Receita não encontrada")
     return recipe
@@ -122,8 +125,9 @@ def toggle_recipe_favorite(
     recipe_id: uuid.UUID,
     db: Session = Depends(get_db),
     workspace_id: uuid.UUID = Depends(get_workspace_id),
+    user: User = Depends(current_active_user),
 ):
-    recipe = crud.toggle_recipe_favorite(db, workspace_id, recipe_id)
+    recipe = crud.toggle_recipe_favorite(db, workspace_id, recipe_id, user.id)
     if recipe is None:
         raise HTTPException(status_code=404, detail="Receita não encontrada")
     return recipe
@@ -134,8 +138,9 @@ def mark_recipe_made(
     recipe_id: uuid.UUID,
     db: Session = Depends(get_db),
     workspace_id: uuid.UUID = Depends(get_workspace_id),
+    user: User = Depends(current_active_user),
 ):
-    recipe = crud.mark_recipe_made(db, workspace_id, recipe_id)
+    recipe = crud.mark_recipe_made(db, workspace_id, recipe_id, user.id)
     if recipe is None:
         raise HTTPException(status_code=404, detail="Receita não encontrada")
     return recipe
@@ -147,8 +152,9 @@ def add_cook_note(
     payload: schemas.CookNoteIn,
     db: Session = Depends(get_db),
     workspace_id: uuid.UUID = Depends(get_workspace_id),
+    user: User = Depends(current_active_user),
 ):
-    recipe = crud.add_cook_note(db, workspace_id, recipe_id, payload.text)
+    recipe = crud.add_cook_note(db, workspace_id, recipe_id, user.id, payload.text)
     if recipe is None:
         raise HTTPException(status_code=404, detail="Receita não encontrada")
     return recipe
@@ -175,6 +181,7 @@ async def upload_recipe_image(
     file: UploadFile,
     db: Session = Depends(get_db),
     workspace_id: uuid.UUID = Depends(get_workspace_id),
+    user: User = Depends(current_active_user),
 ):
     recipe = crud.get_recipe(db, workspace_id, recipe_id)
     if recipe is None:
@@ -183,7 +190,7 @@ async def upload_recipe_image(
     settings = get_settings()
     old_image_path = recipe.image_path
     filename = await save_recipe_image(file, settings)
-    recipe = crud.set_recipe_image(db, workspace_id, recipe_id, filename)
+    recipe = crud.set_recipe_image(db, workspace_id, recipe_id, user.id, filename)
     if old_image_path:
         delete_recipe_image(old_image_path, settings)
     return recipe

@@ -40,6 +40,19 @@ recipe_tags = Table(
     Column("tag_id", UUID(as_uuid=True), ForeignKey("tags.id", ondelete="CASCADE"), primary_key=True),
 )
 
+# Favorito por utilizador (evolução do favorito único do workspace da v1.1 —
+# ver TODO.md). Tabela de associação simples, sem relationship() ORM para
+# User: `app/crud.py` consulta-a diretamente e marca `Recipe.is_favorite`
+# (atributo Python, já não coluna) por pedido, para o schema/frontend não
+# mudarem — só o significado passa de "favorito do agregado" a "favorito
+# deste utilizador".
+recipe_favorites = Table(
+    "recipe_favorites",
+    Base.metadata,
+    Column("recipe_id", UUID(as_uuid=True), ForeignKey("recipes.id", ondelete="CASCADE"), primary_key=True),
+    Column("user_id", UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True),
+)
+
 
 class Workspace(Base):
     __tablename__ = "workspaces"
@@ -137,9 +150,10 @@ class Recipe(Base):
     )
     # Marcado ao concluir o Modo Cozinha (PRD 5.1, alimenta a métrica M3).
     last_made_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    # Favorito do Workspace (agregado), não por utilizador — não há contas
-    # individuais antes da v1.2 (TODO.md).
-    is_favorite: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    # `is_favorite` NÃO é uma coluna — `app/crud.py` marca este atributo em
+    # runtime consultando `recipe_favorites` para o utilizador do pedido
+    # (ver comentário nessa tabela). Sem tipo declarado aqui de propósito;
+    # só existe depois de passar por `_annotate_favorites`.
 
     workspace: Mapped["Workspace"] = relationship(back_populates="recipes")
     ingredients: Mapped[list["Ingredient"]] = relationship(
