@@ -13,6 +13,26 @@ Ponto de situação a 2026-08-07. Ver `PRD-app-receitas-v3.2.md`, `PRODUCT.md` e
 > do PRD estão todos cumpridos, incluindo o deploy: o Tacho substituiu o
 > Tandoor na CT 202 do homelab (`https://receitas.alveslab.dev`). Ver a
 > secção "v1.0 — fechar a fase" abaixo para o detalhe de cada critério.
+>
+> **2026-08-11 — release `v1.3.0` publicada e em produção.** Tag `git tag
+> v1.3.0` (ver mensagem da tag para a lista completa), workflow "Build and
+> push images" publicou `ghcr.io/11vitoralves11/tacho_app-{web,celery-worker}
+> :v1.3.0`. `docker-compose.prod.yml` do repo e do CT 202 atualizados,
+> containers `web`/`celery-worker` recriados (`--force-recreate`, IDs
+> confirmados por `docker inspect` a bater certo com as imagens novas), as
+> 7 migrações Alembic novas desde `v1.2.0` aplicadas de uma vez (favoritos
+> por utilizador, avaliação por estrelas, comentários, cookbooks, despensa,
+> custo estimado, galeria de fotos — `alembic current` confirmado na head,
+> `eb74e97da107`). `GET /health` interno e externo, e as 3 receitas reais
+> confirmadas intactas. **`GEMINI_API_KEY` configurada em produção** —
+> importação inteligente (fallback de extração + foto/Vision) fica
+> disponível a partir de agora, testada a funcionar dentro do container de
+> produção. Detalhe completo do deploy em `homelab/inventory.md`, secção
+> "CT 202 — tacho", "Deploy v1.3.0 (2026-08-11)". **Gap encontrado**: não
+> havia registo do deploy de `v1.2.0` no `inventory.md` do homelab (só
+> aqui no TODO.md) — CT 202 tinha saltado de `v1.1.2` para `v1.2.0` sem
+> essa passagem ficar documentada lá; não investigado a fundo, só
+> assinalado.
 
 ---
 
