@@ -1,17 +1,21 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   addComment,
+  addRecipeGalleryImage,
   deleteComment,
+  deleteRecipeGalleryImage,
   duplicateRecipe,
   getRecipe,
   recipeImageUrl,
+  setRecipeGalleryCover,
   setRecipeRating,
   toggleFavorite,
 } from '../api/recipes'
 import type { Recipe } from '../api/types'
 import { PageShell } from '../components/PageShell'
 import {
+  CameraIcon,
   ClockIcon,
   CopyIcon,
   EuroIcon,
@@ -74,6 +78,8 @@ export function RecipeDetail() {
   const [duplicating, setDuplicating] = useState(false)
   const [commentText, setCommentText] = useState('')
   const [postingComment, setPostingComment] = useState(false)
+  const [uploadingGalleryImage, setUploadingGalleryImage] = useState(false)
+  const galleryInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     if (!id) return
@@ -120,6 +126,31 @@ export function RecipeDetail() {
     if (!id) return
     await deleteComment(id, commentId)
     setRecipe((prev) => (prev ? { ...prev, comments: prev.comments.filter((c) => c.id !== commentId) } : prev))
+  }
+
+  async function handleAddGalleryImage(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!id || !file || uploadingGalleryImage) return
+    setUploadingGalleryImage(true)
+    try {
+      const updated = await addRecipeGalleryImage(id, file)
+      setRecipe((prev) => (prev ? { ...prev, images: updated.images } : prev))
+    } finally {
+      setUploadingGalleryImage(false)
+    }
+  }
+
+  async function handleDeleteGalleryImage(imageId: string) {
+    if (!id) return
+    const updated = await deleteRecipeGalleryImage(id, imageId)
+    setRecipe((prev) => (prev ? { ...prev, images: updated.images } : prev))
+  }
+
+  async function handleSetGalleryCover(imageId: string) {
+    if (!id) return
+    const updated = await setRecipeGalleryCover(id, imageId)
+    setRecipe((prev) => (prev ? { ...prev, images: updated.images } : prev))
   }
 
   async function handleSetRating(value: number) {
@@ -374,6 +405,66 @@ export function RecipeDetail() {
             </ul>
           </section>
         )}
+
+        <section className="mt-8">
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold text-text-primary">Galeria</h2>
+            <button
+              type="button"
+              onClick={() => galleryInputRef.current?.click()}
+              disabled={uploadingGalleryImage}
+              className="flex items-center gap-1 text-sm font-medium text-forest-text disabled:opacity-50"
+            >
+              <CameraIcon className="size-4" />
+              {uploadingGalleryImage ? 'A enviar…' : 'Adicionar foto'}
+            </button>
+            <input
+              ref={galleryInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              capture="environment"
+              onChange={handleAddGalleryImage}
+              className="hidden"
+            />
+          </div>
+
+          {recipe.images.length === 0 ? (
+            <p className="mt-2 text-sm text-text-secondary">Ainda não há fotos extra desta receita.</p>
+          ) : (
+            <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
+              {recipe.images.map((image) => (
+                <div key={image.id} className="group relative aspect-square overflow-hidden rounded-xl bg-bg-sage">
+                  <img src={recipeImageUrl(image.filename)} alt="" className="size-full object-cover" />
+                  {image.is_cover && (
+                    <span className="absolute left-1.5 top-1.5 rounded-full bg-card-white/90 px-2 py-0.5 text-[10px] font-medium text-forest-text">
+                      Capa
+                    </span>
+                  )}
+                  <div className="absolute inset-x-0 bottom-0 flex justify-end gap-1 bg-gradient-to-t from-black/50 to-transparent p-1.5">
+                    {!image.is_cover && (
+                      <button
+                        type="button"
+                        onClick={() => handleSetGalleryCover(image.id)}
+                        aria-label="Tornar capa da galeria"
+                        className="flex size-6 items-center justify-center rounded-full bg-card-white/90 text-forest-text"
+                      >
+                        <StarIcon className="size-3.5" />
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteGalleryImage(image.id)}
+                      aria-label="Apagar foto da galeria"
+                      className="flex size-6 items-center justify-center rounded-full bg-card-white/90 text-accent-orange"
+                    >
+                      <XIcon className="size-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
 
         <section className="mt-8">
           <h2 className="text-lg font-semibold text-text-primary">Comentários</h2>

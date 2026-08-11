@@ -322,12 +322,16 @@ concluída** quando todos estes estiverem verificados.
       linhas a 98px de largura, 34px), e como a linha-mãe alinha ao topo
       (`counterAxisAlignItems: MIN`), a caixa de input de "Porções" ficava
       17px acima das outras duas. **Fix final** (pedido do utilizador):
-      etiqueta passou de "Porções" para "Porções (und.)" — a condizer com
-      "Preparação (min)"/"Confeção (min)", que já mostravam a unidade — o
-      que também quebra para 2 linhas nos 98px de mobile e alinha
-      naturalmente com as outras duas colunas (o `minHeight: 34`
-      experimentado antes, na etiqueta `55:654`, ficou redundante mas
-      inofensivo, não removido). Aplicado em mobile (`55:654`) e desktop
+      etiqueta passou de "Porções" para "Porções (und)" — a condizer com
+      "Preparação (min)"/"Confeção (min)", que já mostravam a unidade, sem
+      ponto (convenção já usada em todo o ficheiro, ex. "25 min"/"35 min"
+      no `RecipeCard`, decisão do utilizador: unidades como símbolo, não
+      abreviatura truncada). Com o ponto ("und."), o texto quebrava para 2
+      linhas nos 98px de mobile e alinhava naturalmente com as outras duas
+      colunas; sem ponto ("und"), cabe numa só linha — o `minHeight: 34`
+      deixado por segurança na etiqueta `55:654` acabou por ser necessário
+      mesmo, e mantém a caixa alinhada com as outras duas apesar de o texto
+      já não quebrar. Aplicado em mobile (`55:654`) e desktop
       (`61:1274`, cabe numa linha aos 261px de coluna, sem quebra — mesmo
       comportamento das outras duas colunas no desktop, sem regressão).
       Verificado por screenshot (grelha isolada mobile+desktop e o ecrã
@@ -339,7 +343,7 @@ concluída** quando todos estes estiverem verificados.
       mas naquela correção não tocou nesta linha Porções/Preparação/
       Confeção — vale a pena a outra sessão confirmar se a app real tem o
       mesmo desalinhamento e, já agora, se faz sentido replicar lá também
-      o "(und.)" na label de Porções por consistência com o Figma.
+      o "(und)" na label de Porções por consistência com o Figma.
       **Ecrãs de v2 — Cookbooks/coleções** (página `v1.0`, prefixo
       `v2 — Cookbooks —`): a frente mais especulativa, sem modelo
       `Cookbook` em lado nenhum do backend na altura do desenho — decisão
@@ -973,7 +977,38 @@ concluída** quando todos estes estiverem verificados.
       ativa abaixo de 896px). Testado no browser (Playwright) a 1280px e a
       375px.
 - [ ] Modo Cozinha offline (cache da receita ativa via service worker).
-- [ ] Galeria de fotos por receita (várias fotos, uma marcada como capa).
+- [x] **Galeria de fotos por receita** (várias fotos, uma marcada como
+      capa) — `RecipeImage` novo (`recipe_id`, `filename`, `position`,
+      `is_cover`), migração `eb74e97da107` (primeira migração desde a
+      v1.2 sem o falso positivo do CHECK do rating — confirmado com uma
+      migração de verificação vazia, descartada). **Deliberadamente
+      separada de `Recipe.image_path`**, que continua exatamente como
+      estava (foto principal, upload único via `RecipeForm.tsx`, usada em
+      todo o lado — card, hero do Detalhe); a galeria é só fotos extra,
+      geridas diretamente no Detalhe (mesmo padrão de comentários/notas —
+      sem passar pelo modo de edição). `POST/DELETE /recipes/{id}/images`
+      (reaproveita `save_recipe_image`/`delete_recipe_image` já
+      existentes), `POST /recipes/{id}/images/{image_id}/cover`. Primeira
+      foto adicionada vira capa automaticamente; apagar a foto que é capa
+      passa o papel para a seguinte por posição (nunca fica a galeria sem
+      capa enquanto tiver pelo menos uma foto). Secção "Galeria" nova no
+      Detalhe, entre Notas e Comentários — grid 3/4 colunas, badge "Capa",
+      botões estrela (tornar capa)/× (apagar) sempre visíveis (não só
+      hover — a app é mobile-first, hover não existe em touch). Testado
+      via curl (1ª foto vira capa, 2ª não, mudar capa, apagar a capa herda
+      para a que sobra, ficheiro realmente apagado do disco) e no browser
+      (Playwright, upload real de ficheiro via `filechooser`): disco
+      confirmado a voltar exatamente ao estado original (2 ficheiros) nos
+      dois testes.
+- [x] **Cartões maiores no menu inicial** (pedido à parte, mesma tarefa) —
+      `RecipeCard.tsx` redesenhado de layout horizontal (thumbnail 56px)
+      para vertical com imagem grande no topo (`aspect-[4/3]`, largura
+      total do cartão), título e metadados por baixo — mais próximo do
+      mockup Figma original, que a implementação real tinha simplificado
+      para horizontal por velocidade (não por decisão de design). Mesmo
+      componente partilhado por `Home.tsx` e `CookbookDetail.tsx`, ambos
+      ficam maiores. Verificado por screenshot em mobile e desktop,
+      incluindo um cartão com foto real (sem distorção, `object-cover`).
 - [ ] Vista de impressão / PDF por receita.
 - [x] **Fracções em unidades** ("½ chávena" em vez de "0.5 chávena") —
       `RecipeDetail.tsx::formatQuantity`, só formatação de apresentação,

@@ -33,6 +33,13 @@ export interface CookNote {
   created_at: string
 }
 
+export interface RecipeImage {
+  id: string
+  filename: string
+  position: number
+  is_cover: boolean
+}
+
 export interface Comment {
   id: string
   text: string
@@ -81,6 +88,7 @@ export interface Recipe {
   tags: Tag[]
   cook_notes: CookNote[]
   comments: Comment[]
+  images: RecipeImage[]
 }
 
 export interface PantryItem {

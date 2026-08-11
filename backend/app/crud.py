@@ -40,6 +40,7 @@ def _recipe_query(workspace_id: uuid.UUID):
             selectinload(models.Recipe.categories),
             selectinload(models.Recipe.tags),
             selectinload(models.Recipe.comments).selectinload(models.Comment.user),
+            selectinload(models.Recipe.images),
         )
     )
 
@@ -313,6 +314,72 @@ def delete_comment(db: Session, workspace_id: uuid.UUID, recipe_id: uuid.UUID, c
     db.delete(comment)
     db.commit()
     return True
+
+
+def add_recipe_image(
+    db: Session, workspace_id: uuid.UUID, recipe_id: uuid.UUID, user_id: uuid.UUID, filename: str
+) -> models.Recipe | None:
+    recipe = get_recipe(db, workspace_id, recipe_id, user_id)
+    if recipe is None:
+        return None
+    image = models.RecipeImage(
+        recipe_id=recipe.id,
+        filename=filename,
+        position=len(recipe.images),
+        is_cover=len(recipe.images) == 0,  # primeira foto da galeria é capa por omissão
+    )
+    db.add(image)
+    db.commit()
+    db.refresh(recipe)
+    return recipe
+
+
+def get_recipe_image(db: Session, workspace_id: uuid.UUID, recipe_id: uuid.UUID, image_id: uuid.UUID) -> models.RecipeImage | None:
+    query = select(models.RecipeImage).where(
+        models.RecipeImage.id == image_id,
+        models.RecipeImage.recipe_id == recipe_id,
+        models.RecipeImage.recipe.has(models.Recipe.workspace_id == workspace_id),
+    )
+    return db.scalars(query).first()
+
+
+def delete_recipe_image_row(
+    db: Session, workspace_id: uuid.UUID, recipe_id: uuid.UUID, image_id: uuid.UUID, user_id: uuid.UUID
+) -> tuple[models.Recipe, str] | None:
+    """Devolve (receita atualizada, nome do ficheiro apagado) para o router
+    poder também remover o ficheiro do disco — só a linha da BD é
+    responsabilidade deste módulo."""
+    image = get_recipe_image(db, workspace_id, recipe_id, image_id)
+    if image is None:
+        return None
+    filename = image.filename
+    was_cover = image.is_cover
+    db.delete(image)
+    db.commit()
+
+    recipe = get_recipe(db, workspace_id, recipe_id, user_id)
+    if recipe is None:
+        return None
+    # Se a foto apagada era a capa, a próxima (por posição) herda o papel —
+    # nunca deixar a galeria sem capa enquanto tiver pelo menos uma foto.
+    if was_cover and recipe.images:
+        recipe.images[0].is_cover = True
+        db.commit()
+        db.refresh(recipe)
+        recipe = get_recipe(db, workspace_id, recipe_id, user_id)
+    return (recipe, filename)
+
+
+def set_recipe_image_cover(
+    db: Session, workspace_id: uuid.UUID, recipe_id: uuid.UUID, image_id: uuid.UUID, user_id: uuid.UUID
+) -> models.Recipe | None:
+    image = get_recipe_image(db, workspace_id, recipe_id, image_id)
+    if image is None:
+        return None
+    for other in image.recipe.images:
+        other.is_cover = other.id == image.id
+    db.commit()
+    return get_recipe(db, workspace_id, recipe_id, user_id)
 
 
 def duplicate_recipe(

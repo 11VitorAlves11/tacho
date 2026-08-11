@@ -162,6 +162,15 @@ class CommentIn(BaseModel):
     text: str
 
 
+class RecipeImageOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    filename: str
+    position: int
+    is_cover: bool
+
+
 class ImportRequest(BaseModel):
     url: HttpUrl
 
@@ -201,6 +210,7 @@ class RecipeOut(BaseModel):
     tags: list[TagOut]
     cook_notes: list[CookNoteOut]
     comments: list[CommentOut]
+    images: list[RecipeImageOut]
 
 
 class MealPlanEntryIn(BaseModel):

@@ -199,6 +199,27 @@ class Recipe(Base):
     comments: Mapped[list["Comment"]] = relationship(
         back_populates="recipe", cascade="all, delete-orphan", order_by="Comment.created_at.asc()"
     )
+    images: Mapped[list["RecipeImage"]] = relationship(
+        back_populates="recipe", cascade="all, delete-orphan", order_by="RecipeImage.position"
+    )
+
+
+class RecipeImage(Base):
+    """Galeria de fotos extra da receita — separada de `Recipe.image_path`
+    de propósito (a foto principal, mostrada em todo o lado — card, hero do
+    Detalhe — continua exatamente como estava, upload único via
+    RecipeForm.tsx). `is_cover` marca qual desta galeria aparece primeiro,
+    mas nunca substitui `image_path`."""
+
+    __tablename__ = "recipe_images"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    recipe_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("recipes.id", ondelete="CASCADE"))
+    filename: Mapped[str] = mapped_column(Text)
+    position: Mapped[int]
+    is_cover: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+
+    recipe: Mapped["Recipe"] = relationship(back_populates="images")
 
 
 class Ingredient(Base):

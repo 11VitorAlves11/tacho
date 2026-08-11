@@ -236,3 +236,49 @@ async def upload_recipe_image(
     if old_image_path:
         delete_recipe_image(old_image_path, settings)
     return recipe
+
+
+@router.post("/{recipe_id}/images", response_model=schemas.RecipeOut, status_code=201)
+async def add_recipe_gallery_image(
+    recipe_id: uuid.UUID,
+    file: UploadFile,
+    db: Session = Depends(get_db),
+    workspace_id: uuid.UUID = Depends(get_workspace_id),
+    user: User = Depends(current_active_user),
+):
+    filename = await save_recipe_image(file, get_settings())
+    recipe = crud.add_recipe_image(db, workspace_id, recipe_id, user.id, filename)
+    if recipe is None:
+        delete_recipe_image(filename, get_settings())
+        raise HTTPException(status_code=404, detail="Receita não encontrada")
+    return recipe
+
+
+@router.delete("/{recipe_id}/images/{image_id}", response_model=schemas.RecipeOut)
+def delete_recipe_gallery_image(
+    recipe_id: uuid.UUID,
+    image_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    workspace_id: uuid.UUID = Depends(get_workspace_id),
+    user: User = Depends(current_active_user),
+):
+    result = crud.delete_recipe_image_row(db, workspace_id, recipe_id, image_id, user.id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Foto não encontrada")
+    recipe, filename = result
+    delete_recipe_image(filename, get_settings())
+    return recipe
+
+
+@router.post("/{recipe_id}/images/{image_id}/cover", response_model=schemas.RecipeOut)
+def set_recipe_gallery_cover(
+    recipe_id: uuid.UUID,
+    image_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    workspace_id: uuid.UUID = Depends(get_workspace_id),
+    user: User = Depends(current_active_user),
+):
+    recipe = crud.set_recipe_image_cover(db, workspace_id, recipe_id, image_id, user.id)
+    if recipe is None:
+        raise HTTPException(status_code=404, detail="Foto não encontrada")
+    return recipe

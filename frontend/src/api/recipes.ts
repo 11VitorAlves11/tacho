@@ -84,6 +84,23 @@ export function recipeImageUrl(imagePath: string) {
   return `${api.defaults.baseURL}/images/${imagePath}`
 }
 
+export async function addRecipeGalleryImage(id: string, file: File) {
+  const formData = new FormData()
+  formData.append('file', file)
+  const { data } = await api.post<Recipe>(`/recipes/${id}/images`, formData)
+  return data
+}
+
+export async function deleteRecipeGalleryImage(id: string, imageId: string) {
+  const { data } = await api.delete<Recipe>(`/recipes/${id}/images/${imageId}`)
+  return data
+}
+
+export async function setRecipeGalleryCover(id: string, imageId: string) {
+  const { data } = await api.post<Recipe>(`/recipes/${id}/images/${imageId}/cover`)
+  return data
+}
+
 export async function startImport(url: string) {
   const { data } = await api.post<ImportStatus>('/recipes/import', { url })
   return data
