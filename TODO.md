@@ -438,14 +438,47 @@ concluída** quando todos estes estiverem verificados.
       Testado com scraping real (pingodoce.pt) ponta a ponta, incluindo
       verificação visual no browser (Playwright): foto no card da Home e no
       hero do Detalhe, sem erros de consola.
-- [ ] **Importação inteligente via Gemini** — (a) fallback de extração quando o
-      `recipe-scrapers` falha ou devolve resultado incompleto; (b) **importação
-      por foto** (Vision): fotografar página de livro/receita manuscrita, com
-      1–3 fotos, resultado sempre pré-preenchido no formulário para revisão —
-      nunca gravação direta. Chave em `GEMINI_API_KEY`, funcionalidade opcional
-      (sem chave, a app funciona na mesma).
-      ⚠️ Validar cedo com fotos reais (livros PT, letra manuscrita) — risco de
-      o LLM "corrigir" quantidades silenciosamente.
+- [ ] **Importação inteligente via Gemini** — **implementado, mas
+      deliberadamente deixado por marcar `[x]`: sem `GEMINI_API_KEY`
+      disponível nesta sessão, a chamada real à API do Gemini nunca foi
+      exercitada.** Ao contrário de todos os outros itens deste ficheiro,
+      não há "testado no browser"/"testado via curl" a validar o que a IA
+      realmente devolve — só a integração à volta dela.
+      - `app/gemini.py` novo (`google-genai==2.17.0`, `Settings
+        .gemini_api_key` opcional — `is_available()` false sem chave, a
+        app funciona na mesma, como já estava decidido). Output
+        estruturado via `response_schema=schemas.RecipeExtraction`
+        (Pydantic), não parsing de texto solto.
+      - **(a) fallback de extração** — `app/tasks.py::
+        import_recipe_from_url`: só dispara quando o `recipe-scrapers` não
+        trouxe **nem** ingredientes **nem** passos (nunca para "melhorar"
+        um resultado que já veio preenchido). Confirmado que o caminho
+        normal (com scraper a funcionar) fica bit-a-bit igual ao de antes
+        — testado de novo contra `pingodoce.pt` real (10 ingredientes,
+        como sempre) precisamente para provar que o refactor não mudou
+        nada no caminho que não usa Gemini.
+      - **(b) importação por foto** — `POST /recipes/import/photo`
+        (síncrono, não Celery — ação pontual do utilizador, 1-3 fotos,
+        devolve um rascunho para revisão, não uma receita já criada).
+        `RecipeForm.tsx` ganhou um tipo `RecipeFormInitial` mais fraco do
+        que `Recipe` (só os campos que um rascunho pode ter — sem id,
+        sem is_favorite, etc.) para poder pré-preencher a partir de um
+        `RecipeExtraction` sem inventar dados; `Recipe` continua a
+        satisfazer esse tipo, o modo de edição normal não muda nada.
+        `AddRecipe.tsx` ganhou uma 3ª aba "Por foto".
+      - **O que foi mesmo testado**: o caminho sem chave (`422`
+        "não está configurada", testado via curl e no browser); validação
+        de limite de fotos (1-3, testado via curl); o parsing/pré-
+        preenchimento do formulário a partir de uma resposta simulada
+        (`page.route` do Playwright a devolver um `RecipeExtraction`
+        fabricado — confirma que o adaptador `RecipeFormInitial`
+        funciona, não que o Gemini vai devolver isto).
+      - **O que NÃO foi testado, por falta de chave**: se o Gemini
+        realmente extrai bem uma receita PT real (URL com scraper falhado,
+        ou foto de livro/letra manuscrita), a qualidade do fallback, e o
+        ⚠️ já assinalado no PRD sobre o LLM poder "corrigir" quantidades
+        silenciosamente. **Antes de confiar nisto em produção**: definir
+        `GEMINI_API_KEY` e validar com casos reais.
 - [x] **Timers por passo** no Modo Cozinha — `Step.duration_minutes` opcional
       (migração `ab0f3fc87c29`, aditiva), campo de minutos no editor manual
       (`RecipeForm.tsx`, ao lado de cada passo). Quando o passo atual tem

@@ -4,7 +4,7 @@ from collections.abc import Callable
 
 from recipe_scrapers import AbstractScraper, WebsiteNotImplementedError, scrape_html, scrape_me
 
-from app import models
+from app import gemini, models
 from app.celery_app import celery_app
 from app.config import get_settings
 from app.database import SessionLocal
@@ -164,6 +164,33 @@ def import_recipe_from_url(self, url: str, workspace_id: str) -> str:
     image_url = _safe_field(scraper.image)
     image_path = save_recipe_image_from_url(image_url, get_settings()) if image_url else None
 
+    ingredients = [
+        models.Ingredient(position=i, name=name, quantity=quantity, unit=unit)
+        for i, (name, quantity, unit) in enumerate(
+            _parse_ingredient_line(line) for line in _safe_field(scraper.ingredients) or []
+        )
+    ]
+    steps = [models.Step(position=i, instruction=line) for i, line in enumerate(_extract_steps(scraper))]
+
+    # Fallback via Gemini só quando o recipe-scrapers não trouxe NADA de
+    # nenhum dos dois — nunca para "melhorar" um resultado que já veio
+    # preenchido. Usa os campos já estruturados da extração diretamente,
+    # sem os achatar de volta a texto e reparsear (⚠️ não testado contra a
+    # API real, ver app/gemini.py).
+    if not ingredients and not steps and gemini.is_available(get_settings()):
+        extraction = gemini.extract_from_html(get_settings(), scraper.page_data)
+        if extraction is not None:
+            ingredients = [
+                models.Ingredient(
+                    position=i, name=ing.name, quantity=ing.quantity, unit=ing.unit, is_header=ing.is_header
+                )
+                for i, ing in enumerate(extraction.ingredients)
+            ]
+            steps = [
+                models.Step(position=i, instruction=step.instruction, duration_minutes=step.duration_minutes)
+                for i, step in enumerate(extraction.steps)
+            ]
+
     db = SessionLocal()
     try:
         recipe = models.Recipe(
@@ -174,15 +201,8 @@ def import_recipe_from_url(self, url: str, workspace_id: str) -> str:
             cook_minutes=cook_minutes,
             source_url=url,
             image_path=image_path,
-            ingredients=[
-                models.Ingredient(position=i, name=name, quantity=quantity, unit=unit)
-                for i, (name, quantity, unit) in enumerate(
-                    _parse_ingredient_line(line) for line in scraper.ingredients()
-                )
-            ],
-            steps=[
-                models.Step(position=i, instruction=line) for i, line in enumerate(_extract_steps(scraper))
-            ],
+            ingredients=ingredients,
+            steps=steps,
         )
         db.add(recipe)
         db.commit()

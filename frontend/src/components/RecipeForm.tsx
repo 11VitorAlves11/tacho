@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import { estimateNutrition, type NutritionEstimate } from '../api/nutrition'
 import { createCategory, createTag, listCategories, listTags, recipeImageUrl } from '../api/recipes'
-import type { Category, Recipe, RecipeInput, Tag } from '../api/types'
+import type { Category, RecipeInput, Tag } from '../api/types'
 import { CameraIcon, PlusIcon, XIcon } from './icons'
 
 interface IngredientRow {
@@ -16,19 +16,47 @@ interface StepRow {
   durationMinutes: string
 }
 
-function toIngredientRows(recipe?: Recipe): IngredientRow[] {
-  if (!recipe || recipe.ingredients.length === 0) return [{ name: '', quantity: '', unit: '', isHeader: false }]
-  return recipe.ingredients.map((i) => ({
+// Mais fraco do que `Recipe` de propósito — permite pré-preencher o
+// formulário a partir de um rascunho que não é (ainda) uma receita
+// guardada (ex. RecipeExtraction do import por foto via Gemini,
+// AddRecipe.tsx), sem inventar ids/posições/is_favorite/etc. que esse
+// rascunho não tem. `Recipe` continua a satisfazer este tipo (é um
+// superconjunto estrutural), por isso o modo de edição não muda nada.
+interface RecipeFormInitial {
+  title?: string
+  description?: string | null
+  servings?: number | null
+  prep_minutes?: number | null
+  cook_minutes?: number | null
+  source_url?: string | null
+  notes?: string | null
+  calories_kcal?: number | null
+  protein_g?: number | null
+  carbs_g?: number | null
+  fat_g?: number | null
+  estimated_cost?: number | null
+  image_path?: string | null
+  ingredients?: { name: string; quantity?: number | null; unit?: string | null; is_header?: boolean }[]
+  steps?: { instruction: string; duration_minutes?: number | null }[]
+  categories?: Category[]
+  tags?: Tag[]
+}
+
+function toIngredientRows(initial?: RecipeFormInitial): IngredientRow[] {
+  const ingredients = initial?.ingredients ?? []
+  if (ingredients.length === 0) return [{ name: '', quantity: '', unit: '', isHeader: false }]
+  return ingredients.map((i) => ({
     name: i.name,
     quantity: i.quantity?.toString() ?? '',
     unit: i.unit ?? '',
-    isHeader: i.is_header,
+    isHeader: i.is_header ?? false,
   }))
 }
 
-function toStepRows(recipe?: Recipe): StepRow[] {
-  if (!recipe || recipe.steps.length === 0) return [{ instruction: '', durationMinutes: '' }]
-  return recipe.steps.map((s) => ({ instruction: s.instruction, durationMinutes: s.duration_minutes?.toString() ?? '' }))
+function toStepRows(initial?: RecipeFormInitial): StepRow[] {
+  const steps = initial?.steps ?? []
+  if (steps.length === 0) return [{ instruction: '', durationMinutes: '' }]
+  return steps.map((s) => ({ instruction: s.instruction, durationMinutes: s.duration_minutes?.toString() ?? '' }))
 }
 
 export function RecipeForm({
@@ -36,7 +64,7 @@ export function RecipeForm({
   onSubmit,
   submitLabel,
 }: {
-  initial?: Recipe
+  initial?: RecipeFormInitial
   onSubmit: (payload: RecipeInput, imageFile: File | null) => Promise<void>
   submitLabel: string
 }) {
@@ -72,8 +100,8 @@ export function RecipeForm({
 
   const [categories, setCategories] = useState<Category[]>([])
   const [tags, setTags] = useState<Tag[]>([])
-  const [categoryIds, setCategoryIds] = useState<string[]>(initial?.categories.map((c) => c.id) ?? [])
-  const [tagIds, setTagIds] = useState<string[]>(initial?.tags.map((t) => t.id) ?? [])
+  const [categoryIds, setCategoryIds] = useState<string[]>(initial?.categories?.map((c) => c.id) ?? [])
+  const [tagIds, setTagIds] = useState<string[]>(initial?.tags?.map((t) => t.id) ?? [])
   const [newCategoryName, setNewCategoryName] = useState('')
   const [newTagName, setNewTagName] = useState('')
 

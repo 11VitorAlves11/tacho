@@ -44,6 +44,13 @@ class Settings(BaseSettings):
     # qualquer pessoa. Sem valor, `trust_forward_auth` fica inerte mesmo
     # que `True` (ver validação em `forward_login`).
     forward_auth_secret: str | None = None
+    # Importação inteligente (app/gemini.py): fallback de extração quando o
+    # recipe-scrapers falha, e importação por foto (Vision). Opcional — sem
+    # chave, `gemini.is_available()` devolve False e a app funciona na
+    # mesma (TODO.md: "funcionalidade opcional"). NUNCA testado contra a
+    # API real nesta sessão de desenvolvimento (sem chave disponível) — ver
+    # aviso em TODO.md antes de confiar cegamente na extração em produção.
+    gemini_api_key: str | None = None
 
     @property
     def async_database_url(self) -> str:

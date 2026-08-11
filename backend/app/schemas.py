@@ -181,6 +181,23 @@ class ImportStatus(BaseModel):
     recipe_id: str | None = None
 
 
+class RecipeExtraction(BaseModel):
+    """Rascunho extraído pelo Gemini (fallback de URL ou foto) — nunca
+    gravado diretamente, só usado para pré-preencher `RecipeForm.tsx` para
+    revisão manual (mesmo princípio da estimativa de nutrição: sugestão,
+    nunca escrita automática). Forma próxima de `RecipeCreate`, mas sem os
+    campos que não fazem sentido extrair de texto/foto (categorias, tags,
+    custo, nutrição)."""
+
+    title: str
+    description: str | None = None
+    servings: int | None = None
+    prep_minutes: int | None = None
+    cook_minutes: int | None = None
+    ingredients: list[IngredientIn] = []
+    steps: list[StepIn] = []
+
+
 class RecipeOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

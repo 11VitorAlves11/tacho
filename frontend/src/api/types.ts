@@ -128,6 +128,16 @@ export interface RecipeInput {
   tag_ids: string[]
 }
 
+export interface RecipeExtraction {
+  title: string
+  description: string | null
+  servings: number | null
+  prep_minutes: number | null
+  cook_minutes: number | null
+  ingredients: { name: string; quantity: number | null; unit: string | null; is_header: boolean }[]
+  steps: { instruction: string; duration_minutes: number | null }[]
+}
+
 export interface ImportStatus {
   task_id: string
   status: 'pending' | 'done' | string

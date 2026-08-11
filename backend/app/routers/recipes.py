@@ -5,14 +5,14 @@ from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
-from app import crud, schemas
+from app import crud, gemini, schemas
 from app.auth import current_active_user
 from app.celery_app import celery_app
 from app.config import get_settings
 from app.database import get_db
 from app.deps import get_workspace_id
 from app.models import User
-from app.images import copy_recipe_image, delete_recipe_image, save_recipe_image
+from app.images import ALLOWED_CONTENT_TYPES, copy_recipe_image, delete_recipe_image, save_recipe_image
 from app.schema_org import recipe_to_schema_org
 from app.tasks import import_recipe_from_url
 
@@ -54,6 +54,41 @@ def import_recipe(
 ):
     task = import_recipe_from_url.delay(str(payload.url), str(workspace_id))
     return schemas.ImportStatus(task_id=task.id, status="pending")
+
+
+# Registado antes de "/{recipe_id}" pelo mesmo motivo do "/import" acima.
+# Síncrono (não Celery, ao contrário da importação por URL) — é uma ação
+# pontual do utilizador (1-3 fotos), não um scrape que pode demorar; e
+# devolve um rascunho para revisão manual, não uma receita já criada, por
+# isso não faz sentido reaproveitar o schemas.ImportStatus/polling.
+# ⚠️ Não testado contra a API Gemini real nesta sessão — ver app/gemini.py.
+@router.post("/import/photo", response_model=schemas.RecipeExtraction)
+async def import_recipe_from_photos(
+    files: list[UploadFile],
+    workspace_id: uuid.UUID = Depends(get_workspace_id),
+):
+    if not files or len(files) > 3:
+        raise HTTPException(status_code=422, detail="Envia entre 1 e 3 fotos.")
+
+    settings = get_settings()
+    if not gemini.is_available(settings):
+        raise HTTPException(status_code=422, detail="Importação por foto não está configurada (sem GEMINI_API_KEY).")
+
+    images: list[tuple[bytes, str]] = []
+    for file in files:
+        content_type = file.content_type or ""
+        if content_type not in ALLOWED_CONTENT_TYPES:
+            raise HTTPException(status_code=422, detail="Formato de imagem não suportado (usa JPEG, PNG ou WEBP).")
+        contents = await file.read()
+        if len(contents) > settings.max_image_bytes:
+            max_mb = settings.max_image_bytes // (1024 * 1024)
+            raise HTTPException(status_code=422, detail=f"Imagem demasiado grande (máx. {max_mb}MB).")
+        images.append((contents, content_type))
+
+    extraction = gemini.extract_from_images(settings, images)
+    if extraction is None:
+        raise HTTPException(status_code=422, detail="Não foi possível reconhecer uma receita nestas fotos.")
+    return extraction
 
 
 @router.get("/import/{task_id}", response_model=schemas.ImportStatus)

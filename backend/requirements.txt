@@ -11,3 +11,4 @@ recipe-scrapers==15.11.0
 requests==2.34.2
 fastapi-users[sqlalchemy]==15.0.5
 asyncpg==0.31.0
+google-genai==2.17.0

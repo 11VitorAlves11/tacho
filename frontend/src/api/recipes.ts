@@ -1,5 +1,5 @@
 import { api } from './client'
-import type { Category, ImportStatus, Recipe, RecipeInput, RecipeSummary, Tag } from './types'
+import type { Category, ImportStatus, Recipe, RecipeExtraction, RecipeInput, RecipeSummary, Tag } from './types'
 
 export async function listRecipes(params?: {
   categoryId?: string
@@ -108,6 +108,16 @@ export async function startImport(url: string) {
 
 export async function getImportStatus(taskId: string) {
   const { data } = await api.get<ImportStatus>(`/recipes/import/${taskId}`)
+  return data
+}
+
+// Importação por foto (Gemini Vision) — 1-3 fotos, devolve um rascunho
+// para rever/completar no formulário, nunca uma receita já criada. Sem
+// GEMINI_API_KEY no backend, dá 422 (ver AddRecipe.tsx).
+export async function importRecipeFromPhotos(files: File[]) {
+  const formData = new FormData()
+  files.forEach((file) => formData.append('files', file))
+  const { data } = await api.post<RecipeExtraction>('/recipes/import/photo', formData)
   return data
 }
 
