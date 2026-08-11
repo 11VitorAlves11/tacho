@@ -886,7 +886,16 @@ concluída** quando todos estes estiverem verificados.
       →" → criar → entrar → adicionar receita via select → remover →
       voltar → apagar coleção → estado vazio), sem erros de consola —
       nada de teste ficou na BD no fim.
-- [ ] Modo Cozinha desktop.
+- [x] **Modo Cozinha desktop** — `CookMode.tsx`: cabeçalho, barra de
+      progresso e botões Anterior/Seguinte passaram a `mx-auto max-w-4xl`,
+      mesma coluna centrada usada em todo o resto da app (`PageShell.tsx`,
+      896px) — em 1280px de largura os botões deixavam de esticar de ponta
+      a ponta do ecrã. O fundo cheio (verde-floresta, "modo escuro" fixo do
+      Modo Cozinha) e o número gigante de fundo continuam full-bleed, só o
+      conteúdo interativo ficou contido. **Pixel-idêntico em mobile**
+      (confirmado por screenshot a 375px antes/depois — `max-w-4xl` nunca
+      ativa abaixo de 896px). Testado no browser (Playwright) a 1280px e a
+      375px.
 - [ ] Modo Cozinha offline (cache da receita ativa via service worker).
 - [ ] Galeria de fotos por receita (várias fotos, uma marcada como capa).
 - [ ] Vista de impressão / PDF por receita.

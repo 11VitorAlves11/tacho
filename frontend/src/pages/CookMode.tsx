@@ -99,7 +99,7 @@ export function CookMode() {
 
   return (
     <div className="flex min-h-svh flex-col bg-primary-forest text-card-white" style={FIXED_LIGHT_TOKENS}>
-      <header className="flex items-center justify-between px-4 py-4">
+      <header className="mx-auto flex w-full max-w-4xl items-center justify-between px-4 py-4">
         <Link
           to={`/receitas/${recipe.id}`}
           className="flex size-10 items-center justify-center rounded-full bg-card-white/10"
@@ -123,7 +123,7 @@ export function CookMode() {
         </button>
       </header>
 
-      <div className="flex gap-1.5 px-4">
+      <div className="mx-auto flex w-full max-w-4xl gap-1.5 px-4">
         {steps.map((s, i) => (
           <div
             key={s.id}
@@ -156,7 +156,7 @@ export function CookMode() {
         )}
       </main>
 
-      <footer className="flex gap-3 p-4 sm:p-6">
+      <footer className="mx-auto flex w-full max-w-4xl gap-3 p-4 sm:p-6">
         <button
           type="button"
           disabled={stepIndex === 0}
