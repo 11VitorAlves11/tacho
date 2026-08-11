@@ -1,4 +1,5 @@
 import re
+import unicodedata
 import uuid
 from datetime import date, datetime, timedelta, timezone
 
@@ -6,6 +7,15 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app import models, schemas
+
+
+def _normalize(text: str) -> str:
+    """Minúsculas e sem acentos, para comparar nomes de ingredientes com
+    nomes de itens da despensa sem depender de escrita exata (ex. "Farinha"
+    == "farinha", "açúcar" == "acucar")."""
+    decomposed = unicodedata.normalize("NFKD", text)
+    without_accents = "".join(c for c in decomposed if not unicodedata.combining(c))
+    return without_accents.lower().strip()
 
 
 def _prefix_tsquery(q: str) -> str | None:
@@ -55,6 +65,16 @@ def _annotate_favorites(db: Session, user_id: uuid.UUID, recipes: list[models.Re
     return recipes
 
 
+def _is_makeable(recipe: models.Recipe, normalized_pantry: list[str]) -> bool:
+    ingredients = [i for i in recipe.ingredients if not i.is_header]
+    if not ingredients:
+        return False
+    return all(
+        any(pantry_name in _normalize(ingredient.name) for pantry_name in normalized_pantry)
+        for ingredient in ingredients
+    )
+
+
 def list_recipes(
     db: Session,
     workspace_id: uuid.UUID,
@@ -63,6 +83,7 @@ def list_recipes(
     tag_id: uuid.UUID | None = None,
     q: str | None = None,
     favorite_only: bool = False,
+    makeable_only: bool = False,
 ) -> list[models.Recipe]:
     query = _recipe_query(workspace_id)
     if category_id is not None:
@@ -84,6 +105,16 @@ def list_recipes(
                 )
             )
     recipes = list(db.scalars(query.order_by(models.Recipe.title)))
+    if makeable_only:
+        # Correspondência em Python, não em SQL: precisa de comparar contra
+        # todos os ingredientes de cada receita (já carregados por
+        # selectinload em _recipe_query) e a lista de despensa é tipicamente
+        # pequena — não vale a pena um JOIN/subquery SQL para isto.
+        pantry_query = select(models.PantryItem.name).where(
+            models.PantryItem.workspace_id == workspace_id, models.PantryItem.has_it.is_(True)
+        )
+        normalized_pantry = [_normalize(name) for name in db.scalars(pantry_query)]
+        recipes = [r for r in recipes if _is_makeable(r, normalized_pantry)]
     return _annotate_favorites(db, user_id, recipes)
 
 
@@ -580,6 +611,48 @@ def update_shopping_list_item(
 def delete_shopping_list_item(db: Session, workspace_id: uuid.UUID, item_id: uuid.UUID) -> bool:
     query = select(models.ShoppingListItem).where(
         models.ShoppingListItem.workspace_id == workspace_id, models.ShoppingListItem.id == item_id
+    )
+    item = db.scalars(query).first()
+    if item is None:
+        return False
+    db.delete(item)
+    db.commit()
+    return True
+
+
+def list_pantry_items(db: Session, workspace_id: uuid.UUID) -> list[models.PantryItem]:
+    query = (
+        select(models.PantryItem).where(models.PantryItem.workspace_id == workspace_id).order_by(models.PantryItem.name)
+    )
+    return list(db.scalars(query))
+
+
+def create_pantry_item(db: Session, workspace_id: uuid.UUID, payload: schemas.PantryItemIn) -> models.PantryItem:
+    item = models.PantryItem(workspace_id=workspace_id, name=payload.name)
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+def update_pantry_item(
+    db: Session, workspace_id: uuid.UUID, item_id: uuid.UUID, payload: schemas.PantryItemUpdate
+) -> models.PantryItem | None:
+    query = select(models.PantryItem).where(
+        models.PantryItem.workspace_id == workspace_id, models.PantryItem.id == item_id
+    )
+    item = db.scalars(query).first()
+    if item is None:
+        return None
+    item.has_it = payload.has_it
+    db.commit()
+    db.refresh(item)
+    return item
+
+
+def delete_pantry_item(db: Session, workspace_id: uuid.UUID, item_id: uuid.UUID) -> bool:
+    query = select(models.PantryItem).where(
+        models.PantryItem.workspace_id == workspace_id, models.PantryItem.id == item_id
     )
     item = db.scalars(query).first()
     if item is None:

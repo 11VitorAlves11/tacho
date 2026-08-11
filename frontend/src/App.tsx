@@ -8,6 +8,7 @@ import { EditRecipe } from './pages/EditRecipe'
 import { Home } from './pages/Home'
 import { Login } from './pages/Login'
 import { MealPlan } from './pages/MealPlan'
+import { Pantry } from './pages/Pantry'
 import { RecipeDetail } from './pages/RecipeDetail'
 import { Setup } from './pages/Setup'
 import { ShoppingList } from './pages/ShoppingList'
@@ -56,6 +57,7 @@ function AppRoutes() {
       <Route path="/lista-compras" element={<ShoppingList />} />
       <Route path="/colecoes" element={<Cookbooks />} />
       <Route path="/colecoes/:id" element={<CookbookDetail />} />
+      <Route path="/despensa" element={<Pantry />} />
       <Route path="/login" element={<Navigate to="/" replace />} />
       <Route path="/setup" element={<Navigate to="/" replace />} />
     </Routes>

@@ -25,11 +25,14 @@ def list_recipes(
     tag_id: uuid.UUID | None = None,
     q: str | None = None,
     favorite: bool = False,
+    makeable: bool = False,
     db: Session = Depends(get_db),
     workspace_id: uuid.UUID = Depends(get_workspace_id),
     user: User = Depends(current_active_user),
 ):
-    return crud.list_recipes(db, workspace_id, user.id, category_id=category_id, tag_id=tag_id, q=q, favorite_only=favorite)
+    return crud.list_recipes(
+        db, workspace_id, user.id, category_id=category_id, tag_id=tag_id, q=q, favorite_only=favorite, makeable_only=makeable
+    )
 
 
 @router.post("", response_model=schemas.RecipeOut, status_code=201)

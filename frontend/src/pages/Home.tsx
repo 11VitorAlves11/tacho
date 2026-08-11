@@ -4,7 +4,7 @@ import { listCategories, listRecipes, listTags, toggleFavorite } from '../api/re
 import type { Category, RecipeSummary, Tag } from '../api/types'
 import { PageShell } from '../components/PageShell'
 import { RecipeCard } from '../components/RecipeCard'
-import { HeartIcon, SearchIcon } from '../components/icons'
+import { CartIcon, HeartIcon, SearchIcon } from '../components/icons'
 
 export function Home() {
   const [recipes, setRecipes] = useState<RecipeSummary[] | null>(null)
@@ -14,6 +14,7 @@ export function Home() {
   const [categoryId, setCategoryId] = useState<string | null>(null)
   const [tagId, setTagId] = useState<string | null>(null)
   const [favoriteOnly, setFavoriteOnly] = useState(false)
+  const [makeableOnly, setMakeableOnly] = useState(false)
   const [error, setError] = useState(false)
 
   useEffect(() => {
@@ -24,12 +25,18 @@ export function Home() {
   useEffect(() => {
     const handle = setTimeout(() => {
       setError(false)
-      listRecipes({ q: q || undefined, categoryId: categoryId ?? undefined, tagId: tagId ?? undefined, favorite: favoriteOnly || undefined })
+      listRecipes({
+        q: q || undefined,
+        categoryId: categoryId ?? undefined,
+        tagId: tagId ?? undefined,
+        favorite: favoriteOnly || undefined,
+        makeable: makeableOnly || undefined,
+      })
         .then(setRecipes)
         .catch(() => setError(true))
     }, 250)
     return () => clearTimeout(handle)
-  }, [q, categoryId, tagId, favoriteOnly])
+  }, [q, categoryId, tagId, favoriteOnly, makeableOnly])
 
   async function handleToggleFavorite(id: string) {
     const updated = await toggleFavorite(id)
@@ -76,6 +83,17 @@ export function Home() {
             <HeartIcon className="size-3.5" fill={favoriteOnly ? 'currentColor' : 'none'} />
             Favoritos
           </button>
+          <button
+            type="button"
+            onClick={() => setMakeableOnly((v) => !v)}
+            aria-pressed={makeableOnly}
+            className={`flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+              makeableOnly ? 'bg-card-white text-accent-leaf' : 'bg-card-white/15 text-card-white hover:bg-card-white/25'
+            }`}
+          >
+            <CartIcon className="size-3.5" />
+            Dá para fazer
+          </button>
           {hasCategoryOrTagFilters && (
             <>
               <FilterChip label="Todas" active={!categoryId && !tagId} onClick={() => { setCategoryId(null); setTagId(null) }} />
@@ -116,6 +134,13 @@ export function Home() {
         <div className="rounded-2xl bg-surface p-8 text-center">
           {favoriteOnly ? (
             <p className="font-medium text-text-primary">Ainda não marcaste nenhuma receita como favorita.</p>
+          ) : makeableOnly ? (
+            <>
+              <p className="font-medium text-text-primary">Nenhuma receita dá para fazer com o que tens na despensa.</p>
+              <Link to="/despensa" className="mt-1 inline-block text-sm text-forest-text">
+                Atualizar a despensa →
+              </Link>
+            </>
           ) : (
             <>
               <p className="font-medium text-text-primary">Ainda não há receitas por aqui.</p>

@@ -281,9 +281,37 @@ concluída** quando todos estes estiverem verificados.
       formulário "Adicionar pessoa" inline), não como página própria com
       `Header`+`BottomNav`. Os ecrãs `v1.2 — Setup`/`v1.2 — Login` batem
       certo com `pages/Setup.tsx`/`pages/Login.tsx` reais; o ecrã
-      `v1.2 — Gestão de membros` como página autónoma fica então como
-      conceito alternativo, não como documentação do que existe — por
-      reconciliar com o Figma numa próxima passagem, não urgente.
+      `v1.2 — Gestão de membros` como página autónoma ficou marcado como
+      "ideia descartada" (nota de texto no próprio frame, feita numa sessão
+      de Figma entretanto), a apontar para `component/UserMenu-Dropdown-Aberto`
+      como fonte de verdade — reconciliação concluída.
+      **Reconciliação do `UserMenu-Dropdown-Aberto`, 2026-08-11:** esse
+      componente (página `Componentes`, ficheiro Figma
+      `Receitas App - Design Revamp`) tinha ficado desatualizado por ter sido
+      construído antes da secção de perfil chegar ao código — só tinha os
+      blocos Agregado + Tema. Reconciliado com o `UserMenu.tsx` real: bloco
+      "Sessão" passou a mostrar nome+email (quando há nome) e os 3 links
+      "Alterar nome"/"Alterar email"/"Alterar password" (estado fechado do
+      `InlineEditField`; o estado aberto — formulário de um campo com
+      Guardar/Cancelar — fica só anotado por nota de texto, mesmo padrão de
+      input em pill já usado no resto do ficheiro); lista "Agregado" passou a
+      mostrar o botão de remover (ícone X) em todas as linhas exceto a da
+      própria pessoa, replicando `m.id !== user.id` do código. Aproveitado
+      para corrigir também o avatar do estado fechado do `UserMenu`, que
+      ainda mostrava `"VM"` fixo (iniciais do agregado, herança do UserMenu
+      pré-login) em 17 instâncias espalhadas pelo ficheiro — agora mostra as
+      iniciais de uma pessoa autenticada (`"VA"`, mesma identidade de exemplo
+      do dropdown). Verificado por screenshot (componente isolado e em
+      contexto num frame de ecrã real) e `get_variable_defs`/`get_styles` no
+      fim (9 variáveis de cor, 5 estilos de texto, 4 de efeito — intactos).
+      **Nota à parte, sem relação com o trabalho acima:** o ficheiro Figma
+      tinha 3 páginas nos planos anteriores a esta sessão (`Design System`,
+      `v1.0 — Ecrãs atuais`, `v1.1 — Planeamento & Compras`) e passou a ter só
+      2 (`Componentes`, `Design da Aplicação (Mobile & Desktop)`, mesmos IDs
+      `30:2`/`0:1`) — confirmado que foi só uma reorganização/fusão de
+      páginas por alguém, sem perda de conteúdo (todos os frames de
+      Planeamento, Lista de Compras, Setup, Login e Cookbooks continuam lá).
+      Registar aqui para planos futuros não voltarem a assumir "3 páginas".
       **Ecrãs de v2 — Cookbooks/coleções** (página `v1.0`, prefixo
       `v2 — Cookbooks —`): a frente mais especulativa, sem modelo
       `Cookbook` em lado nenhum do backend na altura do desenho — decisão
@@ -804,11 +832,32 @@ concluída** quando todos estes estiverem verificados.
 - [ ] **Custo por receita/porção** — preço estimado por ingrediente → custo do
       prato e por porção. Depende do parsing estruturado (v1.1). Nenhum dos dois
       (Tandoor/Mealie) faz isto bem.
-- [ ] **Despensa/inventário básico** — só "tenho/não tenho" por ingrediente,
-      sem quantidades nem validades (âmbito contido de propósito, para não virar
-      um Grocy). Cruza com a pesquisa por ingredientes e com a lista de compras.
-- [ ] **Pesquisa por ingredientes disponíveis** — "o que consigo fazer com
-      frango e cogumelos?".
+- [x] **Despensa/inventário básico + pesquisa por ingredientes disponíveis**
+      — implementados juntos (a pesquisa não tem utilidade sem a despensa).
+      `PantryItem` (nome, `has_it`, `UniqueConstraint` por workspace/nome),
+      migração `a1ded7dbab02` — só "tenho/não tenho", sem quantidades nem
+      validades, âmbito contido de propósito (não virar um Grocy).
+      "Dá para fazer": `crud.list_recipes(..., makeable_only=True)` —
+      decisão de correspondência (substring normalizada, sem acentos/case:
+      `unicodedata.normalize` + `casefold`-like `.lower()`) — uma receita
+      "dá para fazer" quando **todos** os ingredientes não-cabeçalho têm o
+      nome de despensa como substring do nome do ingrediente (ex. despensa
+      "farinha" casa com ingrediente "farinha de trigo"); receita sem
+      ingredientes nunca é "makeable" (protege contra receitas vazias
+      aparecerem por vacuidade lógica). Filtro em Python, não SQL — a lista
+      de despensa é tipicamente pequena, não compensa um JOIN/subquery.
+      `GET /recipes?makeable=true`, novo router `app/routers/pantry.py`
+      (`GET/POST /pantry`, `PATCH/DELETE /pantry/{id}`). Frontend: página
+      `Pantry.tsx` (`/despensa`, checklist simples, acessível a partir de
+      um link "Despensa →" na Lista de Compras — mesmo padrão do link
+      "Coleções →" da Home, sem novo destino do `BottomNav`); chip "Dá
+      para fazer" novo na Home, ao lado de "Favoritos", com estado vazio
+      dedicado e link de volta para a despensa. Testado via curl (despensa
+      vazia → 0 receitas; adicionar "Arroz" com `has_it=true` → "Arroz
+      Doce" aparece; desmarcar → desaparece) e no browser (Playwright,
+      fluxo completo Lista→Despensa→adicionar→Home→filtro→Despensa→
+      desmarcar→Home→filtro→apagar), despensa confirmada vazia no fim via
+      API.
 - [x] **Cookbooks / coleções** — modelo exatamente como decidido (decisão #3
       acima): `Cookbook` (nome) + tabela de associação `cookbook_recipes`
       many-to-many com `Recipe` (uma receita pode estar em várias coleções,

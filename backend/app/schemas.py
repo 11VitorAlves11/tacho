@@ -217,6 +217,22 @@ class ShoppingListItemOut(BaseModel):
     created_at: datetime
 
 
+class PantryItemIn(BaseModel):
+    name: str
+
+
+class PantryItemUpdate(BaseModel):
+    has_it: bool
+
+
+class PantryItemOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    name: str
+    has_it: bool
+
+
 class GenerateShoppingListRequest(BaseModel):
     # Segunda-feira da semana a agregar — o frontend calcula-a localmente
     # (ver nota sobre fuso horário em MealPlan.tsx) e envia-a já resolvida.

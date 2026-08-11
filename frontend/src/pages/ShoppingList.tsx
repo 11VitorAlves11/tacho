@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
 import {
   addShoppingListItem,
   deleteShoppingListItem,
@@ -66,7 +67,7 @@ export function ShoppingList() {
 
   return (
     <PageShell>
-      <div className="mb-6 flex items-center justify-between gap-3">
+      <div className="mb-1 flex items-center justify-between gap-3">
         <h1 className="text-2xl font-bold text-text-primary sm:text-3xl">Lista de Compras</h1>
         <button
           type="button"
@@ -77,6 +78,10 @@ export function ShoppingList() {
           {generating ? 'A gerar…' : 'Gerar da semana'}
         </button>
       </div>
+
+      <Link to="/despensa" className="mb-6 inline-block text-sm font-medium text-forest-text">
+        Despensa →
+      </Link>
 
       {error && (
         <p className="mb-4 rounded-xl bg-surface p-4 text-sm text-text-secondary">

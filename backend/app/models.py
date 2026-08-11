@@ -81,6 +81,7 @@ class Workspace(Base):
     shopping_list_items: Mapped[list["ShoppingListItem"]] = relationship(
         back_populates="workspace", cascade="all, delete-orphan"
     )
+    pantry_items: Mapped[list["PantryItem"]] = relationship(back_populates="workspace", cascade="all, delete-orphan")
     members: Mapped[list["WorkspaceMember"]] = relationship(
         back_populates="workspace", cascade="all, delete-orphan"
     )
@@ -355,3 +356,23 @@ class ShoppingListItem(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     workspace: Mapped["Workspace"] = relationship(back_populates="shopping_list_items")
+
+
+class PantryItem(Base):
+    """Despensa básica — só "tenho/não tenho" por ingrediente, sem
+    quantidades nem validades (TODO.md, âmbito contido de propósito, para
+    não virar um Grocy). Alimenta o filtro "Dá para fazer" (crud.py::
+    list_recipes, makeable_only) por correspondência de substring
+    normalizada (sem acentos) contra o nome dos ingredientes."""
+
+    __tablename__ = "pantry_items"
+    __table_args__ = (UniqueConstraint("workspace_id", "name", name="uq_pantry_item_workspace_name"),)
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    workspace_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE")
+    )
+    name: Mapped[str] = mapped_column(Text)
+    has_it: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+
+    workspace: Mapped["Workspace"] = relationship(back_populates="pantry_items")

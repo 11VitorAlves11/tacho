@@ -82,6 +82,12 @@ export interface Recipe {
   comments: Comment[]
 }
 
+export interface PantryItem {
+  id: string
+  name: string
+  has_it: boolean
+}
+
 export interface CookbookSummary {
   id: string
   name: string

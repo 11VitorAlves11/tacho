@@ -1,9 +1,21 @@
 import { api } from './client'
 import type { Category, ImportStatus, Recipe, RecipeInput, RecipeSummary, Tag } from './types'
 
-export async function listRecipes(params?: { categoryId?: string; tagId?: string; q?: string; favorite?: boolean }) {
+export async function listRecipes(params?: {
+  categoryId?: string
+  tagId?: string
+  q?: string
+  favorite?: boolean
+  makeable?: boolean
+}) {
   const { data } = await api.get<RecipeSummary[]>('/recipes', {
-    params: { category_id: params?.categoryId, tag_id: params?.tagId, q: params?.q, favorite: params?.favorite },
+    params: {
+      category_id: params?.categoryId,
+      tag_id: params?.tagId,
+      q: params?.q,
+      favorite: params?.favorite,
+      makeable: params?.makeable,
+    },
   })
   return data
 }
