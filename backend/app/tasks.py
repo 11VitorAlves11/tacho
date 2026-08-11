@@ -28,6 +28,103 @@ def _parse_servings(yields: str | None) -> int | None:
     return int(match.group()) if match else None
 
 
+# Unidades PT reconhecidas para separar a linha scraped em quantidade/unidade/
+# nome (ver backend/README.md, "Limitações conhecidas"). Ordem importa: as
+# variantes compostas ("colher de sopa") têm de vir antes de "colher" sozinho,
+# senão o regex para cedo demais e deixa "de sopa" preso ao nome.
+_INGREDIENT_UNIT_ALTERNATIVES = (
+    r"colher(?:es)?\s+de\s+sopa",
+    r"colher(?:es)?\s+de\s+ch[áa]",
+    r"colher(?:es)?\s+de\s+caf[ée]",
+    r"colher(?:es)?",
+    r"c\.\s+de\s+sopa",
+    r"c\.\s+de\s+ch[áa]",
+    r"c\.\s+de\s+caf[ée]",
+    r"ch[áa]venas?",
+    r"copos?",
+    r"dentes?",
+    r"fatias?",
+    r"ramos?",
+    r"raminhos?",
+    r"folhas?",
+    r"pitadas?",
+    r"punhados?",
+    r"latas?",
+    r"pacotes?",
+    r"embalage(?:m|ns)",
+    r"unidades?",
+    r"unid\.",
+    r"quilos?",
+    r"gramas?",
+    r"mililitros?",
+    r"litros?",
+    r"kg",
+    r"gr",
+    r"g",
+    r"ml",
+    r"dl",
+    r"l",
+)
+# (?!\w) em vez de \b: unidades abreviadas terminam em "." (ex. "unid.",
+# "c."), e \b não conta como fronteira entre dois caracteres não-palavra
+# (o "." e o espaço a seguir seriam ambos "não-palavra") — ficava por
+# combinar mesmo com a unidade certa.
+_UNIT_RE = re.compile(r"^\s*(" + "|".join(_INGREDIENT_UNIT_ALTERNATIVES) + r")(?!\w)", re.IGNORECASE)
+_LEADING_DE_RE = re.compile(r"^\s*(?:de|d['’])\s+", re.IGNORECASE)
+
+_FRACTIONS = {"½": 0.5, "¼": 0.25, "¾": 0.75, "⅓": 1 / 3, "⅔": 2 / 3, "⅛": 0.125}
+_QUANTITY_RE = re.compile(r"^\s*(\d+/\d+|\d+(?:[.,]\d+)?|[" + "".join(_FRACTIONS) + r"])")
+# "2-3 dentes" / "2 a 3 dentes" — intervalo, não um número só; guardar como
+# número único seria adivinhar qual dos dois lados fica, por isso a linha
+# inteira fica por parsear nestes casos (mesma disciplina do _extract_steps:
+# nunca arriscar destruir informação real por uma heurística).
+_RANGE_AFTER_RE = re.compile(r"^\s*(-|a\s)\s*\d")
+# Alguns sites (ex. pingodoce.pt) escrevem "1 q.b. salsa fresca" — o "1" não
+# é uma quantidade real, é só o formato deles para "quanto baste"/"a gosto".
+# Tratar como quantidade dava um número enganador; fica tudo por parsear.
+_QB_AFTER_RE = re.compile(r"^\s*q\.?\s*b\.?\b", re.IGNORECASE)
+
+
+def _parse_quantity(raw: str) -> float | None:
+    if "/" in raw:
+        num, _, den = raw.partition("/")
+        return round(int(num) / int(den), 2)
+    if raw in _FRACTIONS:
+        return round(_FRACTIONS[raw], 2)
+    return float(raw.replace(",", "."))
+
+
+def _parse_ingredient_line(line: str) -> tuple[str, float | None, str | None]:
+    """Separa "500 g de bacalhau desfiado" em (name="bacalhau desfiado",
+    quantity=500, unit="g"). Só separa quando tem a certeza — quantidades em
+    intervalo, frações mistas ("1 ½"), ou linhas sem quantidade no início
+    (ex. "Sal q.b.", "Azeite (opcional)") ficam com a linha original intacta
+    em `name` e quantity/unit a None, em vez de arriscar um split errado."""
+    quantity_match = _QUANTITY_RE.match(line)
+    if not quantity_match:
+        return line, None, None
+    rest = line[quantity_match.end() :]
+    if _RANGE_AFTER_RE.match(rest) or _QB_AFTER_RE.match(rest):
+        return line, None, None
+    try:
+        quantity = _parse_quantity(quantity_match.group(1))
+    except (ValueError, ZeroDivisionError):
+        return line, None, None
+
+    unit_match = _UNIT_RE.match(rest)
+    if not unit_match:
+        name = rest.strip()
+        return (name or line), (quantity if name else None), None
+
+    unit = unit_match.group(1)
+    name = _LEADING_DE_RE.sub("", rest[unit_match.end() :].strip(" ,;")).strip()
+    if not name:
+        # "500 g" sem nenhum ingrediente a seguir — não deve acontecer numa
+        # receita real, mas se acontecer é mais seguro devolver a linha
+        # completa do que um Ingredient sem nome.
+        return line, None, None
+    return name, quantity, unit
+
 
 # Alguns sites publicam JSON-LD malformado onde uma HowToSection tem
 # `itemListElement` como um dict solto em vez de uma lista (visto em
@@ -77,10 +174,11 @@ def import_recipe_from_url(self, url: str, workspace_id: str) -> str:
             cook_minutes=cook_minutes,
             source_url=url,
             image_path=image_path,
-            # Scraped ingredient lines aren't split into quantity/unit/name —
-            # see backend/README.md, "Limitações conhecidas".
             ingredients=[
-                models.Ingredient(position=i, name=line) for i, line in enumerate(scraper.ingredients())
+                models.Ingredient(position=i, name=name, quantity=quantity, unit=unit)
+                for i, (name, quantity, unit) in enumerate(
+                    _parse_ingredient_line(line) for line in scraper.ingredients()
+                )
             ],
             steps=[
                 models.Step(position=i, instruction=line) for i, line in enumerate(_extract_steps(scraper))

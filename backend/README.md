@@ -39,12 +39,16 @@ projeto) sobe os 4 containers — `db`, `redis`, `backend`, `celery-worker`.
 Validadas com sites reais (spike do PRD, Secção 11 — risco técnico mais
 alto identificado):
 
-- **Ingredientes não vêm separados.** O `recipe-scrapers` devolve uma linha
-  de texto por ingrediente (ex.: `"500 g frango"`), não quantidade/unidade/
-  nome separados. Guardamos a linha inteira em `Ingredient.name`, com
-  `quantity`/`unit` a `null` — fica para o utilizador editar à mão, ou para
-  uma iteração futura com um parser de ingredientes dedicado (não incluído
-  aqui de propósito, para não somar um segundo risco não validado ao spike).
+- **Ingredientes: separados quando há confiança, senão a linha fica intacta.**
+  O `recipe-scrapers` devolve uma linha de texto por ingrediente (ex.:
+  `"500 g de frango"`). `app/tasks.py::_parse_ingredient_line` separa
+  quantidade/unidade/nome quando reconhece um padrão seguro (número no
+  início + unidade PT conhecida); quando não tem a certeza — intervalos
+  ("2-3 dentes"), frações mistas ("1 ½"), ou linhas sem quantidade no início
+  ("Sal q.b.") — deixa a linha original intacta em `Ingredient.name` com
+  `quantity`/`unit` a `null`, em vez de arriscar um split errado (mesma
+  disciplina do filtro de passos abaixo: nunca uma heurística que possa
+  destruir dado real).
 - **Alguns sites não expõem instruções, nem em modo genérico.** Ex.:
   `pingodoce.pt` devolve título/porções/tempo/ingredientes corretamente mas
   `instructions()` vem vazio, mesmo com fallback `wild_mode` (schema.org

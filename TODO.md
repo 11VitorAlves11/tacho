@@ -328,9 +328,38 @@ concluída** quando todos estes estiverem verificados.
       para o Postgres (nunca sintaxe de tsquery crua). Testado pela API
       (prefixo, multi-palavra, sem resultados, caracteres especiais) e no
       browser (Playwright).
-- [ ] **Parsing de ingredientes da importação** — a linha scraped fica inteira
-      em `Ingredient.name`, sem separar quantidade/unidade. Desbloqueia o custo
-      por porção e a pesquisa por ingredientes (v2).
+- [x] **Parsing de ingredientes da importação** — `app/tasks.py::
+      _parse_ingredient_line`, aplicado só às linhas vindas do
+      `recipe-scrapers` (a entrada manual já guarda quantidade/unidade/nome
+      em campos separados desde sempre). Reconhece um número no início
+      (inteiro, decimal com vírgula ou ponto, fração `1/2`, fração unicode
+      `½¼¾⅓⅔⅛`) seguido de uma unidade PT conhecida (massa/volume — g, kg,
+      ml, l, colher(es) de sopa/chá/café incl. abreviatura `c.`, chávena,
+      copo — e contagem — dente, fatia, folha, pitada, lata, pacote,
+      embalagem, unidade/`unid.`), com "de "/"d'" a seguir removido do
+      nome. **Mesma disciplina do `_extract_steps`** (nunca uma heurística
+      que arrisque destruir dado real): quando não há confiança total, a
+      linha inteira fica intacta em `Ingredient.name` com `quantity`/`unit`
+      a `null` — cobre intervalos ("2-3 dentes", "2 a 3 folhas", nunca
+      escolhe um lado), frações mistas ("1 ½", não suportado), e linhas sem
+      quantidade no início ("Sal q.b.", "Azeite (opcional)"). Caso real
+      descoberto só ao testar contra `pingodoce.pt`: o site escreve "1 q.b.
+      salsa fresca" — o "1" não é quantidade nenhuma, é só o formato deles
+      para "a gosto"; reconhecido e tratado como não-parseável em vez de
+      guardar `quantity=1` enganador. Dois bugs de regex apanhados só ao
+      testar (não óbvios por inspeção): `colheres?` como escrito
+      correspondia a "colhere"/"colheres" (faltava agrupar o "es" opcional,
+      `colher(?:es)?`) e a fronteira `\b` no fim de unidades abreviadas
+      como "unid."/"c." nunca batia certo (`\b` não conta como fronteira
+      entre dois caracteres não-palavra — o "." e o espaço a seguir — por
+      isso trocado por `(?!\w)`). Testado com casos sintéticos (frações,
+      intervalos, `q.b.`, "3 ovos" sem unidade) e com scraping real de
+      `pingodoce.pt` ponta a ponta (task chamada diretamente, sem mock,
+      contra a BD local — registo de teste apagado no fim), 10 ingredientes
+      todos corretos incluindo os dois casos "q.b." acima. **Desbloqueia**:
+      escalar porções também para receitas importadas por URL (hoje só
+      funciona para as manuais), custo por porção e pesquisa por
+      ingredientes disponíveis (ambos ainda por implementar).
 - [x] **Filtrar lixo nos passos importados** — causa raiz encontrada e
       reproduzida (`mundodereceitasbimby.com.pt`, "Cheesecake de Bolacha -
       gelado sanduíche"): uma `HowToSection` do JSON-LD com
