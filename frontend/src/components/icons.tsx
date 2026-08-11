@@ -173,6 +173,15 @@ export function FlameIcon(props: SVGProps<SVGSVGElement>) {
   )
 }
 
+export function EuroIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base} {...props}>
+      <path d="M16.5 6.5a6 6 0 1 0 0 11" />
+      <path d="M4.5 10.5h9M4.5 13.5h8" />
+    </svg>
+  )
+}
+
 export function UserIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <svg {...base} {...props}>

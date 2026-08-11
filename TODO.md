@@ -312,6 +312,34 @@ concluída** quando todos estes estiverem verificados.
       páginas por alguém, sem perda de conteúdo (todos os frames de
       Planeamento, Lista de Compras, Setup, Login e Cookbooks continuam lá).
       Registar aqui para planos futuros não voltarem a assumir "3 páginas".
+      **Fix: alinhamento Porções/Preparação/Confeção em mobile, 2026-08-11**
+      — reportado pelo utilizador ("caixa de texto das porções está acima
+      das outras"). Causa: `Grid3-PorcoesPrepCook` (frame `Mobile - Editar
+      receita`) tem 3 colunas independentes (label + input, auto-layout
+      vertical), cada uma a fazer HUG à sua própria altura; a coluna
+      "Porções" (etiqueta de uma linha, 17px) ficava mais baixa que
+      "Preparação (min)"/"Confeção (min)" (etiquetas que quebram para 2
+      linhas a 98px de largura, 34px), e como a linha-mãe alinha ao topo
+      (`counterAxisAlignItems: MIN`), a caixa de input de "Porções" ficava
+      17px acima das outras duas. **Fix final** (pedido do utilizador):
+      etiqueta passou de "Porções" para "Porções (und.)" — a condizer com
+      "Preparação (min)"/"Confeção (min)", que já mostravam a unidade — o
+      que também quebra para 2 linhas nos 98px de mobile e alinha
+      naturalmente com as outras duas colunas (o `minHeight: 34`
+      experimentado antes, na etiqueta `55:654`, ficou redundante mas
+      inofensivo, não removido). Aplicado em mobile (`55:654`) e desktop
+      (`61:1274`, cabe numa linha aos 261px de coluna, sem quebra — mesmo
+      comportamento das outras duas colunas no desktop, sem regressão).
+      Verificado por screenshot (grelha isolada mobile+desktop e o ecrã
+      `Mobile - Editar receita` completo); grelha de Informação nutricional
+      (2×2, mais abaixo no mesmo formulário) confirmada sem o mesmo
+      problema. **Nota:** a mesma classe de bug (`w-full`/cascade a
+      espremer campos) já tinha sido corrigida no código real em
+      2026-08-11 (ver entrada "Fix: `RecipeForm.tsx`..." na secção v1.2),
+      mas naquela correção não tocou nesta linha Porções/Preparação/
+      Confeção — vale a pena a outra sessão confirmar se a app real tem o
+      mesmo desalinhamento e, já agora, se faz sentido replicar lá também
+      o "(und.)" na label de Porções por consistência com o Figma.
       **Ecrãs de v2 — Cookbooks/coleções** (página `v1.0`, prefixo
       `v2 — Cookbooks —`): a frente mais especulativa, sem modelo
       `Cookbook` em lado nenhum do backend na altura do desenho — decisão
@@ -857,9 +885,29 @@ concluída** quando todos estes estiverem verificados.
       (Playwright) no caminho de falha total (mensagem "não foi possível
       estimar agora" em vez de erro cru). **Por fazer**: validar contra
       pesquisas reais bem-sucedidas quando a OFF recuperar.
-- [ ] **Custo por receita/porção** — preço estimado por ingrediente → custo do
-      prato e por porção. Depende do parsing estruturado (v1.1). Nenhum dos dois
-      (Tandoor/Mealie) faz isto bem.
+- [x] **Custo por receita/porção** — decisão: sem fonte de preços por
+      ingrediente disponível nem decidida (nem OFF nem nenhuma API de
+      supermercado PT tem isso, e não está nos planos ir buscar uma só
+      para isto), por isso **entrada manual** em vez de automática — um
+      único campo `Recipe.estimated_cost` (custo da receita **toda**, não
+      por porção; migração `90e07c148e15`), mesmo padrão que a nutrição
+      usava antes do cálculo automático existir. Custo por porção
+      calculado em runtime no frontend (`estimated_cost / servings`,
+      arredondado a 2 casas), mostrado como `HeroStat` novo no Detalhe
+      (ícone `EuroIcon` novo, ao lado de tempo/porções/calorias, tom
+      `forest` como calorias — laranja continua exclusivo de tempo/Modo
+      Cozinha). Campo novo em `RecipeForm.tsx`, entre "Fonte" e "Notas".
+      Copiado em `duplicate_recipe` (é atributo da receita, como as
+      calorias — ao contrário do `rating`, que é avaliação de uso e não é
+      copiado). **Efeito colateral desta tarefa**: o CHECK do rating
+      (`ck_recipes_rating_range`) finalmente declarado em
+      `Recipe.__table_args__` — resolve de vez o falso positivo do
+      autogenerate que obrigava a apagar `op.drop_constraint` à mão em
+      todas as migrações desde a v1.2 (confirmado com uma migração de
+      verificação vazia, descartada). Testado via curl (definir custo,
+      confirmar `estimated_cost/servings` correto) e no browser
+      (Playwright): campo no editor, "€/porção" no Detalhe — dado de teste
+      reposto a `null` no fim (a receita seed não tinha custo definido).
 - [x] **Despensa/inventário básico + pesquisa por ingredientes disponíveis**
       — implementados juntos (a pesquisa não tem utilidade sem a despensa).
       `PantryItem` (nome, `has_it`, `UniqueConstraint` por workspace/nome),

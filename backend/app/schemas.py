@@ -95,6 +95,7 @@ class RecipeCreate(BaseModel):
     protein_g: float | None = None
     carbs_g: float | None = None
     fat_g: float | None = None
+    estimated_cost: float | None = None
     ingredients: list[IngredientIn] = []
     steps: list[StepIn] = []
     category_ids: list[uuid.UUID] = []
@@ -190,6 +191,7 @@ class RecipeOut(BaseModel):
     protein_g: float | None
     carbs_g: float | None
     fat_g: float | None
+    estimated_cost: float | None
     created_at: datetime
     updated_at: datetime
     last_made_at: datetime | None

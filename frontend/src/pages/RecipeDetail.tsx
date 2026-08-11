@@ -14,6 +14,7 @@ import { PageShell } from '../components/PageShell'
 import {
   ClockIcon,
   CopyIcon,
+  EuroIcon,
   FlameIcon,
   HeartIcon,
   MinusIcon,
@@ -252,6 +253,14 @@ export function RecipeDetail() {
           )}
           {recipe.calories_kcal != null && (
             <HeroStat icon={<FlameIcon className="size-5" />} value={recipe.calories_kcal} label="kcal/porção" tone="forest" />
+          )}
+          {recipe.estimated_cost != null && recipe.servings != null && recipe.servings > 0 && (
+            <HeroStat
+              icon={<EuroIcon className="size-5" />}
+              value={Math.round((recipe.estimated_cost / recipe.servings) * 100) / 100}
+              label="€/porção"
+              tone="forest"
+            />
           )}
         </div>
 

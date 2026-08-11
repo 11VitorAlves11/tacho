@@ -3,6 +3,7 @@ from datetime import date, datetime
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     Date,
     DateTime,
     ForeignKey,
@@ -123,16 +124,19 @@ class WorkspaceMember(Base):
 
 class Recipe(Base):
     __tablename__ = "recipes"
-    # Criado via op.execute na migração f8210117be6a; registado aqui só
-    # para o autogenerate parar de o assinalar como "removido" em todas as
-    # migrações seguintes (já aconteceu duas vezes — 2fbf5b821d94 e
-    # 4d0d5fd85a2d tiveram de remover um op.drop_index espúrio à mão).
+    # Índice GIN criado via op.execute na migração f8210117be6a; registado
+    # aqui só para o autogenerate parar de o assinalar como "removido" em
+    # todas as migrações seguintes (já aconteceu duas vezes — 2fbf5b821d94
+    # e 4d0d5fd85a2d tiveram de remover um op.drop_index espúrio à mão).
+    # O CHECK do rating (migração 1124746a9f09) tinha o mesmo problema —
+    # declarado agora para não repetir pela sexta vez.
     __table_args__ = (
         Index(
             "ix_recipes_title_tsv",
             text("to_tsvector('portuguese', title)"),
             postgresql_using="gin",
         ),
+        CheckConstraint("rating IS NULL OR rating BETWEEN 1 AND 5", name="ck_recipes_rating_range"),
     )
 
     id: Mapped[uuid.UUID] = _uuid_pk()
@@ -149,13 +153,17 @@ class Recipe(Base):
     # Só o nome do ficheiro (uuid4 + extensão), guardado em Settings.images_dir
     # e servido em /images/{image_path} — nunca o caminho absoluto do disco.
     image_path: Mapped[str | None] = mapped_column(Text)
-    # Informação nutricional por porção, entrada manual (PRD 5.1/11.1 #5).
-    # Cálculo automático a partir dos ingredientes fica para a v2 (Open Food
-    # Facts, não LLM — ver TODO.md).
+    # Informação nutricional por porção, entrada manual (PRD 5.1/11.1 #5) —
+    # `app/nutrition.py` pode sugerir valores (Open Food Facts), mas nunca
+    # grava sozinho, só por confirmação explícita no formulário.
     calories_kcal: Mapped[int | None]
     protein_g: Mapped[float | None] = mapped_column(Numeric(6, 1))
     carbs_g: Mapped[float | None] = mapped_column(Numeric(6, 1))
     fat_g: Mapped[float | None] = mapped_column(Numeric(6, 1))
+    # Custo estimado da receita TOTAL (não por porção) — entrada manual, sem
+    # fonte de preços automática disponível (TODO.md). Custo por porção
+    # calculado em runtime no frontend (estimated_cost / servings).
+    estimated_cost: Mapped[float | None] = mapped_column(Numeric(8, 2))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
@@ -164,13 +172,11 @@ class Recipe(Base):
     last_made_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # Avaliação por estrelas (1-5), padrão Mealie — do agregado, não por
     # utilizador (ao contrário de is_favorite; ver TODO.md, "não do Tandoor",
-    # que não tem esta funcionalidade). Validação do intervalo em schemas.py
-    # + CHECK "ck_recipes_rating_range" na BD (migração 1124746a9f09) — esse
-    # CHECK não está declarado aqui (SQLAlchemy não expõe CheckConstraint
-    # inline em coluna de forma simples), por isso o autogenerate vai
-    # sempre propor removê-lo por engano; mesmo tipo de falso positivo do
-    # índice GIN acima — ignorar/apagar essa linha à mão em migrações
-    # futuras, nunca aplicar.
+    # que não tem esta funcionalidade). Validação do intervalo em
+    # schemas.py + CHECK "ck_recipes_rating_range" (criado na migração
+    # 1124746a9f09, declarado no __table_args__ acima desde a migração
+    # 90e07c148e15 — antes disso o autogenerate propunha removê-lo por
+    # engano em todas as migrações seguintes, mesmo problema do índice GIN).
     rating: Mapped[int | None]
     # `is_favorite` NÃO é uma coluna — `app/crud.py` marca este atributo em
     # runtime consultando `recipe_favorites` para o utilizador do pedido

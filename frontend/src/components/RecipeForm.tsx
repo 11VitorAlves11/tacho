@@ -51,6 +51,7 @@ export function RecipeForm({
   const [proteinG, setProteinG] = useState(initial?.protein_g?.toString() ?? '')
   const [carbsG, setCarbsG] = useState(initial?.carbs_g?.toString() ?? '')
   const [fatG, setFatG] = useState(initial?.fat_g?.toString() ?? '')
+  const [estimatedCost, setEstimatedCost] = useState(initial?.estimated_cost?.toString() ?? '')
   const [nutritionEstimate, setNutritionEstimate] = useState<NutritionEstimate | null>(null)
   const [estimating, setEstimating] = useState(false)
   const [ingredients, setIngredients] = useState<IngredientRow[]>(toIngredientRows(initial))
@@ -182,6 +183,7 @@ export function RecipeForm({
           protein_g: proteinG ? Number(proteinG) : null,
           carbs_g: carbsG ? Number(carbsG) : null,
           fat_g: fatG ? Number(fatG) : null,
+          estimated_cost: estimatedCost ? Number(estimatedCost) : null,
           ingredients: ingredients
             .filter((row) => row.name.trim())
             .map((row) => ({
@@ -317,6 +319,20 @@ export function RecipeForm({
           onChange={(e) => setSourceUrl(e.target.value)}
           className={`${fieldClass} w-full mt-1`}
           placeholder="https://…"
+        />
+
+        <label className="mt-4 block text-sm font-medium text-text-secondary" htmlFor="cost">
+          Custo estimado da receita (€, opcional)
+        </label>
+        <input
+          id="cost"
+          type="number"
+          min={0}
+          step="0.01"
+          value={estimatedCost}
+          onChange={(e) => setEstimatedCost(e.target.value)}
+          className={`${fieldClass} w-full mt-1`}
+          placeholder="Ex.: 8.50"
         />
 
         <label className="mt-4 block text-sm font-medium text-text-secondary" htmlFor="notes">

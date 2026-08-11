@@ -164,6 +164,7 @@ def create_recipe(db: Session, workspace_id: uuid.UUID, payload: schemas.RecipeC
         protein_g=payload.protein_g,
         carbs_g=payload.carbs_g,
         fat_g=payload.fat_g,
+        estimated_cost=payload.estimated_cost,
         ingredients=[
             models.Ingredient(
                 position=i, name=ing.name, quantity=ing.quantity, unit=ing.unit, is_header=ing.is_header
@@ -202,6 +203,7 @@ def update_recipe(
     recipe.protein_g = payload.protein_g
     recipe.carbs_g = payload.carbs_g
     recipe.fat_g = payload.fat_g
+    recipe.estimated_cost = payload.estimated_cost
     recipe.ingredients = [
         models.Ingredient(
             position=i, name=ing.name, quantity=ing.quantity, unit=ing.unit, is_header=ing.is_header
@@ -338,6 +340,7 @@ def duplicate_recipe(
         protein_g=original.protein_g,
         carbs_g=original.carbs_g,
         fat_g=original.fat_g,
+        estimated_cost=original.estimated_cost,
         ingredients=[
             models.Ingredient(
                 position=ing.position, name=ing.name, quantity=ing.quantity, unit=ing.unit, is_header=ing.is_header

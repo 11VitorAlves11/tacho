@@ -71,6 +71,7 @@ export interface Recipe {
   protein_g: number | null
   carbs_g: number | null
   fat_g: number | null
+  estimated_cost: number | null
   created_at: string
   updated_at: string
   last_made_at: string | null
@@ -112,6 +113,7 @@ export interface RecipeInput {
   protein_g?: number | null
   carbs_g?: number | null
   fat_g?: number | null
+  estimated_cost?: number | null
   ingredients: { name: string; quantity?: number | null; unit?: string | null; is_header?: boolean }[]
   steps: { instruction: string; duration_minutes?: number | null }[]
   category_ids: string[]
