@@ -18,7 +18,7 @@ from google.genai import types
 from app import schemas
 from app.config import Settings
 
-_MODEL = "gemini-2.5-flash"
+_MODEL = "gemini-flash-latest"
 
 _EXTRACTION_PROMPT = (
     "Extrai esta receita de cozinha para JSON estruturado, em português "
