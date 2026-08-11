@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
+import { estimateNutrition, type NutritionEstimate } from '../api/nutrition'
 import { createCategory, createTag, listCategories, listTags, recipeImageUrl } from '../api/recipes'
 import type { Category, Recipe, RecipeInput, Tag } from '../api/types'
 import { CameraIcon, PlusIcon, XIcon } from './icons'
@@ -50,6 +51,8 @@ export function RecipeForm({
   const [proteinG, setProteinG] = useState(initial?.protein_g?.toString() ?? '')
   const [carbsG, setCarbsG] = useState(initial?.carbs_g?.toString() ?? '')
   const [fatG, setFatG] = useState(initial?.fat_g?.toString() ?? '')
+  const [nutritionEstimate, setNutritionEstimate] = useState<NutritionEstimate | null>(null)
+  const [estimating, setEstimating] = useState(false)
   const [ingredients, setIngredients] = useState<IngredientRow[]>(toIngredientRows(initial))
   const [steps, setSteps] = useState<StepRow[]>(toStepRows(initial))
 
@@ -131,6 +134,34 @@ export function RecipeForm({
       setTagIds((ids) => [...ids, created.id])
     }
     setNewTagName('')
+  }
+
+  async function handleEstimateNutrition() {
+    if (estimating) return
+    setEstimating(true)
+    setNutritionEstimate(null)
+    try {
+      const result = await estimateNutrition(
+        ingredients
+          .filter((row) => !row.isHeader && row.name.trim())
+          .map((row) => ({ name: row.name, quantity: row.quantity ? Number(row.quantity) : null, unit: row.unit || null })),
+        servings ? Number(servings) : null,
+      )
+      setNutritionEstimate(result)
+    } catch {
+      setNutritionEstimate({ calories_kcal: null, protein_g: null, carbs_g: null, fat_g: null, matched_count: 0, skipped_count: 0 })
+    } finally {
+      setEstimating(false)
+    }
+  }
+
+  function applyNutritionEstimate() {
+    if (!nutritionEstimate) return
+    if (nutritionEstimate.calories_kcal != null) setCaloriesKcal(nutritionEstimate.calories_kcal.toString())
+    if (nutritionEstimate.protein_g != null) setProteinG(nutritionEstimate.protein_g.toString())
+    if (nutritionEstimate.carbs_g != null) setCarbsG(nutritionEstimate.carbs_g.toString())
+    if (nutritionEstimate.fat_g != null) setFatG(nutritionEstimate.fat_g.toString())
+    setNutritionEstimate(null)
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -441,9 +472,53 @@ export function RecipeForm({
 
       <div className="rounded-2xl bg-surface p-5 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)]">
         <h2 className="text-lg font-semibold text-text-primary">Informação nutricional</h2>
-        <p className="mt-1 text-xs text-text-secondary">
-          Por porção, opcional e à mão — sem cálculo automático por agora.
-        </p>
+        <p className="mt-1 text-xs text-text-secondary">Por porção, opcional e à mão.</p>
+
+        <button
+          type="button"
+          onClick={handleEstimateNutrition}
+          disabled={estimating}
+          className="mt-3 flex items-center gap-1 text-sm font-medium text-forest-text disabled:opacity-50"
+        >
+          {estimating ? 'A estimar…' : 'Estimar a partir dos ingredientes (Open Food Facts)'}
+        </button>
+
+        {nutritionEstimate && (
+          <div className="mt-2 rounded-xl bg-bg-sage p-3 text-sm">
+            {nutritionEstimate.matched_count === 0 ? (
+              <p className="text-text-secondary">
+                Não foi possível estimar agora — a Open Food Facts pode estar em baixo, ou nenhum ingrediente foi
+                reconhecido. Podes sempre preencher à mão.
+              </p>
+            ) : (
+              <>
+                <p className="text-text-primary">
+                  Estimativa ({nutritionEstimate.matched_count} de{' '}
+                  {nutritionEstimate.matched_count + nutritionEstimate.skipped_count} ingredientes): {nutritionEstimate.calories_kcal}{' '}
+                  kcal · {nutritionEstimate.protein_g}g proteína · {nutritionEstimate.carbs_g}g hidratos ·{' '}
+                  {nutritionEstimate.fat_g}g gordura
+                </p>
+                <p className="mt-1 text-xs text-text-secondary">
+                  Aproximada — nem todos os ingredientes/unidades entram na conta, nunca substitui os campos abaixo
+                  sem confirmares.
+                </p>
+                <div className="mt-2 flex gap-3">
+                  <button type="button" onClick={applyNutritionEstimate} className="text-sm font-medium text-forest-text">
+                    Aplicar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNutritionEstimate(null)}
+                    className="text-sm font-medium text-text-secondary"
+                  >
+                    Descartar
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
         <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div>
             <label className="block text-sm font-medium text-text-secondary" htmlFor="calories">

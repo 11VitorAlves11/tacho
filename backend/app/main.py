@@ -9,7 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from app.auth import auth_backend, fastapi_users
 from app.config import get_settings
 from app.routers import auth as auth_router
-from app.routers import cookbooks, pantry, planning, recipes, taxonomy
+from app.routers import cookbooks, nutrition, pantry, planning, recipes, taxonomy
 from app.schemas import UserRead, UserUpdate
 
 settings = get_settings()
@@ -35,6 +35,7 @@ app.include_router(taxonomy.router)
 app.include_router(planning.router)
 app.include_router(cookbooks.router)
 app.include_router(pantry.router)
+app.include_router(nutrition.router)
 
 os.makedirs(settings.images_dir, exist_ok=True)
 app.mount("/images", StaticFiles(directory=settings.images_dir), name="images")

@@ -822,13 +822,41 @@ concluída** quando todos estes estiverem verificados.
 
 ## v2
 
-- [ ] **Cálculo automático de nutrição a partir dos ingredientes** — decisão
-      tomada: cruzar os ingredientes parseados (v1.1) com uma base de dados
-      nutricional real, **Open Food Facts**, não um LLM (o Gemini não tem
-      uma base de dados nutricional; pedir-lhe calorias/macros seria
-      alucinação em dados de saúde, um risco pior do que o já assinalado
-      para a importação por foto — ver Riscos no PRD). O Gemini fica
-      reservado ao que já estava previsto: extração de receitas por URL/foto.
+- [x] **Cálculo automático de nutrição a partir dos ingredientes** — Open
+      Food Facts, não LLM (decisão já tomada — o Gemini não tem base de
+      dados nutricional, pedir-lhe calorias/macros seria alucinação em
+      dados de saúde). `app/nutrition.py::estimate_nutrition`: só
+      ingredientes com unidade de massa/volume reconhecida (g/kg/ml/l/dl,
+      convertidos para gramas-equivalente — `ml`≈`g` assume densidade de
+      água, aproximação grosseira mas aceitável para uma estimativa)
+      entram na conta; unidades de contagem (dente, unidade, pitada…)
+      ficam de fora, sem conversão fiável. Pesquisa de texto na OFF por
+      ingrediente, só o primeiro produto com dados nutricionais é usado;
+      sem resultado ou sem correspondência, esse ingrediente é ignorado —
+      nunca trava o resto. Soma-se a receita toda e só no fim divide-se
+      pelas porções (`Recipe.calories_kcal`/etc. são "por porção", não
+      pela receita — divisão em falta seria um bug silencioso). **Nunca
+      grava sozinho**: `POST /nutrition/estimate` (recebe ingredientes +
+      porções do próprio formulário, não precisa da receita já guardada)
+      devolve a estimativa com `matched_count`/`skipped_count` para
+      transparência; o utilizador tem de clicar "Aplicar" em
+      `RecipeForm.tsx` para os 4 campos serem substituídos — mesmo
+      princípio do import Gemini, nunca grava direto. **Não totalmente
+      verificado**: a pesquisa da Open Food Facts esteve consistentemente
+      em baixo (503 "Page temporarily unavailable") durante todo o
+      desenvolvimento e teste desta funcionalidade — confirmado que é do
+      lado deles (o site e o lookup por código de barras funcionavam
+      normalmente, só a pesquisa por texto, nova e antiga API, estava
+      afetada). Testado o que deu: agregação e arredondamento corretos
+      contra uma resposta real capturada num momento em que a pesquisa
+      respondeu (`farinha`+`açúcar`, matched_count confirmado 1-2 em
+      várias tentativas); tratamento de erro testado exaustivamente
+      (rede em baixo, sem resultados, unidade não reconhecida, cabeçalho
+      de secção ignorado, lista vazia, 401 sem sessão) — nunca crasha,
+      sempre devolve uma resposta válida. UI testada no browser
+      (Playwright) no caminho de falha total (mensagem "não foi possível
+      estimar agora" em vez de erro cru). **Por fazer**: validar contra
+      pesquisas reais bem-sucedidas quando a OFF recuperar.
 - [ ] **Custo por receita/porção** — preço estimado por ingrediente → custo do
       prato e por porção. Depende do parsing estruturado (v1.1). Nenhum dos dois
       (Tandoor/Mealie) faz isto bem.

@@ -12,6 +12,24 @@ class IngredientIn(BaseModel):
     is_header: bool = False
 
 
+class NutritionEstimateRequest(BaseModel):
+    ingredients: list[IngredientIn]
+    servings: int | None = None
+
+
+class NutritionEstimate(BaseModel):
+    calories_kcal: int | None
+    protein_g: float | None
+    carbs_g: float | None
+    fat_g: float | None
+    # Quantos ingredientes entraram na conta vs. ficaram de fora (sem
+    # unidade de massa/volume reconhecida, ou sem correspondência na Open
+    # Food Facts) — para o frontend mostrar "estimativa parcial: 3 de 5
+    # ingredientes" em vez de fingir precisão que não existe.
+    matched_count: int
+    skipped_count: int
+
+
 class IngredientOut(IngredientIn):
     model_config = ConfigDict(from_attributes=True)
 
