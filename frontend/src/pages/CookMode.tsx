@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { addCookNote, getRecipe, markRecipeMade } from '../api/recipes'
+import { addCookNote, getRecipe, markRecipeMade, recipeImageUrl } from '../api/recipes'
 import type { Recipe } from '../api/types'
 import { ChevronLeftIcon, ClockIcon } from '../components/icons'
 
@@ -58,6 +58,19 @@ export function CookMode() {
     if (!id) return
     getRecipe(id).then(setRecipe)
   }, [id])
+
+  // Diz ao service worker para guardar esta receita (dados + foto) para
+  // continuar visível se a rede cair a meio de cozinhar — best-effort,
+  // nunca bloqueia o Modo Cozinha se falhar ou se não houver SW ativo.
+  useEffect(() => {
+    if (!recipe || !('serviceWorker' in navigator)) return
+    const apiBase = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
+    const urls = [`${apiBase}/recipes/${recipe.id}`]
+    if (recipe.image_path) urls.push(recipeImageUrl(recipe.image_path))
+    navigator.serviceWorker.ready
+      .then((registration) => registration.active?.postMessage({ type: 'CACHE_ACTIVE_RECIPE', urls }))
+      .catch(() => {})
+  }, [recipe])
 
   // "sem bloqueio automático do ecrã" (PRD 4.5) — pede um wake lock
   // enquanto o Modo Cozinha está aberto; falha em silêncio em navegadores

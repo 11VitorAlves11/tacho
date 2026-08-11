@@ -976,7 +976,28 @@ concluída** quando todos estes estiverem verificados.
       (confirmado por screenshot a 375px antes/depois — `max-w-4xl` nunca
       ativa abaixo de 896px). Testado no browser (Playwright) a 1280px e a
       375px.
-- [ ] Modo Cozinha offline (cache da receita ativa via service worker).
+- [x] **Modo Cozinha offline** (cache da receita ativa via service worker,
+      não pré-cache de tudo) — `public/sw.js` ganhou um segundo papel além
+      do cache-first de `/assets/*` já existente: uma cache
+      `tacho-active-recipe-v1` separada, alimentada por `postMessage`
+      (`CookMode.tsx` manda `{type: 'CACHE_ACTIVE_RECIPE', urls}` assim
+      que a receita carrega — dados + foto). O `fetch` handler do SW faz
+      network-first com fallback a essa cache **só** para pedidos que já lá
+      estavam guardados explicitamente — outras receitas nunca cacheadas
+      continuam a falhar normalmente offline (confirmado por teste,
+      `TypeError: Failed to fetch`), isto não virou um cache de API
+      genérico. Abrir uma receita nova no Modo Cozinha limpa a anterior da
+      cache primeiro — nunca acumula, só a "ativa" de cada vez. **Testado
+      contra o build de produção real** (`npm run build` + `vite preview`,
+      não o servidor de dev — o dev do Vite serve módulos individuais não
+      cacheados, só faz sentido testar isto num build real): confirmado
+      que a receita ativa responde offline com os dados certos, que uma
+      receita nunca aberta falha offline como esperado, e que trocar de
+      receita substitui a cache. **Nota de âmbito**: isto sobrevive à rede
+      cair enquanto a SPA já está montada e a correr (o caso real —
+      "estou a meio de cozinhar e a rede caiu"); não sobrevive a um reload
+      completo da página já offline, porque isso pré-cachearia o shell da
+      app inteiro, que foi decisão explícita não fazer.
 - [x] **Galeria de fotos por receita** (várias fotos, uma marcada como
       capa) — `RecipeImage` novo (`recipe_id`, `filename`, `position`,
       `is_cover`), migração `eb74e97da107` (primeira migração desde a
