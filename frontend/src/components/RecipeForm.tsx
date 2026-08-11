@@ -177,7 +177,7 @@ export function RecipeForm({
   }
 
   const fieldClass =
-    'w-full rounded-xl border border-black/10 bg-bg-sage px-3 py-2 text-sm outline-none ring-2 ring-transparent transition-shadow focus:border-accent-leaf focus:ring-accent-leaf/30'
+    'rounded-xl border border-black/10 bg-bg-sage px-3 py-2 text-sm outline-none ring-2 ring-transparent transition-shadow focus:border-accent-leaf focus:ring-accent-leaf/30'
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -219,7 +219,7 @@ export function RecipeForm({
           required
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className={`${fieldClass} mt-1`}
+          className={`${fieldClass} w-full mt-1`}
           placeholder="Ex.: Bacalhau à Brás"
         />
 
@@ -230,7 +230,7 @@ export function RecipeForm({
           id="description"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          className={`${fieldClass} mt-1`}
+          className={`${fieldClass} w-full mt-1`}
           rows={2}
         />
 
@@ -245,7 +245,7 @@ export function RecipeForm({
               min={0}
               value={servings}
               onChange={(e) => setServings(e.target.value)}
-              className={`${fieldClass} mt-1`}
+              className={`${fieldClass} w-full mt-1`}
             />
           </div>
           <div>
@@ -258,7 +258,7 @@ export function RecipeForm({
               min={0}
               value={prepMinutes}
               onChange={(e) => setPrepMinutes(e.target.value)}
-              className={`${fieldClass} mt-1`}
+              className={`${fieldClass} w-full mt-1`}
             />
           </div>
           <div>
@@ -271,7 +271,7 @@ export function RecipeForm({
               min={0}
               value={cookMinutes}
               onChange={(e) => setCookMinutes(e.target.value)}
-              className={`${fieldClass} mt-1`}
+              className={`${fieldClass} w-full mt-1`}
             />
           </div>
         </div>
@@ -284,7 +284,7 @@ export function RecipeForm({
           type="url"
           value={sourceUrl}
           onChange={(e) => setSourceUrl(e.target.value)}
-          className={`${fieldClass} mt-1`}
+          className={`${fieldClass} w-full mt-1`}
           placeholder="https://…"
         />
 
@@ -295,7 +295,7 @@ export function RecipeForm({
           id="notes"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          className={`${fieldClass} mt-1`}
+          className={`${fieldClass} w-full mt-1`}
           rows={2}
         />
       </div>
@@ -310,7 +310,7 @@ export function RecipeForm({
                   value={row.name}
                   onChange={(e) => updateIngredient(i, { name: e.target.value })}
                   placeholder="Nome da secção, ex.: Para o recheio"
-                  className={`${fieldClass} font-semibold`}
+                  className={`${fieldClass} w-full font-semibold`}
                 />
                 <button
                   type="button"
@@ -328,19 +328,19 @@ export function RecipeForm({
                   onChange={(e) => updateIngredient(i, { quantity: e.target.value })}
                   placeholder="qtd"
                   inputMode="decimal"
-                  className={`${fieldClass} w-16`}
+                  className={`${fieldClass} w-16 shrink-0`}
                 />
                 <input
                   value={row.unit}
                   onChange={(e) => updateIngredient(i, { unit: e.target.value })}
                   placeholder="unidade"
-                  className={`${fieldClass} w-24`}
+                  className={`${fieldClass} w-24 shrink-0`}
                 />
                 <input
                   value={row.name}
                   onChange={(e) => updateIngredient(i, { name: e.target.value })}
                   placeholder="ingrediente"
-                  className={fieldClass}
+                  className={`${fieldClass} min-w-0 flex-1`}
                 />
                 <button
                   type="button"
@@ -387,7 +387,7 @@ export function RecipeForm({
                 onChange={(e) => updateStep(i, { instruction: e.target.value })}
                 placeholder={`Passo ${i + 1}`}
                 rows={1}
-                className={fieldClass}
+                className={`${fieldClass} min-w-0 flex-1`}
               />
               <input
                 value={row.durationMinutes}
@@ -455,7 +455,7 @@ export function RecipeForm({
               min={0}
               value={caloriesKcal}
               onChange={(e) => setCaloriesKcal(e.target.value)}
-              className={`${fieldClass} mt-1`}
+              className={`${fieldClass} w-full mt-1`}
             />
           </div>
           <div>
@@ -469,7 +469,7 @@ export function RecipeForm({
               step="0.1"
               value={proteinG}
               onChange={(e) => setProteinG(e.target.value)}
-              className={`${fieldClass} mt-1`}
+              className={`${fieldClass} w-full mt-1`}
             />
           </div>
           <div>
@@ -483,7 +483,7 @@ export function RecipeForm({
               step="0.1"
               value={carbsG}
               onChange={(e) => setCarbsG(e.target.value)}
-              className={`${fieldClass} mt-1`}
+              className={`${fieldClass} w-full mt-1`}
             />
           </div>
           <div>
@@ -497,7 +497,7 @@ export function RecipeForm({
               step="0.1"
               value={fatG}
               onChange={(e) => setFatG(e.target.value)}
-              className={`${fieldClass} mt-1`}
+              className={`${fieldClass} w-full mt-1`}
             />
           </div>
         </div>

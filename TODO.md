@@ -667,6 +667,34 @@ concluída** quando todos estes estiverem verificados.
       conta real do Vítor em `/setup`. Passos 1/2/4/5 da checklist acima
       continuam por fazer (dependem do Authentik/NPM, fora do alcance
       deste trabalho).
+- [x] **Fix: `RecipeForm.tsx` a desformatar-se em mobile e a desalinhar o
+      `BottomNav`** — reportado pelo utilizador em 2026-08-11. Causa raiz
+      única para os dois sintomas: `fieldClass` (linha 179) incluía `w-full`
+      e os campos estreitos de Ingredientes/Preparação combinavam
+      `${fieldClass} w-16`/`w-24` esperando que a classe mais específica
+      ganhasse — mas ambas têm a mesma especificidade CSS (uma classe), e o
+      Tailwind v4 gera `.w-full` **depois** de `.w-16`/`.w-24` no mesmo
+      `@layer utilities`, por isso `w-full` ganhava sempre o cascade
+      (confirmado inspecionando o CSS gerado por um build real, não por
+      suposição). Os campos de quantidade/unidade/duração renderizavam a
+      100% de largura dentro de linhas `flex`, espremendo os restantes
+      campos — visualmente "desformatado". O mesmo overflow horizontal daí
+      resultante (confirmado por medição: `document.documentElement
+      .scrollWidth` 445px vs `clientWidth` 375px em `/adicionar` mobile,
+      antes do fix) explica também o `BottomNav` "não direito": overflow
+      horizontal na página quebra o posicionamento de elementos `fixed` no
+      viewport visual em browsers móveis reais — o `BottomNav.tsx` em si
+      não tinha bug próprio (confirmado por screenshot a 320px/375px, 4
+      itens bem alinhados, sem quebra de texto). **Fix**: tirado `w-full`
+      da base de `fieldClass`; declarado explicitamente em cada campo que
+      precisa dele; campos estreitos (`qtd`, `unidade`, `min` do passo)
+      ganharam `shrink-0`; os campos flexíveis ao lado (nome do
+      ingrediente, texto do passo) passaram a `min-w-0 flex-1` em vez de
+      dependerem do `w-full` implícito. Testado no browser (Playwright,
+      sessão via forward-auth de teste): `scrollWidth` volta a 375px = 375px
+      (sem overflow), screenshots de `/adicionar` (mobile, tab "À mão"),
+      Home, Planeamento e Lista de Compras confirmam layout correto em
+      320px/375px/1280px, `tsc -b` e `oxlint` sem erros novos.
 - [ ] **Favoritos por utilizador** — evolução do item da v1.1, padrão
       `favorited_by` do Mealie.
 - [ ] **Avaliação por estrelas** — padrão do Mealie (`rating`), não do Tandoor.
