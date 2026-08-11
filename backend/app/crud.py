@@ -384,6 +384,92 @@ def delete_tag(db: Session, workspace_id: uuid.UUID, tag_id: uuid.UUID) -> bool:
     return True
 
 
+def list_cookbooks(db: Session, workspace_id: uuid.UUID) -> list[models.Cookbook]:
+    query = (
+        select(models.Cookbook)
+        .where(models.Cookbook.workspace_id == workspace_id)
+        .options(selectinload(models.Cookbook.recipes))
+        .order_by(models.Cookbook.name)
+    )
+    cookbooks = list(db.scalars(query))
+    for cookbook in cookbooks:
+        cookbook.recipe_count = len(cookbook.recipes)  # não é coluna, ver schemas.CookbookSummary
+    return cookbooks
+
+
+def create_cookbook(db: Session, workspace_id: uuid.UUID, payload: schemas.CookbookCreate) -> models.Cookbook:
+    cookbook = models.Cookbook(workspace_id=workspace_id, name=payload.name)
+    db.add(cookbook)
+    db.commit()
+    db.refresh(cookbook)
+    cookbook.recipe_count = 0
+    return cookbook
+
+
+def _cookbook_query(workspace_id: uuid.UUID):
+    return (
+        select(models.Cookbook)
+        .where(models.Cookbook.workspace_id == workspace_id)
+        .options(
+            selectinload(models.Cookbook.recipes).selectinload(models.Recipe.categories),
+            selectinload(models.Cookbook.recipes).selectinload(models.Recipe.tags),
+        )
+    )
+
+
+def get_cookbook(
+    db: Session, workspace_id: uuid.UUID, cookbook_id: uuid.UUID, user_id: uuid.UUID
+) -> models.Cookbook | None:
+    query = _cookbook_query(workspace_id).where(models.Cookbook.id == cookbook_id)
+    cookbook = db.scalars(query).first()
+    if cookbook is None:
+        return None
+    _annotate_favorites(db, user_id, cookbook.recipes)  # CookbookDetail.recipes é RecipeSummary, exige is_favorite
+    return cookbook
+
+
+def delete_cookbook(db: Session, workspace_id: uuid.UUID, cookbook_id: uuid.UUID) -> bool:
+    query = select(models.Cookbook).where(
+        models.Cookbook.workspace_id == workspace_id, models.Cookbook.id == cookbook_id
+    )
+    cookbook = db.scalars(query).first()
+    if cookbook is None:
+        return False
+    db.delete(cookbook)
+    db.commit()
+    return True
+
+
+def add_recipe_to_cookbook(
+    db: Session, workspace_id: uuid.UUID, cookbook_id: uuid.UUID, recipe_id: uuid.UUID, user_id: uuid.UUID
+) -> models.Cookbook | None:
+    cookbook = get_cookbook(db, workspace_id, cookbook_id, user_id)
+    if cookbook is None:
+        return None
+    recipe = get_recipe(db, workspace_id, recipe_id)
+    if recipe is None:
+        return None
+    if recipe.id not in {r.id for r in cookbook.recipes}:
+        cookbook.recipes.append(recipe)
+        db.commit()
+        db.refresh(cookbook)
+        _annotate_favorites(db, user_id, cookbook.recipes)
+    return cookbook
+
+
+def remove_recipe_from_cookbook(
+    db: Session, workspace_id: uuid.UUID, cookbook_id: uuid.UUID, recipe_id: uuid.UUID, user_id: uuid.UUID
+) -> models.Cookbook | None:
+    cookbook = get_cookbook(db, workspace_id, cookbook_id, user_id)
+    if cookbook is None:
+        return None
+    cookbook.recipes = [r for r in cookbook.recipes if r.id != recipe_id]
+    db.commit()
+    db.refresh(cookbook)
+    _annotate_favorites(db, user_id, cookbook.recipes)
+    return cookbook
+
+
 def _meal_plan_query(workspace_id: uuid.UUID):
     return (
         select(models.MealPlanEntry)

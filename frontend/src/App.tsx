@@ -1,6 +1,8 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { AuthProvider, useAuth } from './auth/AuthContext'
 import { AddRecipe } from './pages/AddRecipe'
+import { CookbookDetail } from './pages/CookbookDetail'
+import { Cookbooks } from './pages/Cookbooks'
 import { CookMode } from './pages/CookMode'
 import { EditRecipe } from './pages/EditRecipe'
 import { Home } from './pages/Home'
@@ -52,6 +54,8 @@ function AppRoutes() {
       <Route path="/receitas/:id/cozinhar" element={<CookMode />} />
       <Route path="/planeamento" element={<MealPlan />} />
       <Route path="/lista-compras" element={<ShoppingList />} />
+      <Route path="/colecoes" element={<Cookbooks />} />
+      <Route path="/colecoes/:id" element={<CookbookDetail />} />
       <Route path="/login" element={<Navigate to="/" replace />} />
       <Route path="/setup" element={<Navigate to="/" replace />} />
     </Routes>

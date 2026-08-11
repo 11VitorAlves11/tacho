@@ -82,6 +82,18 @@ export interface Recipe {
   comments: Comment[]
 }
 
+export interface CookbookSummary {
+  id: string
+  name: string
+  recipe_count: number
+}
+
+export interface CookbookDetail {
+  id: string
+  name: string
+  recipes: RecipeSummary[]
+}
+
 export interface RecipeInput {
   title: string
   description?: string | null

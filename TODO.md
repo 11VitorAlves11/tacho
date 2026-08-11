@@ -809,7 +809,34 @@ concluída** quando todos estes estiverem verificados.
       um Grocy). Cruza com a pesquisa por ingredientes e com a lista de compras.
 - [ ] **Pesquisa por ingredientes disponíveis** — "o que consigo fazer com
       frango e cogumelos?".
-- [ ] **Cookbooks / coleções** — ver decisão #3 (podem ser antecipados).
+- [x] **Cookbooks / coleções** — modelo exatamente como decidido (decisão #3
+      acima): `Cookbook` (nome) + tabela de associação `cookbook_recipes`
+      many-to-many com `Recipe` (uma receita pode estar em várias coleções,
+      sem filtro automático — lista manual estilo Tandoor), migração
+      `8f63280c8233` (o autogenerate voltou a propor remover o CHECK do
+      rating por engano — terceira vez, ver nota em `models.py::
+      Recipe.rating`). Sem endpoint de renomear — mesmo âmbito de
+      `Category`/`Tag`, que também só têm criar/listar/apagar. Entrada a
+      partir da Home por link de texto "Coleções →" por baixo dos chips de
+      filtro (`Home.tsx`), **não** um novo destino do `BottomNav` — regra
+      do `DESIGN.md` já seguida para Favoritos/Lista/Plano, mesmo padrão
+      documentado no desenho Figma. Rotas novas `/colecoes` (lista, cards
+      nome+contagem, criar/apagar) e `/colecoes/:id` (detalhe, reutiliza
+      `RecipeCard` tal como o Figma previa — grid igual ao da Home, com
+      `<select>` "+ Adicionar receita" para juntar uma receita existente,
+      mesmo padrão do `<select>` de atribuição no `MealPlan.tsx`, e um
+      link "Remover da coleção" por baixo de cada card, sem tocar no
+      `RecipeCard` partilhado). **Deliberadamente não tocado** (mesma nota
+      já deixada no desenho Figma): a afordância "adicionar a esta coleção"
+      a partir do `ActionsGroup` do Detalhe da Receita — fica só acessível
+      a partir da própria coleção. Apagar uma coleção não apaga as
+      receitas (só a associação, `ondelete=CASCADE` na tabela de junção).
+      Testado via curl (criar, listar com contagem, adicionar, obter,
+      remover, apagar, e confirmar que a receita sobrevive à coleção ser
+      apagada) e no browser (Playwright, fluxo completo: Home → "Coleções
+      →" → criar → entrar → adicionar receita via select → remover →
+      voltar → apagar coleção → estado vazio), sem erros de consola —
+      nada de teste ficou na BD no fim.
 - [ ] Modo Cozinha desktop.
 - [ ] Modo Cozinha offline (cache da receita ativa via service worker).
 - [ ] Galeria de fotos por receita (várias fotos, uma marcada como capa).

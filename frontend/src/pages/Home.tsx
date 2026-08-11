@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { listCategories, listRecipes, listTags, toggleFavorite } from '../api/recipes'
 import type { Category, RecipeSummary, Tag } from '../api/types'
 import { PageShell } from '../components/PageShell'
@@ -97,6 +98,10 @@ export function Home() {
             </>
           )}
         </div>
+
+        <Link to="/colecoes" className="mt-3 inline-block text-sm font-medium text-card-white/80 hover:text-card-white">
+          Coleções →
+        </Link>
       </section>
 
       {error && (

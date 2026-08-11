@@ -53,6 +53,16 @@ recipe_favorites = Table(
     Column("user_id", UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True),
 )
 
+# Cookbooks/coleções (v2, decisão #3 do TODO.md): lista manual estilo
+# Tandoor, não coleção por filtro inteligente estilo Mealie — uma receita
+# pode estar em várias coleções, sem filtro automático.
+cookbook_recipes = Table(
+    "cookbook_recipes",
+    Base.metadata,
+    Column("cookbook_id", UUID(as_uuid=True), ForeignKey("cookbooks.id", ondelete="CASCADE"), primary_key=True),
+    Column("recipe_id", UUID(as_uuid=True), ForeignKey("recipes.id", ondelete="CASCADE"), primary_key=True),
+)
+
 
 class Workspace(Base):
     __tablename__ = "workspaces"
@@ -64,6 +74,7 @@ class Workspace(Base):
     recipes: Mapped[list["Recipe"]] = relationship(back_populates="workspace", cascade="all, delete-orphan")
     categories: Mapped[list["Category"]] = relationship(back_populates="workspace", cascade="all, delete-orphan")
     tags: Mapped[list["Tag"]] = relationship(back_populates="workspace", cascade="all, delete-orphan")
+    cookbooks: Mapped[list["Cookbook"]] = relationship(back_populates="workspace", cascade="all, delete-orphan")
     meal_plan_entries: Mapped[list["MealPlanEntry"]] = relationship(
         back_populates="workspace", cascade="all, delete-orphan"
     )
@@ -174,6 +185,7 @@ class Recipe(Base):
     )
     categories: Mapped[list["Category"]] = relationship(secondary=recipe_categories, back_populates="recipes")
     tags: Mapped[list["Tag"]] = relationship(secondary=recipe_tags, back_populates="recipes")
+    cookbooks: Mapped[list["Cookbook"]] = relationship(secondary=cookbook_recipes, back_populates="recipes")
     cook_notes: Mapped[list["CookNote"]] = relationship(
         back_populates="recipe", cascade="all, delete-orphan", order_by="CookNote.created_at.desc()"
     )
@@ -276,6 +288,25 @@ class Tag(Base):
 
     workspace: Mapped["Workspace"] = relationship(back_populates="tags")
     recipes: Mapped[list["Recipe"]] = relationship(secondary=recipe_tags, back_populates="tags")
+
+
+class Cookbook(Base):
+    """Coleção manual de receitas (v2, decisão #3 do TODO.md) — sem
+    UniqueConstraint de nome ao contrário de Category/Tag, porque não há
+    razão de produto para proibir duas coleções com o mesmo nome (ex. duas
+    pessoas a fazerem "Favoritas de Verão" em anos diferentes)."""
+
+    __tablename__ = "cookbooks"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    workspace_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE")
+    )
+    name: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    workspace: Mapped["Workspace"] = relationship(back_populates="cookbooks")
+    recipes: Mapped[list["Recipe"]] = relationship(secondary=cookbook_recipes, back_populates="cookbooks")
 
 
 class MealPlanEntry(Base):

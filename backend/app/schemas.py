@@ -51,6 +51,20 @@ class TagOut(TagCreate):
     id: uuid.UUID
 
 
+class CookbookCreate(BaseModel):
+    name: str
+
+
+class CookbookSummary(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    name: str
+    # Não é coluna — len(cookbook.recipes), anotado por crud.py antes de
+    # sair (mesmo padrão do Recipe.is_favorite).
+    recipe_count: int
+
+
 class RecipeCreate(BaseModel):
     title: str
     description: str | None = None
@@ -86,6 +100,14 @@ class RecipeSummary(BaseModel):
     rating: int | None
     categories: list[CategoryOut]
     tags: list[TagOut]
+
+
+class CookbookDetail(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    name: str
+    recipes: list[RecipeSummary]
 
 
 class RecipeRatingIn(BaseModel):
