@@ -4,9 +4,9 @@ import { Header } from './Header'
 
 export function PageShell({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-svh pb-28 sm:pb-10">
+    <div className="min-h-svh pb-28 sm:pb-10 print:pb-0">
       <Header />
-      <main className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8">{children}</main>
+      <main className="mx-auto max-w-4xl px-4 py-6 sm:px-6 sm:py-8 print:p-0">{children}</main>
       <BottomNav />
     </div>
   )

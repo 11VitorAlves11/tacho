@@ -66,3 +66,24 @@ body {
 #root {
   min-height: 100svh;
 }
+
+/* Impressão (RecipeDetail.tsx: botão "Imprimir") — sempre no tema claro,
+   mesmo com o SO em modo escuro (poupa tinteiro e evita texto claro sobre
+   fundo escuro no papel); mesma especificidade dos seletores do dark mode
+   acima, para garantir que ganha independentemente da preferência do SO
+   ou do toggle manual (data-theme). */
+@media print {
+  :root,
+  :root:not([data-theme="light"]),
+  :root[data-theme="dark"] {
+    --color-bg-sage: #eaf0e7;
+    --color-surface: #ffffff;
+    --color-text-primary: #1c2b1f;
+    --color-text-secondary: #5c6b5e;
+    --color-forest-text: #2d5f3f;
+  }
+
+  body {
+    background-color: #ffffff;
+  }
+}

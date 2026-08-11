@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import QRCode from 'qrcode'
 import {
   addComment,
   addRecipeGalleryImage,
@@ -25,6 +26,7 @@ import {
   PencilIcon,
   PlayIcon,
   PlusIcon,
+  PrinterIcon,
   ServingsIcon,
   StarIcon,
   XIcon,
@@ -80,6 +82,7 @@ export function RecipeDetail() {
   const [postingComment, setPostingComment] = useState(false)
   const [uploadingGalleryImage, setUploadingGalleryImage] = useState(false)
   const galleryInputRef = useRef<HTMLInputElement>(null)
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
 
   useEffect(() => {
     if (!id) return
@@ -90,6 +93,16 @@ export function RecipeDetail() {
       })
       .catch(() => setNotFound(true))
   }, [id])
+
+  // Só para a folha de estilo de impressão (print:...) — gerado já aqui em
+  // vez de só ao clicar "Imprimir" para não haver atraso nem flash entre o
+  // clique e o diálogo de impressão do browser.
+  useEffect(() => {
+    if (!recipe) return
+    QRCode.toDataURL(window.location.href, { margin: 1, width: 160 })
+      .then(setQrDataUrl)
+      .catch(() => setQrDataUrl(null))
+  }, [recipe?.id])
 
   async function handleDuplicate() {
     if (!id || duplicating) return
@@ -194,7 +207,7 @@ export function RecipeDetail() {
 
         <div className={`flex items-start justify-between gap-3 ${recipe.image_path ? 'mt-5' : ''}`}>
           <h1 className="text-2xl font-bold text-text-primary sm:text-3xl">{recipe.title}</h1>
-          <div className="flex shrink-0 gap-2">
+          <div className="flex shrink-0 gap-2 print:hidden">
             <button
               type="button"
               onClick={handleToggleFavorite}
@@ -215,6 +228,14 @@ export function RecipeDetail() {
             >
               <CopyIcon className="size-4" />
               <span className="hidden sm:inline">Duplicar</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="flex items-center gap-1.5 rounded-full bg-surface px-3 py-1.5 text-sm font-medium text-text-secondary shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)] hover:text-forest-text"
+            >
+              <PrinterIcon className="size-4" />
+              <span className="hidden sm:inline">Imprimir</span>
             </button>
             <Link
               to={`/receitas/${recipe.id}/editar`}
@@ -259,7 +280,7 @@ export function RecipeDetail() {
                   <button
                     type="button"
                     onClick={() => setDesiredServings((s) => Math.max(1, (s ?? 1) - 1))}
-                    className="flex size-6 shrink-0 items-center justify-center rounded-full bg-bg-sage text-forest-text"
+                    className="flex size-6 shrink-0 items-center justify-center rounded-full bg-bg-sage text-forest-text print:hidden"
                     aria-label="Menos uma porção"
                   >
                     <MinusIcon className="size-3.5" />
@@ -270,7 +291,7 @@ export function RecipeDetail() {
                   <button
                     type="button"
                     onClick={() => setDesiredServings((s) => (s ?? 1) + 1)}
-                    className="flex size-6 shrink-0 items-center justify-center rounded-full bg-bg-sage text-forest-text"
+                    className="flex size-6 shrink-0 items-center justify-center rounded-full bg-bg-sage text-forest-text print:hidden"
                     aria-label="Mais uma porção"
                   >
                     <PlusIcon className="size-3.5" />
@@ -325,7 +346,7 @@ export function RecipeDetail() {
 
         <Link
           to={`/receitas/${recipe.id}/cozinhar`}
-          className="mt-5 flex items-center justify-center gap-2 rounded-full bg-primary-forest px-5 py-3.5 font-semibold text-card-white shadow-[0_8px_20px_-6px_rgba(45,95,63,0.6)] transition-transform active:scale-[0.98] sm:hidden"
+          className="mt-5 flex items-center justify-center gap-2 rounded-full bg-primary-forest px-5 py-3.5 font-semibold text-card-white shadow-[0_8px_20px_-6px_rgba(45,95,63,0.6)] transition-transform active:scale-[0.98] sm:hidden print:hidden"
         >
           <PlayIcon className="size-4" />
           Iniciar Modo Cozinha
@@ -406,7 +427,7 @@ export function RecipeDetail() {
           </section>
         )}
 
-        <section className="mt-8">
+        <section className="mt-8 print:hidden">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-text-primary">Galeria</h2>
             <button
@@ -466,7 +487,7 @@ export function RecipeDetail() {
           )}
         </section>
 
-        <section className="mt-8">
+        <section className="mt-8 print:hidden">
           <h2 className="text-lg font-semibold text-text-primary">Comentários</h2>
           {recipe.comments.length > 0 && (
             <ul className="mt-3 space-y-3">
@@ -517,6 +538,17 @@ export function RecipeDetail() {
               {recipe.source_url}
             </a>
           </p>
+        )}
+
+        {qrDataUrl && (
+          <div className="hidden items-center gap-3 border-t border-black/10 pt-4 print:mt-8 print:flex">
+            <img src={qrDataUrl} alt="" className="size-24" />
+            <p className="text-xs text-text-secondary">
+              Ver esta receita online, com fotos e comentários:
+              <br />
+              {window.location.href}
+            </p>
+          </div>
         )}
       </article>
     </PageShell>

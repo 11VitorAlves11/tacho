@@ -7,7 +7,7 @@ const linkBase =
 export function BottomNav() {
   return (
     <nav
-      className="fixed inset-x-4 bottom-4 z-20 flex gap-1 rounded-full bg-surface/95 p-1.5 shadow-[0_10px_30px_-8px_rgba(28,43,31,0.35)] backdrop-blur sm:hidden"
+      className="fixed inset-x-4 bottom-4 z-20 flex gap-1 rounded-full bg-surface/95 p-1.5 shadow-[0_10px_30px_-8px_rgba(28,43,31,0.35)] backdrop-blur sm:hidden print:hidden"
       aria-label="Navegação principal"
     >
       <NavLink

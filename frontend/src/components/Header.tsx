@@ -4,7 +4,7 @@ import { UserMenu } from './UserMenu'
 
 export function Header() {
   return (
-    <header className="bg-gradient-to-br from-bg-sage-deep-start to-bg-sage-deep-end text-card-white">
+    <header className="bg-gradient-to-br from-bg-sage-deep-start to-bg-sage-deep-end text-card-white print:hidden">
       <div className="mx-auto flex max-w-4xl items-center justify-between px-4 py-4 sm:px-6">
         <Link to="/" className="flex items-center gap-2 font-semibold tracking-tight">
           <PotIcon className="size-6" />

@@ -1009,7 +1009,29 @@ concluída** quando todos estes estiverem verificados.
       componente partilhado por `Home.tsx` e `CookbookDetail.tsx`, ambos
       ficam maiores. Verificado por screenshot em mobile e desktop,
       incluindo um cartão com foto real (sem distorção, `object-cover`).
-- [ ] Vista de impressão / PDF por receita.
+- [x] **Vista de impressão / PDF por receita** — decisão: `window.print()`
+      com folha de estilo `@media print` dedicada (via o variant `print:`
+      do Tailwind), sem gerar PDF no servidor nem nova dependência de
+      geração de PDF. Botão "Imprimir" novo (`PrinterIcon`, ícone novo) ao
+      lado de Favorito/Duplicar/Editar no Detalhe. `print:hidden` em tudo
+      o que não interessa no papel — cabeçalho, `BottomNav`, os próprios
+      botões de ação, steppers +/− de porções (o número fica, só os
+      botões desaparecem), "Iniciar Modo Cozinha", secções inteiras de
+      Galeria e Comentários (incluindo formulário e botões de apagar).
+      Fundo forçado a claro na impressão mesmo com o sistema em modo
+      escuro (`index.css`, mesma especificidade dos seletores do dark
+      mode, para garantir que ganha) — poupa tinteiro e evita texto claro
+      sobre fundo escuro no papel. **Pedido extra do utilizador: QR code
+      partilhável** — biblioteca `qrcode` nova (cliente, sem chamada de
+      rede; gerado localmente, funciona offline uma vez a app em cache),
+      aponta para o URL da própria página (`window.location.href`),
+      gerado assim que a receita carrega (antes de clicar "Imprimir", para
+      não haver atraso nem flash) e só visível na folha de impressão
+      (`hidden print:flex`). Testado no browser (Playwright,
+      `emulateMedia({ media: 'print' })`): cabeçalho/nav/botões/
+      galeria/comentários corretamente ausentes, QR code presente com o
+      URL por baixo, fundo confirmado branco tanto em modo claro como em
+      modo escuro do sistema.
 - [x] **Fracções em unidades** ("½ chávena" em vez de "0.5 chávena") —
       `RecipeDetail.tsx::formatQuantity`, só formatação de apresentação,
       sem mudanças no backend nem no valor guardado (`Ingredient.quantity`

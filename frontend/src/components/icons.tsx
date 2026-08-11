@@ -165,6 +165,16 @@ export function CameraIcon(props: SVGProps<SVGSVGElement>) {
   )
 }
 
+export function PrinterIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base} {...props}>
+      <rect x="6" y="3.5" width="12" height="6" rx="1" />
+      <rect x="4" y="9.5" width="16" height="7.5" rx="1.5" />
+      <rect x="7" y="14" width="10" height="6.5" rx="1" />
+    </svg>
+  )
+}
+
 export function FlameIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <svg {...base} {...props}>
