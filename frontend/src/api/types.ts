@@ -33,6 +33,14 @@ export interface CookNote {
   created_at: string
 }
 
+export interface Comment {
+  id: string
+  text: string
+  created_at: string
+  author_name: string | null
+  author_email: string
+}
+
 export interface RecipeSummary {
   id: string
   title: string
@@ -71,6 +79,7 @@ export interface Recipe {
   categories: Category[]
   tags: Tag[]
   cook_notes: CookNote[]
+  comments: Comment[]
 }
 
 export interface RecipeInput {

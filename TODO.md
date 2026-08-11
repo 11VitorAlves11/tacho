@@ -767,7 +767,28 @@ concluída** quando todos estes estiverem verificados.
       Testado via curl (definir, limpar, 0 e 6 rejeitados com 422) e no
       browser (Playwright): clicar na 4ª estrela preenche 4 de 5 sem
       reload, sem erros de consola — dado de teste limpo no fim.
-- [ ] **Comentários** por receita.
+- [x] **Comentários** por receita — com autor (diferente do `CookNote`, nota
+      pós-confeção sem autor, e de `Recipe.notes`, campo único). Modelo
+      `Comment` novo (`recipe_id`, `user_id`, `text`, `created_at`),
+      migração `49f829cb42e3` (autogenerate propôs também remover o CHECK
+      `ck_recipes_rating_range` — falso positivo, mesmo padrão do índice
+      GIN documentado em `models.py::Recipe`, removido à mão e deixada nota
+      lá para a próxima vez). `author_name`/`author_email` em
+      `schemas.CommentOut` não são colunas — properties em `models.Comment`
+      que delegam para `comment.user` (mesmo padrão do `Recipe.is_favorite`
+      calculado em runtime). Ordem cronológica (mais antigo primeiro, como
+      uma conversa — ao contrário do `CookNote`, que é histórico ordenado
+      do mais recente). `POST /recipes/{id}/comments`,
+      `DELETE /recipes/{id}/comments/{comment_id}` — qualquer membro pode
+      apagar qualquer comentário, mesmo modelo de confiança total já usado
+      no resto da app (remover pessoa do agregado, editar/apagar receitas
+      de outrem). Frontend: secção "Comentários" no Detalhe, entre
+      Preparação e a fonte — lista com autor+data+botão apagar, mais um
+      formulário simples (input + "Enviar") sempre visível. Testado via
+      curl com as duas contas reais (comentar com uma, apagar com a outra,
+      ordem cronológica confirmada) e no browser (Playwright): escrever e
+      enviar um comentário aparece de imediato sem reload, sem erros de
+      consola — dados de teste apagados no fim.
 
 ---
 

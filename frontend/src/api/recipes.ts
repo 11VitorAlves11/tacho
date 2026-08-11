@@ -52,6 +52,15 @@ export async function addCookNote(id: string, text: string) {
   return data
 }
 
+export async function addComment(id: string, text: string) {
+  const { data } = await api.post<Recipe>(`/recipes/${id}/comments`, { text })
+  return data
+}
+
+export async function deleteComment(id: string, commentId: string) {
+  await api.delete(`/recipes/${id}/comments/${commentId}`)
+}
+
 export async function uploadRecipeImage(id: string, file: File) {
   const formData = new FormData()
   formData.append('file', file)

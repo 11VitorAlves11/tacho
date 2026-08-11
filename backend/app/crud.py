@@ -29,6 +29,7 @@ def _recipe_query(workspace_id: uuid.UUID):
             selectinload(models.Recipe.steps),
             selectinload(models.Recipe.categories),
             selectinload(models.Recipe.tags),
+            selectinload(models.Recipe.comments).selectinload(models.Comment.user),
         )
     )
 
@@ -253,6 +254,32 @@ def add_cook_note(
     db.commit()
     db.refresh(recipe)
     return recipe
+
+
+def add_comment(
+    db: Session, workspace_id: uuid.UUID, recipe_id: uuid.UUID, user_id: uuid.UUID, text: str
+) -> models.Recipe | None:
+    recipe = get_recipe(db, workspace_id, recipe_id, user_id)
+    if recipe is None:
+        return None
+    db.add(models.Comment(recipe_id=recipe.id, user_id=user_id, text=text))
+    db.commit()
+    db.refresh(recipe)
+    return recipe
+
+
+def delete_comment(db: Session, workspace_id: uuid.UUID, recipe_id: uuid.UUID, comment_id: uuid.UUID) -> bool:
+    query = select(models.Comment).where(
+        models.Comment.id == comment_id,
+        models.Comment.recipe_id == recipe_id,
+        models.Comment.recipe.has(models.Recipe.workspace_id == workspace_id),
+    )
+    comment = db.scalars(query).first()
+    if comment is None:
+        return False
+    db.delete(comment)
+    db.commit()
+    return True
 
 
 def duplicate_recipe(

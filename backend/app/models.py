@@ -152,7 +152,13 @@ class Recipe(Base):
     last_made_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # Avaliação por estrelas (1-5), padrão Mealie — do agregado, não por
     # utilizador (ao contrário de is_favorite; ver TODO.md, "não do Tandoor",
-    # que não tem esta funcionalidade). Validação do intervalo em schemas.py.
+    # que não tem esta funcionalidade). Validação do intervalo em schemas.py
+    # + CHECK "ck_recipes_rating_range" na BD (migração 1124746a9f09) — esse
+    # CHECK não está declarado aqui (SQLAlchemy não expõe CheckConstraint
+    # inline em coluna de forma simples), por isso o autogenerate vai
+    # sempre propor removê-lo por engano; mesmo tipo de falso positivo do
+    # índice GIN acima — ignorar/apagar essa linha à mão em migrações
+    # futuras, nunca aplicar.
     rating: Mapped[int | None]
     # `is_favorite` NÃO é uma coluna — `app/crud.py` marca este atributo em
     # runtime consultando `recipe_favorites` para o utilizador do pedido
@@ -170,6 +176,9 @@ class Recipe(Base):
     tags: Mapped[list["Tag"]] = relationship(secondary=recipe_tags, back_populates="recipes")
     cook_notes: Mapped[list["CookNote"]] = relationship(
         back_populates="recipe", cascade="all, delete-orphan", order_by="CookNote.created_at.desc()"
+    )
+    comments: Mapped[list["Comment"]] = relationship(
+        back_populates="recipe", cascade="all, delete-orphan", order_by="Comment.created_at.asc()"
     )
 
 
@@ -212,6 +221,33 @@ class CookNote(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     recipe: Mapped["Recipe"] = relationship(back_populates="cook_notes")
+
+
+class Comment(Base):
+    """Comentário livre por receita, com autor — diferente do `CookNote`
+    (nota pós-confeção, sem autor, ligada ao Modo Cozinha) e de
+    `Recipe.notes` (campo único editável). Qualquer membro pode apagar
+    qualquer comentário (mesmo modelo de confiança total do resto da app —
+    ver `DELETE /workspace/members/{id}`, sem admin/roles)."""
+
+    __tablename__ = "comments"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    recipe_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("recipes.id", ondelete="CASCADE"))
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"))
+    text: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    recipe: Mapped["Recipe"] = relationship(back_populates="comments")
+    user: Mapped["User"] = relationship()
+
+    @property
+    def author_name(self) -> str | None:
+        return self.user.name
+
+    @property
+    def author_email(self) -> str:
+        return self.user.email
 
 
 class Category(Base):

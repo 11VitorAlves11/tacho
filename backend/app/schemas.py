@@ -104,6 +104,23 @@ class CookNoteIn(BaseModel):
     text: str
 
 
+class CommentOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    text: str
+    created_at: datetime
+    # Não são colunas — properties em models.Comment que delegam para
+    # comment.user (mesmo padrão do Recipe.is_favorite: atributo Python
+    # lido por from_attributes, não uma coluna).
+    author_name: str | None
+    author_email: str
+
+
+class CommentIn(BaseModel):
+    text: str
+
+
 class ImportRequest(BaseModel):
     url: HttpUrl
 
@@ -141,6 +158,7 @@ class RecipeOut(BaseModel):
     categories: list[CategoryOut]
     tags: list[TagOut]
     cook_notes: list[CookNoteOut]
+    comments: list[CommentOut]
 
 
 class MealPlanEntryIn(BaseModel):

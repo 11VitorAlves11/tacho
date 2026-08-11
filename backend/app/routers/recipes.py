@@ -174,6 +174,31 @@ def add_cook_note(
     return recipe
 
 
+@router.post("/{recipe_id}/comments", response_model=schemas.RecipeOut, status_code=201)
+def add_comment(
+    recipe_id: uuid.UUID,
+    payload: schemas.CommentIn,
+    db: Session = Depends(get_db),
+    workspace_id: uuid.UUID = Depends(get_workspace_id),
+    user: User = Depends(current_active_user),
+):
+    recipe = crud.add_comment(db, workspace_id, recipe_id, user.id, payload.text)
+    if recipe is None:
+        raise HTTPException(status_code=404, detail="Receita não encontrada")
+    return recipe
+
+
+@router.delete("/{recipe_id}/comments/{comment_id}", status_code=204)
+def delete_comment(
+    recipe_id: uuid.UUID,
+    comment_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    workspace_id: uuid.UUID = Depends(get_workspace_id),
+):
+    if not crud.delete_comment(db, workspace_id, recipe_id, comment_id):
+        raise HTTPException(status_code=404, detail="Comentário não encontrado")
+
+
 @router.delete("/{recipe_id}", status_code=204)
 def delete_recipe(
     recipe_id: uuid.UUID,

@@ -1,6 +1,14 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { duplicateRecipe, getRecipe, recipeImageUrl, setRecipeRating, toggleFavorite } from '../api/recipes'
+import {
+  addComment,
+  deleteComment,
+  duplicateRecipe,
+  getRecipe,
+  recipeImageUrl,
+  setRecipeRating,
+  toggleFavorite,
+} from '../api/recipes'
 import type { Recipe } from '../api/types'
 import { PageShell } from '../components/PageShell'
 import {
@@ -14,6 +22,7 @@ import {
   PlusIcon,
   ServingsIcon,
   StarIcon,
+  XIcon,
 } from '../components/icons'
 
 // Recalcula a quantidade para o número de porções escolhido, sem persistir
@@ -38,6 +47,8 @@ export function RecipeDetail() {
   const [notFound, setNotFound] = useState(false)
   const [desiredServings, setDesiredServings] = useState<number | null>(null)
   const [duplicating, setDuplicating] = useState(false)
+  const [commentText, setCommentText] = useState('')
+  const [postingComment, setPostingComment] = useState(false)
 
   useEffect(() => {
     if (!id) return
@@ -64,6 +75,26 @@ export function RecipeDetail() {
     if (!id) return
     const updated = await toggleFavorite(id)
     setRecipe((prev) => (prev ? { ...prev, is_favorite: updated.is_favorite } : prev))
+  }
+
+  async function handleAddComment(e: FormEvent) {
+    e.preventDefault()
+    const text = commentText.trim()
+    if (!id || !text || postingComment) return
+    setPostingComment(true)
+    try {
+      const updated = await addComment(id, text)
+      setRecipe((prev) => (prev ? { ...prev, comments: updated.comments } : prev))
+      setCommentText('')
+    } finally {
+      setPostingComment(false)
+    }
+  }
+
+  async function handleDeleteComment(commentId: string) {
+    if (!id) return
+    await deleteComment(id, commentId)
+    setRecipe((prev) => (prev ? { ...prev, comments: prev.comments.filter((c) => c.id !== commentId) } : prev))
   }
 
   async function handleSetRating(value: number) {
@@ -310,6 +341,50 @@ export function RecipeDetail() {
             </ul>
           </section>
         )}
+
+        <section className="mt-8">
+          <h2 className="text-lg font-semibold text-text-primary">Comentários</h2>
+          {recipe.comments.length > 0 && (
+            <ul className="mt-3 space-y-3">
+              {recipe.comments.map((comment) => (
+                <li
+                  key={comment.id}
+                  className="flex items-start justify-between gap-2 rounded-2xl bg-surface p-4 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)]"
+                >
+                  <div>
+                    <p className="text-sm text-text-primary">{comment.text}</p>
+                    <p className="mt-1 text-xs text-text-secondary">
+                      {comment.author_name ?? comment.author_email} · {formatLastMade(comment.created_at)}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteComment(comment.id)}
+                    className="shrink-0 rounded-full p-1.5 text-text-secondary hover:bg-bg-sage"
+                    aria-label="Apagar comentário"
+                  >
+                    <XIcon className="size-4" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <form onSubmit={handleAddComment} className="mt-3 flex gap-2">
+            <input
+              value={commentText}
+              onChange={(e) => setCommentText(e.target.value)}
+              placeholder="Escreve um comentário…"
+              className="min-w-0 flex-1 rounded-xl border border-black/10 bg-bg-sage px-3 py-2 text-sm outline-none ring-2 ring-transparent transition-shadow focus:border-accent-leaf focus:ring-accent-leaf/30"
+            />
+            <button
+              type="submit"
+              disabled={!commentText.trim() || postingComment}
+              className="shrink-0 rounded-xl bg-primary-forest px-4 py-2 text-sm font-medium text-card-white disabled:opacity-50"
+            >
+              Enviar
+            </button>
+          </form>
+        </section>
 
         {recipe.source_url && (
           <p className="mt-8 text-xs text-text-secondary">
