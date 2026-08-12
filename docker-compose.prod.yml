@@ -47,7 +47,7 @@ services:
       retries: 10
 
   web:
-    image: ghcr.io/11vitoralves11/tacho_app-web:v1.3.4
+    image: ghcr.io/11vitoralves11/tacho_app-web:v1.3.5
     restart: unless-stopped
     env_file: .env
     environment:
@@ -64,7 +64,7 @@ services:
         condition: service_healthy
 
   celery-worker:
-    image: ghcr.io/11vitoralves11/tacho_app-celery-worker:v1.3.4
+    image: ghcr.io/11vitoralves11/tacho_app-celery-worker:v1.3.5
     restart: unless-stopped
     env_file: .env
     environment:
