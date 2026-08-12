@@ -211,6 +211,20 @@ export function CalendarIcon(props: SVGProps<SVGSVGElement>) {
   )
 }
 
+export function QrIcon(props: SVGProps<SVGSVGElement>) {
+  return (
+    <svg {...base} {...props}>
+      <rect x="4" y="4" width="6" height="6" rx="1" />
+      <rect x="14" y="4" width="6" height="6" rx="1" />
+      <rect x="4" y="14" width="6" height="6" rx="1" />
+      <path d="M14 14h3v3h-3z" />
+      <path d="M19 14v3" />
+      <path d="M14 19h3" />
+      <path d="M19 19h.01" />
+    </svg>
+  )
+}
+
 export function CartIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <svg {...base} {...props}>

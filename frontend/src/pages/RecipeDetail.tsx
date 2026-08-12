@@ -11,6 +11,7 @@ import {
   recipeImageUrl,
   setRecipeGalleryCover,
   setRecipeRating,
+  shareRecipe,
   toggleFavorite,
 } from '../api/recipes'
 import type { Recipe } from '../api/types'
@@ -28,45 +29,12 @@ import {
   PlusIcon,
   PotIcon,
   PrinterIcon,
+  QrIcon,
   ServingsIcon,
   StarIcon,
   XIcon,
 } from '../components/icons'
-
-// Recalcula a quantidade para o número de porções escolhido, sem persistir
-// nada — padrão Mealie (PRD/TODO: "sem mudanças no backend").
-function scaleQuantity(quantity: number, originalServings: number, desiredServings: number): number {
-  return quantity * (desiredServings / originalServings)
-}
-
-// Frações comuns de cozinha como glifo unicode em vez de decimal — "½
-// chávena" em vez de "0.5 chávena" (TODO.md). Tolerância cobre o
-// arredondamento próprio do parser de importação (backend/app/tasks.py::
-// _parse_quantity arredonda a 2 casas: 1/3 vira 0.33, não 0.333…) e o erro
-// de vírgula flutuante ao escalar porções.
-const FRACTION_GLYPHS: [number, string][] = [
-  [0.125, '⅛'],
-  [0.25, '¼'],
-  [1 / 3, '⅓'],
-  [0.375, '⅜'],
-  [0.5, '½'],
-  [0.625, '⅝'],
-  [2 / 3, '⅔'],
-  [0.75, '¾'],
-  [0.875, '⅞'],
-]
-
-function formatQuantity(quantity: number): string {
-  const rounded = Math.round(quantity * 1000) / 1000
-  const whole = Math.floor(rounded)
-  const fraction = rounded - whole
-  const match = FRACTION_GLYPHS.find(([value]) => Math.abs(fraction - value) < 0.02)
-  if (match) {
-    const [, glyph] = match
-    return whole > 0 ? `${whole} ${glyph}` : glyph
-  }
-  return (Math.round(quantity * 100) / 100).toFixed(2).replace(/\.?0+$/, '')
-}
+import { formatQuantity, scaleQuantity } from '../lib/quantity'
 
 function formatLastMade(iso: string): string {
   return new Date(iso).toLocaleDateString('pt-PT', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -83,7 +51,9 @@ export function RecipeDetail() {
   const [postingComment, setPostingComment] = useState(false)
   const [uploadingGalleryImage, setUploadingGalleryImage] = useState(false)
   const galleryInputRef = useRef<HTMLInputElement>(null)
-  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null)
+  const [shareState, setShareState] = useState<
+    { status: 'loading' } | { status: 'ready'; qrDataUrl: string; shareUrl: string; expiresAt: string } | null
+  >(null)
 
   useEffect(() => {
     if (!id) return
@@ -95,15 +65,17 @@ export function RecipeDetail() {
       .catch(() => setNotFound(true))
   }, [id])
 
-  // Só para a folha de estilo de impressão (print:...) — gerado já aqui em
-  // vez de só ao clicar "Imprimir" para não haver atraso nem flash entre o
-  // clique e o diálogo de impressão do browser.
-  useEffect(() => {
-    if (!recipe) return
-    QRCode.toDataURL(window.location.href, { margin: 1, width: 160 })
-      .then(setQrDataUrl)
-      .catch(() => setQrDataUrl(null))
-  }, [recipe?.id])
+  async function handleShare() {
+    if (!id) return
+    setShareState({ status: 'loading' })
+    try {
+      const { share_url, share_expires_at } = await shareRecipe(id)
+      const qrDataUrl = await QRCode.toDataURL(share_url, { margin: 1, width: 220 })
+      setShareState({ status: 'ready', qrDataUrl, shareUrl: share_url, expiresAt: share_expires_at })
+    } catch {
+      setShareState(null)
+    }
+  }
 
   async function handleDuplicate() {
     if (!id || duplicating) return
@@ -245,6 +217,15 @@ export function RecipeDetail() {
             >
               <PrinterIcon className="size-4" />
               <span className="hidden sm:inline">Imprimir</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleShare}
+              disabled={shareState?.status === 'loading'}
+              className="flex items-center gap-1.5 rounded-full bg-surface px-3 py-1.5 text-sm font-medium text-text-secondary shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)] hover:text-forest-text disabled:opacity-50"
+            >
+              <QrIcon className="size-4" />
+              <span className="hidden sm:inline">Partilhar</span>
             </button>
             <Link
               to={`/receitas/${recipe.id}/editar`}
@@ -561,19 +542,53 @@ export function RecipeDetail() {
           </p>
         )}
 
-        {qrDataUrl && (
-          <div className="hidden items-center gap-3 border-t border-black/10 pt-4 print:mt-8 print:flex">
-            <img src={qrDataUrl} alt="" className="size-24" />
-            <p className="text-xs text-text-secondary">
-              Ver esta receita online, com fotos e comentários:
-              <br />
-              {window.location.href}
-            </p>
-          </div>
-        )}
       </article>
+
+      {shareState && (
+        <div
+          className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 p-4"
+          onClick={() => setShareState(null)}
+        >
+          <div
+            className="w-full max-w-xs rounded-2xl bg-surface p-6 text-center shadow-[0_10px_30px_-8px_rgba(28,43,31,0.35)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-semibold text-text-primary">Partilhar receita</h2>
+              <button
+                type="button"
+                onClick={() => setShareState(null)}
+                aria-label="Fechar"
+                className="rounded-full p-1 text-text-secondary hover:bg-bg-sage"
+              >
+                <XIcon className="size-4" />
+              </button>
+            </div>
+            {shareState.status === 'loading' ? (
+              <p className="mt-6 mb-2 text-sm text-text-secondary">A gerar o link…</p>
+            ) : (
+              <>
+                <img src={shareState.qrDataUrl} alt="" className="mx-auto mt-4 size-48" />
+                <p className="mt-3 text-xs text-text-secondary">
+                  Aponta a câmara de outro telemóvel para ver esta receita, sem precisar de conta.
+                </p>
+                <p className="mt-2 text-xs font-medium text-forest-text">
+                  Válido até {formatExpiry(shareState.expiresAt)}
+                </p>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </PageShell>
   )
+}
+
+function formatExpiry(iso: string): string {
+  const date = new Date(iso)
+  const day = date.toLocaleDateString('pt-PT', { day: 'numeric', month: 'long' })
+  const time = date.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })
+  return `${day} às ${time}`
 }
 
 function MacroStat({ value, label }: { value: number | null; label: string }) {

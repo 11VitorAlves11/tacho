@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './auth/AuthContext'
 import { AddRecipe } from './pages/AddRecipe'
 import { CookbookDetail } from './pages/CookbookDetail'
@@ -10,6 +10,7 @@ import { Home } from './pages/Home'
 import { Login } from './pages/Login'
 import { MealPlan } from './pages/MealPlan'
 import { Pantry } from './pages/Pantry'
+import { PublicRecipe } from './pages/PublicRecipe'
 import { RecipeDetail } from './pages/RecipeDetail'
 import { Setup } from './pages/Setup'
 import { ShoppingList } from './pages/ShoppingList'
@@ -24,6 +25,18 @@ export default function App() {
 
 function AppRoutes() {
   const { user, needsSetup, forwardAuthBlocked } = useAuth()
+  const location = useLocation()
+
+  // Única rota sem sessão nenhuma — link/QR gerado em "Partilhar"
+  // (RecipeDetail.tsx). Tem de vir antes do gate de autenticação abaixo,
+  // senão qualquer pessoa sem conta Tacho cairia sempre no login.
+  if (location.pathname.startsWith('/partilha/')) {
+    return (
+      <Routes>
+        <Route path="/partilha/:token" element={<PublicRecipe />} />
+      </Routes>
+    )
+  }
 
   // undefined = ainda a verificar GET /users/me — evita um flash do ecrã de
   // login antes de sabermos se já há sessão válida.

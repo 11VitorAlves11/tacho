@@ -1,5 +1,5 @@
 import { api } from './client'
-import type { Category, ImportStatus, Recipe, RecipeExtraction, RecipeInput, RecipeSummary, Tag } from './types'
+import type { Category, ImportStatus, Recipe, RecipeExtraction, RecipeInput, RecipeShare, RecipeSummary, Tag } from './types'
 
 export async function listRecipes(params?: {
   categoryId?: string
@@ -41,6 +41,13 @@ export async function deleteRecipe(id: string) {
 
 export async function duplicateRecipe(id: string) {
   const { data } = await api.post<Recipe>(`/recipes/${id}/duplicate`)
+  return data
+}
+
+// Gera/renova o link público temporário (5h) — POST de novo antes de
+// expirar estica a janela em vez de a substituir por outra em separado.
+export async function shareRecipe(id: string) {
+  const { data } = await api.post<RecipeShare>(`/recipes/${id}/share`)
   return data
 }
 

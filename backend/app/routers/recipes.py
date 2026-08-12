@@ -144,6 +144,27 @@ def export_recipe_schema_org(
     return JSONResponse(content=recipe_to_schema_org(recipe, image_url), media_type="application/ld+json")
 
 
+@router.post("/{recipe_id}/share", response_model=schemas.RecipeShareOut)
+def share_recipe(
+    recipe_id: uuid.UUID,
+    request: Request,
+    db: Session = Depends(get_db),
+    workspace_id: uuid.UUID = Depends(get_workspace_id),
+):
+    """Gera/renova o link público temporário (5h) — ver `crud.create_recipe_share`
+    e `routers/public.py::get_public_recipe`, o endpoint sem autenticação que
+    o consome."""
+    recipe = crud.create_recipe_share(db, workspace_id, recipe_id)
+    if recipe is None:
+        raise HTTPException(status_code=404, detail="Receita não encontrada")
+    settings = get_settings()
+    base_url = settings.public_base_url or str(request.base_url).rstrip("/")
+    return schemas.RecipeShareOut(
+        share_url=f"{base_url}/partilha/{recipe.share_token}",
+        share_expires_at=recipe.share_expires_at,
+    )
+
+
 @router.post("/{recipe_id}/duplicate", response_model=schemas.RecipeOut, status_code=201)
 def duplicate_recipe(
     recipe_id: uuid.UUID,

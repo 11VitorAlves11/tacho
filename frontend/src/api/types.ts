@@ -91,6 +91,26 @@ export interface Recipe {
   images: RecipeImage[]
 }
 
+export interface RecipeShare {
+  share_url: string
+  share_expires_at: string
+}
+
+// Vista pública temporária (link/QR sem autenticação) — deliberadamente
+// mais estreita que Recipe, espelha PublicRecipeOut do backend.
+export interface PublicRecipe {
+  title: string
+  description: string | null
+  servings: number | null
+  prep_minutes: number | null
+  cook_minutes: number | null
+  image_path: string | null
+  ingredients: Ingredient[]
+  steps: Step[]
+  categories: Category[]
+  tags: Tag[]
+}
+
 export interface PantryItem {
   id: string
   name: string

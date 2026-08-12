@@ -1,4 +1,5 @@
 import re
+import secrets
 import unicodedata
 import uuid
 from datetime import date, datetime, timedelta, timezone
@@ -132,6 +133,41 @@ def get_recipe(
         return None
     if user_id is not None:
         recipe = _annotate_favorites(db, user_id, [recipe])[0]
+    return recipe
+
+
+def create_recipe_share(db: Session, workspace_id: uuid.UUID, recipe_id: uuid.UUID) -> models.Recipe | None:
+    """Gera (ou renova) o link público temporário — 5h a partir de agora,
+    pedir de novo antes de expirar simplesmente estica a janela. Nunca
+    reutiliza `Recipe.id` como token (imprevisível de propósito, sem
+    revelar o uuid interno num link partilhado fora do agregado)."""
+    recipe = db.scalars(
+        select(models.Recipe).where(models.Recipe.workspace_id == workspace_id, models.Recipe.id == recipe_id)
+    ).first()
+    if recipe is None:
+        return None
+    recipe.share_token = secrets.token_urlsafe(24)
+    recipe.share_expires_at = datetime.now(timezone.utc) + timedelta(hours=5)
+    db.commit()
+    db.refresh(recipe)
+    return recipe
+
+
+def get_recipe_by_share_token(db: Session, token: str) -> models.Recipe | None:
+    """Sem `workspace_id` — o token já é a única credencial aqui, o
+    pedido nunca vem de uma sessão autenticada. `selectinload` deliberado
+    e mais estreito que `_recipe_query`: a vista pública nunca mostra
+    comentários, notas pós-confeção nem a galeria de fotos extra (decisão
+    do utilizador — só o conteúdo da receita em si)."""
+    query = select(models.Recipe).where(models.Recipe.share_token == token).options(
+        selectinload(models.Recipe.ingredients),
+        selectinload(models.Recipe.steps),
+        selectinload(models.Recipe.categories),
+        selectinload(models.Recipe.tags),
+    )
+    recipe = db.scalars(query).first()
+    if recipe is None or recipe.share_expires_at is None or recipe.share_expires_at < datetime.now(timezone.utc):
+        return None
     return recipe
 
 

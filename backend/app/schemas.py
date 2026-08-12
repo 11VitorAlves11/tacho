@@ -230,6 +230,31 @@ class RecipeOut(BaseModel):
     images: list[RecipeImageOut]
 
 
+class RecipeShareOut(BaseModel):
+    share_url: str
+    share_expires_at: datetime
+
+
+class PublicRecipeOut(BaseModel):
+    """Vista pública temporária (link/QR sem autenticação) — deliberadamente
+    mais estreita que RecipeOut: sem id, workspace_id, is_favorite, rating,
+    notas, custo, comentários, notas pós-confeção nem galeria (decisão do
+    utilizador — só o conteúdo da receita em si, nada do uso do agregado)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    title: str
+    description: str | None
+    servings: int | None
+    prep_minutes: int | None
+    cook_minutes: int | None
+    image_path: str | None
+    ingredients: list[IngredientOut]
+    steps: list[StepOut]
+    categories: list[CategoryOut]
+    tags: list[TagOut]
+
+
 class MealPlanEntryIn(BaseModel):
     recipe_id: uuid.UUID
 

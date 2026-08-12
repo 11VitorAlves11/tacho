@@ -178,6 +178,14 @@ class Recipe(Base):
     # 90e07c148e15 — antes disso o autogenerate propunha removê-lo por
     # engano em todas as migrações seguintes, mesmo problema do índice GIN).
     rating: Mapped[int | None]
+    # Partilha pública temporária (QR/link, sem autenticação) — gerado a
+    # pedido em POST /recipes/{id}/share, válido 5h a partir desse pedido
+    # (pedir de novo renova a janela), nunca ligado por omissão. Token
+    # aleatório (secrets.token_urlsafe), não o id da receita, para nunca
+    # expor um uuid interno num link externo; GET /public/recipes/{token}
+    # confere expires_at antes de devolver qualquer dado.
+    share_token: Mapped[str | None] = mapped_column(Text, unique=True)
+    share_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # `is_favorite` NÃO é uma coluna — `app/crud.py` marca este atributo em
     # runtime consultando `recipe_favorites` para o utilizador do pedido
     # (ver comentário nessa tabela). Sem tipo declarado aqui de propósito;

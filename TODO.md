@@ -1252,6 +1252,44 @@ concluída** quando todos estes estiverem verificados.
       receita de teste com farinha ½, açúcar ¼, manteiga 1 ½, sal 2 —
       confirmado visualmente antes e depois de escalar 4→8 porções, receita
       de teste apagada no fim).
+- [x] **Partilha pública por link/QR, 2026-08-13** — substitui o QR antigo
+      do PDF (`window.location.href`, que só levava ao login do Tacho —
+      inútil para quem está fora do agregado). Decisão do utilizador:
+      link temporário de 5h em vez de um interruptor liga/desliga por
+      receita (autolimpa-se sozinho, sem ficar esquecido ligado). Backend:
+      `Recipe.share_token`/`share_expires_at` (migração `5d7092e277e3`,
+      token aleatório via `secrets.token_urlsafe`, nunca o `id` da
+      receita — não expõe um uuid interno num link externo);
+      `POST /recipes/{id}/share` (autenticado, gera/renova a janela de 5h);
+      `GET /public/recipes/{token}` (`routers/public.py`, **sem
+      autenticação de propósito** — 404 tanto para token inexistente como
+      expirado, sem revelar qual dos dois é o caso). `PublicRecipeOut`
+      deliberadamente mais estreito que `RecipeOut` — só título,
+      descrição, foto, ingredientes, passos, tempos/porções,
+      categorias/tags (decisão do utilizador: nunca comentários, notas
+      pós-confeção, avaliação, custo nem galeria — isso fica privado ao
+      agregado). Frontend: botão "Partilhar" novo (`QrIcon`, ícone novo)
+      no `ActionsGroup` do Detalhe, abre um popover com o QR grande e
+      "Válido até HH:mm"; `pages/PublicRecipe.tsx`, rota `/partilha/:token`
+      **fora do gate de autenticação** (`App.tsx` verifica o path antes
+      de olhar para `user`/`needsSetup` — a única rota que não vive atrás
+      de sessão), layout próprio sem `Header`/`BottomNav` (pressupõem
+      sessão). `formatQuantity`/`scaleQuantity` extraídos de
+      `RecipeDetail.tsx` para `lib/quantity.ts`, partilhados pelas duas
+      páginas. Testado no browser (Playwright): botão gera QR e expiração
+      corretas (22:20+5h=03:20 confirmado); visitante sem sessão nenhuma
+      (`newContext()` sem headers) abre a receita partilhada normalmente;
+      token inválido mostra "Link expirado" em vez de qualquer erro cru;
+      impressão confirmada sem buraco deixado pela remoção do QR antigo.
+      Dados de teste (token da receita "Bacalhau à Brás") limpos no fim.
+      **Por fazer, infraestrutura**: hoje `receitas.alveslab.dev` só é
+      alcançável dentro de casa/Tailscale (`inventory.md`) — o link
+      público só funciona de facto para quem está fora dessa rede depois
+      de existir um caminho de entrada isolado (proxy dedicado, só para
+      esta app, com o próprio port-forward no router — decisão do
+      utilizador de não reutilizar o NPM principal, que exporia todos os
+      outros serviços do homelab). Infraestrutura nova, ainda por
+      desenhar/criar.
 
 ---
 
