@@ -33,6 +33,27 @@ Ponto de situação a 2026-08-07. Ver `PRD-app-receitas-v3.2.md`, `PRODUCT.md` e
 > aqui no TODO.md) — CT 202 tinha saltado de `v1.1.2` para `v1.2.0` sem
 > essa passagem ficar documentada lá; não investigado a fundo, só
 > assinalado.
+>
+> **2026-08-12 — releases `v1.3.1`/`v1.3.2` publicadas e em produção.**
+> `v1.3.1`: página de erro dedicada quando o forward-auth do Authentik
+> identifica alguém sem conta Tacho (`no_account`/`inactive`/
+> `no_membership`, ver "v1.2" abaixo) — publicada mas nunca chegou a ir
+> a produção sozinha, logo seguida da `v1.3.2`. `v1.3.2`: fix de
+> navegação/Modo Cozinha invisíveis no desktop (ver "v2" abaixo).
+> Deploy da `v1.3.2`: `docker pull` direto das duas imagens, `pct push`
+> do `docker-compose.prod.yml`, `docker-compose -f docker-compose.prod.yml
+> up -d --force-recreate --no-deps web celery-worker`, `/health`
+> confirmado (interno via `wget` — **`curl` não existe dentro da LXC do
+> CT 202**, só dentro dos containers Docker), `alembic current` já na
+> head (`eb74e97da107`, sem migrações novas nesta release). **Armadilha
+> nova, documentada também no `inventory.md`**: `/opt/tacho/app/` tem
+> **dois** ficheiros compose (`docker-compose.yml`, versão de dev com
+> `name: tacho` no topo — incompatível com o `docker-compose` 1.29.2 do
+> CT — e `docker-compose.prod.yml`, o correto); sem `-f
+> docker-compose.prod.yml` explícito, o comando usa por omissão o
+> ficheiro de dev errado e falha logo no parse do YAML. Deploys
+> anteriores devem ter usado sempre essa flag sem ficar registada nos
+> resumos daqui — daqui em diante, usar sempre `-f` explícito.
 
 ---
 
