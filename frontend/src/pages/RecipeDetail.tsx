@@ -26,6 +26,7 @@ import {
   PencilIcon,
   PlayIcon,
   PlusIcon,
+  PotIcon,
   PrinterIcon,
   ServingsIcon,
   StarIcon,
@@ -197,6 +198,14 @@ export function RecipeDetail() {
   return (
     <PageShell>
       <article>
+        {/* Só na folha impressa — a app troca o cabeçalho normal (nav,
+            avatar) por um mastro pequeno, para a folha ter identidade
+            própria sem trazer chrome que só faz sentido no ecrã. */}
+        <div className="hidden items-center gap-1.5 border-b border-black/10 pb-3 text-xs font-semibold uppercase tracking-wide text-text-secondary print:mb-4 print:flex">
+          <PotIcon className="size-3.5 text-forest-text" />
+          Tacho
+        </div>
+
         {recipe.image_path && (
           <img
             src={recipeImageUrl(recipe.image_path)}
@@ -266,7 +275,7 @@ export function RecipeDetail() {
           })}
         </div>
 
-        <div className="mt-5 flex gap-6 rounded-2xl bg-surface p-5 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)]">
+        <div className="mt-5 flex gap-6 rounded-2xl bg-surface p-5 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)] print:break-inside-avoid print:border print:border-black/15 print:shadow-none">
           {totalMinutes > 0 && (
             <HeroStat icon={<ClockIcon className="size-5" />} value={totalMinutes} label="min" tone="orange" />
           )}
@@ -363,7 +372,16 @@ export function RecipeDetail() {
                   </li>
                 ) : (
                   <li key={ing.id} className="flex justify-between gap-3 border-b border-black/5 pb-2 text-sm">
-                    <span className="text-text-primary">{ing.name}</span>
+                    <span className="flex items-center gap-2 text-text-primary">
+                      {/* Só na folha impressa — dá para riscar à mão os
+                          ingredientes já separados, mesma lógica do check
+                          da Lista de Compras, mas em papel. */}
+                      <span
+                        aria-hidden="true"
+                        className="hidden size-3 shrink-0 rounded-[3px] border border-black/40 print:inline-block"
+                      />
+                      {ing.name}
+                    </span>
                     {(ing.quantity || ing.unit) && (
                       <span className="shrink-0 text-text-secondary">
                         {ing.quantity != null
@@ -402,7 +420,7 @@ export function RecipeDetail() {
         </div>
 
         {(recipe.protein_g != null || recipe.carbs_g != null || recipe.fat_g != null) && (
-          <section className="mt-8 rounded-2xl bg-surface p-5 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)]">
+          <section className="mt-8 rounded-2xl bg-surface p-5 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)] print:break-inside-avoid print:border print:border-black/15 print:shadow-none">
             <h2 className="text-lg font-semibold text-text-primary">Informação nutricional</h2>
             <p className="mt-1 text-xs text-text-secondary">Por porção, entrada manual.</p>
             <div className="mt-3 grid grid-cols-3 gap-3 text-center">
@@ -418,7 +436,10 @@ export function RecipeDetail() {
             <h2 className="text-lg font-semibold text-text-primary">Notas</h2>
             <ul className="mt-3 space-y-3">
               {recipe.cook_notes.map((note) => (
-                <li key={note.id} className="rounded-2xl bg-surface p-4 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)]">
+                <li
+                  key={note.id}
+                  className="rounded-2xl bg-surface p-4 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)] print:border print:border-black/15 print:shadow-none"
+                >
                   <p className="text-sm text-text-primary">{note.text}</p>
                   <p className="mt-1 text-xs text-text-secondary">{formatLastMade(note.created_at)}</p>
                 </li>

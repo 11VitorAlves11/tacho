@@ -86,4 +86,26 @@ body {
   body {
     background-color: #ffffff;
   }
+
+  @page {
+    margin: 1.4cm;
+  }
+
+  /* #root herda min-height: 100svh do ecrã (App.tsx nunca precisa de saber
+     que está a imprimir) — sem isto, uma receita curta imprime uma
+     segunda folha em branco porque o browser respeita a altura mínima do
+     ecrã como se fosse a altura da página impressa. */
+  #root {
+    min-height: 0;
+  }
+
+  /* Nunca cortar uma linha de ingrediente, passo ou cartão a meio entre
+     duas folhas — e nunca deixar um título de secção sozinho no fim de
+     uma folha com o conteúdo todo a seguir. */
+  h2 {
+    break-after: avoid-page;
+  }
+  li {
+    break-inside: avoid;
+  }
 }

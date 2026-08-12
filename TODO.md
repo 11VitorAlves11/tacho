@@ -1207,6 +1207,36 @@ concluída** quando todos estes estiverem verificados.
       galeria/comentários corretamente ausentes, QR code presente com o
       URL por baixo, fundo confirmado branco tanto em modo claro como em
       modo escuro do sistema.
+- [x] **Redesenho da folha de impressão**, 2026-08-12 — pedido do
+      utilizador: "podia ser melhor" (visual geral pouco cuidado).
+      Três problemas técnicos corrigidos: (1) `#root`/`PageShell`
+      herdavam `min-height: 100svh`/`min-h-svh` do ecrã, o que fazia
+      qualquer receita curta imprimir uma segunda folha em branco — 
+      `print:min-h-0` acrescentado a ambos; (2) os cartões com sombra
+      (hero de tempo/porções, nutrição, notas pós-confeção) imprimiam mal
+      (a sombra depende de "background graphics" estar ligado no diálogo
+      de impressão do browser, inconsistente entre PDFs) — trocados por
+      `print:border print:border-black/15 print:shadow-none`, mesma
+      lógica da "Ghost Card Rule" do `DESIGN.md` mas adaptada ao papel
+      (sombra no ecrã, contorno no papel); (3) sem controlo de quebra de
+      página — `h2 { break-after: avoid-page }`/`li { break-inside: avoid
+      }` acrescentados ao bloco `@media print` do `index.css`, para nunca
+      cortar um ingrediente/passo a meio nem deixar um título de secção
+      sozinho no fim de uma folha. Dois acrescentos visuais, mantendo a
+      paleta/tipografia do `DESIGN.md` (Inter, verde-floresta, laranja
+      só no ícone do relógio — nunca decoração): mastro pequeno "Tacho"
+      (ícone + nome, maiúsculas pequenas) no topo da folha, substituindo
+      o cabeçalho normal (`print:hidden`) por uma identidade própria do
+      papel; caixa de verificação (quadrado com contorno, só
+      `print:inline-block`) antes de cada ingrediente não-cabeçalho, para
+      riscar à mão na cozinha ou no mercado — mesma ideia da despensa,
+      mas em papel. Testado no browser (Playwright, `page.pdf()` e
+      screenshot com `emulateMedia({media:'print'})`, receita "Bacalhau à
+      Brás" com hero/nutrição/notas/QR todos presentes): 1 página só
+      (sem a folha em branco antiga), contornos em vez de sombra,
+      checkboxes visíveis, mastro visível, fundo branco confirmado também
+      com o sistema em modo escuro (sem regressão à regra já existente).
+      `tsc -b`/`oxlint` sem erros novos.
 - [x] **Fracções em unidades** ("½ chávena" em vez de "0.5 chávena") —
       `RecipeDetail.tsx::formatQuantity`, só formatação de apresentação,
       sem mudanças no backend nem no valor guardado (`Ingredient.quantity`
