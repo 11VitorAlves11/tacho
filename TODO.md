@@ -789,22 +789,27 @@ concluída** quando todos estes estiverem verificados.
       contra o Authentik/NPM reais** — isso precisa de configuração do
       lado da infraestrutura partilhada, fora do que este trabalho pode
       fazer sozinho (mesma fronteira da decisão #4). **Checklist para
-      produção** (por fazer no NPM + Authentik, não no código):
-      1. No Authentik, confirmar que o Provider/Outpost que protege
+      produção** (por fazer no NPM + Authentik, não no código) —
+      **concluída em 2026-08-12**, ver nota completa mais abaixo:
+      1. ~~No Authentik, confirmar que o Provider/Outpost que protege
          `receitas.alveslab.dev` tem a opção de enviar os headers
-         `X-authentik-*` ativada (nem todos os outposts do Authentik
-         mandam isto por omissão).
-      2. No Nginx Proxy Manager (CT 207), na config avançada do host
+         `X-authentik-*` ativada~~ **já estava feito desde 2026-08-07**
+         (Provider/Application "Tacho" via blueprint
+         `tacho-forward-auth.yaml`, mesmo Embedded Outpost do
+         `home.alveslab.dev` — descoberto só agora ao inspecionar o
+         `.conf` do NPM, não estava registado aqui nem no `inventory.md`).
+      2. ~~No Nginx Proxy Manager (CT 207), na config avançada do host
          `receitas.alveslab.dev`, adicionar
-         `proxy_set_header X-Tacho-Forward-Secret "<valor secreto>";`
-         — só o NPM injeta isto, por isso um pedido direto ao CT 202 que
-         contorne o NPM nunca o consegue forjar.
-      3. No `.env` do CT 202, definir `TRUST_FORWARD_AUTH=true` e
-         `FORWARD_AUTH_SECRET=<o mesmo valor do passo 2>` (os outros três
-         — `AUTH_SECRET`, `AUTH_COOKIE_SECURE`, `PUBLIC_BASE_URL` — já
-         ficaram definidos no deploy da `v1.2.0`, ver abaixo).
-      4. Confirmar que o NPM não filtra o header `X-authentik-email` a
-         caminho do CT 202 (comportamento por omissão, mas vale confirmar).
+         `proxy_set_header X-Tacho-Forward-Secret "<valor secreto>";`~~
+         **feito em 2026-08-12** — `.conf` editado à mão (backup em
+         `10.conf.bak-presecret-20260812`), `nginx -t` + `nginx -s reload`.
+      3. ~~No `.env` do CT 202, definir `TRUST_FORWARD_AUTH=true` e
+         `FORWARD_AUTH_SECRET=<o mesmo valor do passo 2>`~~ **feito em
+         2026-08-12**, container `web` recriado para aplicar.
+      4. ~~Confirmar que o NPM não filtra o header `X-authentik-email` a
+         caminho do CT 202~~ **confirmado que não filtra** — já vinha a
+         ser reenviado desde 2026-08-07 (parte do mesmo Provider
+         descoberto no passo 1).
       5. Testar com as duas contas reais (`vitor`/`mariana`) — o email da
          conta Authentik de cada um tem de bater certo com o email da
          conta Tacho correspondente, senão cai no login normal (por
@@ -823,9 +828,32 @@ concluída** quando todos estes estiverem verificados.
       código, entre o deploy da auth e esta correção; sem sinal de
       exploração, mas é uma janela real a registar). `needs_setup` ficou
       `true` — primeira vez que a auth corre em produção, falta criar a
-      conta real do Vítor em `/setup`. Passos 1/2/4/5 da checklist acima
-      continuam por fazer (dependem do Authentik/NPM, fora do alcance
-      deste trabalho).
+      conta real do Vítor em `/setup`.
+      **Checklist de infraestrutura concluída, 2026-08-12** — ver os 5
+      passos riscados acima. Achado inesperado: os passos 1 e 4
+      (Authentik enviar `X-authentik-*`, NPM não filtrar) **já estavam
+      feitos desde 2026-08-07** (mesmo deploy que pôs a app atrás do
+      Authentik pela primeira vez, ver "v1.0 — fechar a fase" acima) —
+      só nunca tinham ficado confirmados nem documentados aqui. Só
+      faltava mesmo o passo 2 (segredo partilhado no NPM) e o 3
+      (variáveis no `.env`), ambos feitos nesta sessão: `.conf` do proxy
+      host 10 (`receitas.alveslab.dev`) editado à mão (backup
+      `10.conf.bak-presecret-20260812`, `nginx -t` antes do `-s reload`),
+      `TRUST_FORWARD_AUTH=true`/`FORWARD_AUTH_SECRET=<segredo de 64 hex,
+      openssl rand -hex 32>` acrescentados ao `.env` do CT 202, container
+      `web` recriado. **Testado internamente** (dentro do CT 202, sem
+      passar pelo NPM/Authentik): `POST /auth/forward-login` com o
+      segredo certo + email real do Vítor → `204` + `Set-Cookie` (com
+      `Secure`, confirma `AUTH_COOKIE_SECURE=true` a aplicar); segredo
+      errado → `401`, sem regressão. **Contas reais já tinham o email
+      certo** — `vitormsalgadoalves@gmail.com`/
+      `marianaolivferreira@gmail.com` são literalmente os mesmos emails
+      das contas Authentik (`inventory.md`, CT 208), confirmado por
+      consulta direta à tabela `users` em produção — não foi preciso
+      criar nem corrigir nenhuma conta. **Por confirmar**: o passo 5
+      (teste ponta a ponta real, telemóvel autenticado no Authentik →
+      `receitas.alveslab.dev` sem ver o login do Tacho) só o Vítor/
+      Mariana conseguem fazer, a partir dos telemóveis deles.
       **Página de erro dedicada quando o Authentik identifica alguém sem
       conta Tacho, 2026-08-12** — antes disto, `POST /auth/forward-login`
       devolvia 404/403 com `detail` em texto solto, e o frontend
