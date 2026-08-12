@@ -31,6 +31,15 @@ class Settings(BaseSettings):
     # público). Em dev fica None e usa-se request.base_url, que já está
     # certo (sem proxy no meio).
     public_base_url: str | None = None
+    # Host do link/QR de partilha pública (`POST /recipes/{id}/share`) —
+    # deliberadamente separado de `public_base_url`: aquele é o host
+    # privado (receitas.alveslab.dev, atrás do Authentik) usado também
+    # para `image_url` do export schema.org, enquanto este é o proxy
+    # isolado, sem autenticação, exposto à internet (partilha.alveslab.dev).
+    # Trocar um pelo outro seria errado nos dois sentidos. Sem valor, cai
+    # em `public_base_url` (ex. dev local, onde ambos os casos usam o
+    # mesmo host único).
+    share_base_url: str | None = None
     # Login silencioso quando o pedido já chega autenticado pelo forward-auth
     # do Authentik (produção, atrás do NPM) — evita pedir login uma segunda
     # vez a quem o Authentik já validou (ver `routers/auth.py::forward_login`).

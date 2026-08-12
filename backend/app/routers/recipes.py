@@ -158,7 +158,7 @@ def share_recipe(
     if recipe is None:
         raise HTTPException(status_code=404, detail="Receita não encontrada")
     settings = get_settings()
-    base_url = settings.public_base_url or str(request.base_url).rstrip("/")
+    base_url = settings.share_base_url or settings.public_base_url or str(request.base_url).rstrip("/")
     return schemas.RecipeShareOut(
         share_url=f"{base_url}/partilha/{recipe.share_token}",
         share_expires_at=recipe.share_expires_at,
