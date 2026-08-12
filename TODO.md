@@ -930,6 +930,30 @@ concluída** quando todos estes estiverem verificados.
       ordem cronológica confirmada) e no browser (Playwright): escrever e
       enviar um comentário aparece de imediato sem reload, sem erros de
       consola — dados de teste apagados no fim.
+- [x] **Fix: navegação e "Iniciar Modo Cozinha" invisíveis no desktop,
+      2026-08-12** — reportado pelo utilizador. Causa: `BottomNav.tsx`
+      (`sm:hidden`) e o botão "Iniciar Modo Cozinha" em `RecipeDetail.tsx`
+      (também `sm:hidden`) desapareciam a partir dos 640px sem nenhum
+      equivalente desktop — o `Header` só tinha "Adicionar receita",
+      ficando impossível chegar à Lista de Compras/Planeamento ou entrar
+      no Modo Cozinha pela UI em ecrã grande (só editando o URL à mão).
+      **Fix**: `Header.tsx` ganhou um `<nav>` central (`hidden sm:flex`,
+      mesmos ícones do `BottomNav`) com Lista/Plano — Receitas já tem o
+      logótipo como link e Adicionar já lá estava, por isso só faltavam
+      estes dois, mesmo conjunto de 4 destinos do `BottomNav`, sem
+      Despensa/Coleções (mantidos só como link de texto, mesma decisão já
+      tomada para esses dois ecrãs). Botão "Iniciar Modo Cozinha" perdeu o
+      `sm:hidden` e ganhou `sm:inline-flex sm:w-auto` para não esticar a
+      largura toda no desktop (fica um CTA proeminente, não espremido no
+      `ActionsGroup` de Favorito/Duplicar/Imprimir/Editar, que já está
+      cheio). **Decisão**: estendida a barra superior em vez de criar uma
+      sidebar nova (sugestão alternativa do utilizador) — consistente com
+      o único item desktop que já lá estava e com a decisão já tomada de
+      `PageShell.tsx` ficar a uma coluna única, sem sidebar. Testado no
+      browser (Playwright, forward-auth de teste) a 1280px (nav do Header
+      visível e a navegar, botão do Modo Cozinha visível e proporcional) e
+      a 375px (sem regressão — `BottomNav` e botão continuam como antes),
+      `tsc -b`/`oxlint` sem erros novos.
 
 ---
 

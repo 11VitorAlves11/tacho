@@ -346,7 +346,7 @@ export function RecipeDetail() {
 
         <Link
           to={`/receitas/${recipe.id}/cozinhar`}
-          className="mt-5 flex items-center justify-center gap-2 rounded-full bg-primary-forest px-5 py-3.5 font-semibold text-card-white shadow-[0_8px_20px_-6px_rgba(45,95,63,0.6)] transition-transform active:scale-[0.98] sm:hidden print:hidden"
+          className="mt-5 flex items-center justify-center gap-2 rounded-full bg-primary-forest px-5 py-3.5 font-semibold text-card-white shadow-[0_8px_20px_-6px_rgba(45,95,63,0.6)] transition-transform active:scale-[0.98] print:hidden sm:inline-flex sm:w-auto sm:px-6"
         >
           <PlayIcon className="size-4" />
           Iniciar Modo Cozinha
