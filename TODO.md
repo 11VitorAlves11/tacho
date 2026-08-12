@@ -805,6 +805,38 @@ concluída** quando todos estes estiverem verificados.
       conta real do Vítor em `/setup`. Passos 1/2/4/5 da checklist acima
       continuam por fazer (dependem do Authentik/NPM, fora do alcance
       deste trabalho).
+      **Página de erro dedicada quando o Authentik identifica alguém sem
+      conta Tacho, 2026-08-12** — antes disto, `POST /auth/forward-login`
+      devolvia 404/403 com `detail` em texto solto, e o frontend
+      (`tryForwardLogin`) tratava qualquer erro da mesma forma: caía
+      sempre em silêncio no ecrã de login normal, mesmo quando o Authentik
+      já tinha identificado a pessoa mas faltava a conta Tacho — mostrar
+      um formulário de password para uma conta inexistente é confuso.
+      `forward_login` passou a devolver `detail` sempre como dict com
+      `reason` estável (`disabled`/`bad_secret`/`no_email_header` — não se
+      aplica, cai no login; `no_account`/`inactive`/`no_membership` — o
+      Authentik confirmou quem é, falta ação do admin). Decisão: já não se
+      esconde propositadamente se o email existe (nota antiga aqui,
+      revogada) — só há duas pessoas conhecidas neste agregado, não um
+      SaaS multi-tenant onde isso importasse. Frontend: `tryForwardLogin`
+      devolve um resultado tipado em vez de `boolean`
+      (`api/types.ts::ForwardLoginResult`), `AuthContext` ganhou
+      `forwardAuthBlocked`, `App.tsx` mostra a nova
+      `pages/ForwardAuthBlocked.tsx` (reaproveita `AuthLayout` de
+      Login/Setup) em vez das rotas de login quando bloqueado — sem
+      formulário, sem link para `/login`, por pedido explícito do
+      utilizador. **Ordem importa**: `needsSetup` continua a ser
+      verificado antes de `forwardAuthBlocked` em `App.tsx` — no arranque
+      a frio (zero contas), a primeira pessoa a entrar via Authentik
+      também dá `no_account`, mas aí o caminho certo continua a ser
+      `/setup`, não a página de erro. Testado com `TRUST_FORWARD_AUTH=true`/
+      `FORWARD_AUTH_SECRET` de teste e Playwright (`extraHTTPHeaders`,
+      mesma técnica já usada nos testes de forward-auth anteriores): email
+      desconhecido → página de erro sem formulário de login; sem
+      headers/segredo errado → login normal, sem regressão; conta real
+      (`vitor@example.com`) → entra direto na app, cookie de sessão
+      confirmado por curl (204 + `Set-Cookie`). `tsc -b`/`oxlint` sem
+      erros novos.
 - [x] **Fix: `RecipeForm.tsx` a desformatar-se em mobile e a desalinhar o
       `BottomNav`** — reportado pelo utilizador em 2026-08-11. Causa raiz
       única para os dois sintomas: `fieldClass` (linha 179) incluía `w-full`

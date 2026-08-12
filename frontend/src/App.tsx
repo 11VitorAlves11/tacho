@@ -5,6 +5,7 @@ import { CookbookDetail } from './pages/CookbookDetail'
 import { Cookbooks } from './pages/Cookbooks'
 import { CookMode } from './pages/CookMode'
 import { EditRecipe } from './pages/EditRecipe'
+import { ForwardAuthBlocked } from './pages/ForwardAuthBlocked'
 import { Home } from './pages/Home'
 import { Login } from './pages/Login'
 import { MealPlan } from './pages/MealPlan'
@@ -22,7 +23,7 @@ export default function App() {
 }
 
 function AppRoutes() {
-  const { user, needsSetup } = useAuth()
+  const { user, needsSetup, forwardAuthBlocked } = useAuth()
 
   // undefined = ainda a verificar GET /users/me — evita um flash do ecrã de
   // login antes de sabermos se já há sessão válida.
@@ -30,12 +31,19 @@ function AppRoutes() {
 
   if (user === null) {
     if (needsSetup) {
+      // Prioridade sobre forwardAuthBlocked: no arranque a frio (zero
+      // contas), a primeira pessoa a entrar via Authentik também dá
+      // `no_account` — mas aqui o passo certo é criar a conta em /setup,
+      // não mostrar a página de erro.
       return (
         <Routes>
           <Route path="/setup" element={<Setup />} />
           <Route path="*" element={<Navigate to="/setup" replace />} />
         </Routes>
       )
+    }
+    if (forwardAuthBlocked) {
+      return <ForwardAuthBlocked reason={forwardAuthBlocked.reason} email={forwardAuthBlocked.email} />
     }
     return (
       <Routes>

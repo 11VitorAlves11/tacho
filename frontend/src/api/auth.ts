@@ -1,5 +1,6 @@
+import axios from 'axios'
 import { api } from './client'
-import type { CurrentUser, SetupStatus, WorkspaceMember } from './types'
+import type { CurrentUser, ForwardLoginResult, SetupStatus, WorkspaceMember } from './types'
 
 export async function getSetupStatus() {
   const { data } = await api.get<SetupStatus>('/setup/status')
@@ -32,13 +33,23 @@ export async function getCurrentUser() {
 // Best-effort — em produção, atrás do forward-auth do Authentik, inicia
 // sessão automaticamente sem mostrar a página de login (ver
 // `backend/app/routers/auth.py::forward_login`). Em dev, ou se desligado no
-// backend, dá sempre 404 e cai-se de volta no login normal por password.
-export async function tryForwardLogin() {
+// backend, ou se o pedido não vier via NPM/Authentik, devolve
+// `not_applicable` e cai-se de volta no login normal por password. Quando o
+// Authentik já identificou a pessoa mas falta ação do admin do lado do
+// Tacho (`no_account`/`inactive`/`no_membership`), devolve `blocked` — o
+// `AuthContext` usa isso para mostrar uma página de erro em vez do login.
+export async function tryForwardLogin(): Promise<ForwardLoginResult> {
   try {
     await api.post('/auth/forward-login')
-    return true
-  } catch {
-    return false
+    return { status: 'ok' }
+  } catch (err) {
+    if (axios.isAxiosError(err)) {
+      const detail = err.response?.data?.detail
+      if (detail && typeof detail === 'object' && ['no_account', 'inactive', 'no_membership'].includes(detail.reason)) {
+        return { status: 'blocked', reason: detail.reason, email: detail.email }
+      }
+    }
+    return { status: 'not_applicable' }
   }
 }
 

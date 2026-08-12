@@ -180,3 +180,10 @@ export interface WorkspaceMember {
 export interface SetupStatus {
   needs_setup: boolean
 }
+
+export type ForwardLoginBlockReason = 'no_account' | 'inactive' | 'no_membership'
+
+export type ForwardLoginResult =
+  | { status: 'ok' }
+  | { status: 'blocked'; reason: ForwardLoginBlockReason; email?: string }
+  | { status: 'not_applicable' }

@@ -63,24 +63,32 @@ async def forward_login(
     LAN) conseguia forjar o header de email e entrar como qualquer pessoa.
     Desligado por omissão (`trust_forward_auth=False`). Nunca cria conta
     nova nem workspace — só inicia sessão para quem já é membro do agregado,
-    mesmo padrão fechado do resto da autenticação (decisão #2 do TODO.md);
-    devolve 404 sem essa membership, para o frontend cair de volta no login
-    normal por password sem expor se o email existe ou não."""
+    mesmo padrão fechado do resto da autenticação (decisão #2 do TODO.md).
+    `detail` é sempre um dict com `reason` — o frontend usa esse código
+    para distinguir "forward-auth nem se aplica aqui" (desligado,
+    segredo/header em falta — cai em silêncio no login normal) de "o
+    Authentik já identificou esta pessoa mas falta ação do admin"
+    (`no_account`/`inactive`/`no_membership` — mostra uma página de erro
+    dedicada em vez do login, decisão do utilizador: não faz sentido pedir
+    password de uma conta que não existe). Ao contrário de uma nota antiga
+    aqui (revogada): já não se esconde propositadamente se o email existe
+    — só há duas pessoas conhecidas neste agregado, não um SaaS
+    multi-tenant onde isso importasse."""
     settings = get_settings()
     if not settings.trust_forward_auth:
-        raise HTTPException(status_code=404)
+        raise HTTPException(status_code=404, detail={"reason": "disabled"})
     if not settings.forward_auth_secret or request.headers.get("X-Tacho-Forward-Secret") != settings.forward_auth_secret:
-        raise HTTPException(status_code=401, detail="Segredo de forward-auth inválido ou em falta")
+        raise HTTPException(status_code=401, detail={"reason": "bad_secret"})
     email = request.headers.get(settings.forward_auth_email_header)
     if not email:
-        raise HTTPException(status_code=401, detail="Header de email do forward-auth em falta")
+        raise HTTPException(status_code=401, detail={"reason": "no_email_header"})
 
     try:
         user = await user_manager.get_by_email(email.lower())
     except fu_exceptions.UserNotExists:
-        raise HTTPException(status_code=404, detail="Sem conta Tacho para este email")
+        raise HTTPException(status_code=404, detail={"reason": "no_account", "email": email})
     if not user.is_active:
-        raise HTTPException(status_code=403, detail="Conta inativa")
+        raise HTTPException(status_code=403, detail={"reason": "inactive", "email": email})
 
     membership = db.scalar(
         select(WorkspaceMember).where(
@@ -89,7 +97,7 @@ async def forward_login(
         )
     )
     if membership is None:
-        raise HTTPException(status_code=404, detail="Conta sem acesso ao agregado")
+        raise HTTPException(status_code=404, detail={"reason": "no_membership", "email": email})
 
     token = await get_jwt_strategy().write_token(user)
     return await cookie_transport.get_login_response(token)
