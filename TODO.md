@@ -34,14 +34,16 @@ Ponto de situação a 2026-08-07. Ver `PRD-app-receitas-v3.2.md`, `PRODUCT.md` e
 > essa passagem ficar documentada lá; não investigado a fundo, só
 > assinalado.
 >
-> **2026-08-12 — releases `v1.3.1`/`v1.3.2`/`v1.3.3` publicadas e em
-> produção.** `v1.3.1`: página de erro dedicada quando o forward-auth do
-> Authentik identifica alguém sem conta Tacho (`no_account`/`inactive`/
+> **2026-08-12/13 — releases `v1.3.1`–`v1.3.4` publicadas e em produção.**
+> `v1.3.1`: página de erro dedicada quando o forward-auth do Authentik
+> identifica alguém sem conta Tacho (`no_account`/`inactive`/
 > `no_membership`, ver "v1.2" abaixo) — publicada mas nunca chegou a ir
 > a produção sozinha, logo seguida da `v1.3.2`. `v1.3.2`: fix de
 > navegação/Modo Cozinha invisíveis no desktop (ver "v2" abaixo).
 > `v1.3.3`: redesenho da folha de impressão (ver "v2" abaixo) — mesmo
-> fluxo de deploy das anteriores, sem migrações novas.
+> fluxo de deploy das anteriores, sem migrações novas. `v1.3.4`: partilha
+> pública temporária de receitas por link/QR (ver "v2" abaixo) — única
+> com migração nova (`5d7092e277e3`, aditiva, aplicada sem incidentes).
 > Deploy da `v1.3.2`: `docker pull` direto das duas imagens, `pct push`
 > do `docker-compose.prod.yml`, `docker-compose -f docker-compose.prod.yml
 > up -d --force-recreate --no-deps web celery-worker`, `/health`
