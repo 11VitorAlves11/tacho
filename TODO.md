@@ -1284,14 +1284,35 @@ concluída** quando todos estes estiverem verificados.
       token inválido mostra "Link expirado" em vez de qualquer erro cru;
       impressão confirmada sem buraco deixado pela remoção do QR antigo.
       Dados de teste (token da receita "Bacalhau à Brás") limpos no fim.
-      **Por fazer, infraestrutura**: hoje `receitas.alveslab.dev` só é
-      alcançável dentro de casa/Tailscale (`inventory.md`) — o link
-      público só funciona de facto para quem está fora dessa rede depois
-      de existir um caminho de entrada isolado (proxy dedicado, só para
-      esta app, com o próprio port-forward no router — decisão do
-      utilizador de não reutilizar o NPM principal, que exporia todos os
-      outros serviços do homelab). Infraestrutura nova, ainda por
-      desenhar/criar.
+
+      **Infraestrutura, 2026-08-12 — parcialmente feita.** `share_base_url`
+      separado de `public_base_url` em `config.py`/`recipes.py` (`v1.3.5`,
+      publicada no GHCR e em produção na CT 202 — mas **sem
+      `SHARE_BASE_URL` definida ainda de propósito**, para não gerar QRs
+      mortos antes da infraestrutura estar de pé; até lá o link continua a
+      cair em `PUBLIC_BASE_URL`, comportamento igual ao de antes). CT 210
+      (`tacho-share`) criada no homelab — Caddy isolado, allowlist estrito
+      só para `/partilha/*`, `/public/recipes/*`, `/images/*`, `/assets/*`,
+      `/favicon.svg`; verificado que rotas privadas (`/auth/forward-login`,
+      `/recipes`, `/users`, `/`) e métodos fora de GET/HEAD devolvem 404 no
+      próprio Caddy, sem chegar à CT 202 (ver `homelab/inventory.md`, secção
+      CT 210, para o detalhe completo).
+
+      **Por fazer, bloqueado — precisa de ti:**
+      1. Registo DNS A `partilha.alveslab.dev` → IP público de casa, na
+         zona Cloudflare (não o wildcard `*.alveslab.dev` existente).
+      2. Updater DDNS nessa CT (IP público é dinâmico, confirmaste) — só
+         depois de teres o token Cloudflare.
+      3. Firewall Proxmox restringindo a saída da CT 210 só à CT 202 —
+         ficheiros já desenhados, bloqueado pelo classificador de modo
+         automático (liga o interruptor mestre do firewall do datacenter,
+         mesmo sem afectar as outras CTs). Preciso de autorização tua ou
+         que corras os comandos.
+      4. Port-forward 80/443 no router de casa → 192.168.1.210.
+      5. Só depois de 1-4: ligar `SHARE_BASE_URL` no `.env` da CT 202 e
+         testar o link fora de casa (dados móveis, Wi-Fi desligado) — nada
+         correu dentro de uma sessão de código prova que funciona
+         publicamente.
 
 ---
 
