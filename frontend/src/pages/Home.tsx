@@ -55,12 +55,7 @@ export function Home() {
   return (
     <PageShell>
       <section className="-mx-4 -mt-6 mb-6 rounded-b-3xl bg-gradient-to-br from-bg-sage-deep-start to-bg-sage-deep-end px-4 pb-6 pt-2 text-card-white sm:mx-0 sm:mt-0 sm:rounded-3xl sm:p-6">
-        <h1 className="text-2xl font-bold sm:text-3xl">As receitas do agregado</h1>
-        <p className="mt-1 text-sm text-card-white/80">
-          Tudo o que hoje está no Tandoor, agora num sítio só — e teu.
-        </p>
-
-        <label className="mt-4 flex items-center gap-2 rounded-full bg-card-white px-4 py-3 text-text-primary shadow-inner ring-2 ring-transparent transition-shadow focus-within:ring-accent-leaf">
+        <label className="flex items-center gap-2 rounded-full bg-card-white px-4 py-3 text-text-primary shadow-inner ring-2 ring-transparent transition-shadow focus-within:ring-accent-leaf">
           <SearchIcon className="size-5 shrink-0 text-text-secondary" />
           <input
             value={q}
