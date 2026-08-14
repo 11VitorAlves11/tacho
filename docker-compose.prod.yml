@@ -53,6 +53,16 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: ${REDIS_URL}
+      # `env_file: .env` acima injeta TODO o .env no processo — incluindo
+      # IMAGES_DIR, que aqui só devia servir para resolver ${IMAGES_DIR} no
+      # `volumes:` abaixo (caminho do HOST). Sem esta linha, esse mesmo
+      # valor (ex. /mnt/vmdata/.../mediafiles) também chega ao
+      # `Settings.images_dir` da app (config.py, lido por nome via
+      # pydantic-settings) e substitui o omisso "images" — a app passa a
+      # gravar fotos num caminho absoluto dentro do container que não
+      # corresponde a bind mount nenhum, perdido sempre que o container é
+      # recriado. Esta linha repõe o valor que a app espera.
+      IMAGES_DIR: images
     ports:
       - "${WEB_PORT:-80}:8000"
     volumes:
@@ -70,6 +80,9 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: ${REDIS_URL}
+      # Ver o comentário equivalente no serviço `web` acima — mesma colisão,
+      # mesma correção.
+      IMAGES_DIR: images
     volumes:
       - ${IMAGES_DIR:-tacho_images}:/app/images
     depends_on:
