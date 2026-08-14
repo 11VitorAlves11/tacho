@@ -55,7 +55,7 @@ export function PublicRecipe() {
       </div>
 
       <main className="mx-auto max-w-4xl px-4 sm:px-6">
-        <article className="rounded-2xl bg-card-white p-5 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)] sm:p-8">
+        <article className="rounded-2xl bg-surface p-5 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)] sm:p-8">
           {recipe.image_path && (
             <img
               src={recipeImageUrl(recipe.image_path)}

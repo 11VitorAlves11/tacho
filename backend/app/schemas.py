@@ -305,6 +305,19 @@ class PantryItemOut(BaseModel):
     has_it: bool
 
 
+class PantryExtraction(BaseModel):
+    """Rascunho de artigos reconhecidos numa foto de fatura (Gemini Vision)
+    — mesmo princípio de `RecipeExtraction`: nunca grava sozinho, só
+    alimenta uma lista pré-marcada no frontend para confirmação num toque
+    (`POST /pantry/bulk`)."""
+
+    items: list[str] = []
+
+
+class PantryBulkIn(BaseModel):
+    names: list[str]
+
+
 class GenerateShoppingListRequest(BaseModel):
     # Segunda-feira da semana a agregar — o frontend calcula-a localmente
     # (ver nota sobre fuso horário em MealPlan.tsx) e envia-a já resolvida.

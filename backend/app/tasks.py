@@ -159,10 +159,15 @@ def _scrape(url: str) -> AbstractScraper:
 def import_recipe_from_url(self, url: str, workspace_id: str) -> str:
     scraper = _scrape(url)
 
+    # Gerado já aqui (em vez de deixar o INSERT atribuir um) para a foto
+    # poder ser descarregada logo para a pasta certa (`receitas/<recipe_id>/`)
+    # antes da receita existir na BD.
+    recipe_id = uuid.uuid4()
+
     prep_minutes = _safe_field(scraper.prep_time)
     cook_minutes = _safe_field(scraper.cook_time) or _safe_field(scraper.total_time)
     image_url = _safe_field(scraper.image)
-    image_path = save_recipe_image_from_url(image_url, get_settings()) if image_url else None
+    image_path = save_recipe_image_from_url(image_url, get_settings(), recipe_id) if image_url else None
 
     ingredients = [
         models.Ingredient(position=i, name=name, quantity=quantity, unit=unit)
@@ -194,6 +199,7 @@ def import_recipe_from_url(self, url: str, workspace_id: str) -> str:
     db = SessionLocal()
     try:
         recipe = models.Recipe(
+            id=recipe_id,
             workspace_id=uuid.UUID(workspace_id),
             title=scraper.title(),
             servings=_parse_servings(_safe_field(scraper.yields)),

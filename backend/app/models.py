@@ -150,8 +150,11 @@ class Recipe(Base):
     cook_minutes: Mapped[int | None]
     source_url: Mapped[str | None] = mapped_column(Text)
     notes: Mapped[str | None] = mapped_column(Text)
-    # Só o nome do ficheiro (uuid4 + extensão), guardado em Settings.images_dir
-    # e servido em /images/{image_path} — nunca o caminho absoluto do disco.
+    # Caminho relativo a Settings.images_dir — "receitas/<este id>/<uuid4>.ext"
+    # (app/images.py), servido em /images/{image_path}; nunca o caminho
+    # absoluto do disco. Registos antigos, de antes desta organização por
+    # pastas, podem ainda ter só o nome do ficheiro (sem "/") — também
+    # funciona, StaticFiles serve os dois na mesma.
     image_path: Mapped[str | None] = mapped_column(Text)
     # Informação nutricional por porção, entrada manual (PRD 5.1/11.1 #5) —
     # `app/nutrition.py` pode sugerir valores (Open Food Facts), mas nunca

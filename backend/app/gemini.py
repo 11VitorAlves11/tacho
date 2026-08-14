@@ -35,11 +35,29 @@ _EXTRACTION_PROMPT = (
 )
 
 
+_RECEIPT_PROMPT = (
+    "Esta é uma foto de uma fatura/talão de supermercado em português. "
+    "Extrai só os artigos alimentares ou de despensa comprados (o que "
+    "faria sentido guardar como ingrediente de cozinha), como uma lista "
+    "de nomes genéricos, em português europeu, em minúsculas e no "
+    "singular (ex. 'iogurte natural', 'arroz', 'azeite', 'peito de "
+    "frango' — nunca o nome exato/abreviado da linha da fatura, ex. "
+    "'IOG NAT MIMOSA 4X125G' devia sair como 'iogurte natural'). Ignora "
+    "por completo linhas que não são artigos comprados: total, "
+    "subtotal, IVA, NIF, morada, forma de pagamento, cartão, troco, "
+    "número de talão/fatura, desconto, cartão de cliente, e artigos "
+    "não alimentares (sacos, jornais, produtos de higiene, limpeza, "
+    "etc.). Não repitas o mesmo artigo duas vezes. Não inventes artigos "
+    "que não estão na imagem — se não conseguires ler a fatura, devolve "
+    "uma lista vazia."
+)
+
+
 def is_available(settings: Settings) -> bool:
     return bool(settings.gemini_api_key)
 
 
-def _extract(settings: Settings, contents: list) -> schemas.RecipeExtraction | None:
+def _extract(settings: Settings, contents: list, response_schema: type, is_valid):
     if not is_available(settings):
         return None
     try:
@@ -49,11 +67,11 @@ def _extract(settings: Settings, contents: list) -> schemas.RecipeExtraction | N
             contents=contents,
             config=types.GenerateContentConfig(
                 response_mime_type="application/json",
-                response_schema=schemas.RecipeExtraction,
+                response_schema=response_schema,
             ),
         )
         parsed = response.parsed
-        if not isinstance(parsed, schemas.RecipeExtraction) or not parsed.title.strip():
+        if not isinstance(parsed, response_schema) or not is_valid(parsed):
             return None
         return parsed
     except Exception:
@@ -73,7 +91,7 @@ def extract_from_html(settings: Settings, html: str) -> schemas.RecipeExtraction
     # pedido — o essencial de uma receita está tipicamente nos primeiros
     # blocos do documento.
     truncated = html[:60_000]
-    return _extract(settings, [_EXTRACTION_PROMPT, truncated])
+    return _extract(settings, [_EXTRACTION_PROMPT, truncated], schemas.RecipeExtraction, lambda r: bool(r.title.strip()))
 
 
 def extract_from_images(settings: Settings, images: list[tuple[bytes, str]]) -> schemas.RecipeExtraction | None:
@@ -83,4 +101,16 @@ def extract_from_images(settings: Settings, images: list[tuple[bytes, str]]) -> 
     if not images or len(images) > 3:
         return None
     parts = [types.Part.from_bytes(data=data, mime_type=content_type) for data, content_type in images]
-    return _extract(settings, [_EXTRACTION_PROMPT, *parts])
+    return _extract(
+        settings, [_EXTRACTION_PROMPT, *parts], schemas.RecipeExtraction, lambda r: bool(r.title.strip())
+    )
+
+
+def extract_pantry_items_from_image(settings: Settings, image: tuple[bytes, str]) -> schemas.PantryExtraction | None:
+    """`image`: (bytes, content_type) de uma foto de fatura/talão de
+    supermercado. Resultado só alimenta uma lista pré-marcada no frontend
+    para confirmação num toque (`POST /pantry/bulk`), nunca grava direto —
+    mesmo princípio de `extract_from_images` (ver `schemas.PantryExtraction`)."""
+    data, content_type = image
+    part = types.Part.from_bytes(data=data, mime_type=content_type)
+    return _extract(settings, [_RECEIPT_PROMPT, part], schemas.PantryExtraction, lambda _r: True)

@@ -117,6 +117,10 @@ export interface PantryItem {
   has_it: boolean
 }
 
+export interface PantryExtraction {
+  items: string[]
+}
+
 export interface CookbookSummary {
   id: string
   name: string

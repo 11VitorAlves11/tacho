@@ -419,17 +419,22 @@ def set_recipe_image_cover(
 
 
 def duplicate_recipe(
-    db: Session, workspace_id: uuid.UUID, recipe_id: uuid.UUID, image_path: str | None
+    db: Session, workspace_id: uuid.UUID, recipe_id: uuid.UUID, image_path: str | None, new_id: uuid.UUID
 ) -> models.Recipe | None:
     """Cria uma cópia independente da receita (novo id, sem last_made_at nem
     fonte). `image_path` já vem resolvido pelo router — se a original tem
     foto, o router copia o ficheiro para um nome novo antes de chamar esta
-    função, para que apagar uma receita nunca apague a foto da outra."""
+    função, para que apagar uma receita nunca apague a foto da outra.
+    `new_id` também já vem gerado pelo router — o ficheiro da foto (se
+    houver) já foi copiado para a pasta `receitas/<new_id>/` antes desta
+    receita existir na BD, por isso o id do INSERT tem de ser este mesmo,
+    não um gerado aqui."""
     original = get_recipe(db, workspace_id, recipe_id)
     if original is None:
         return None
 
     copy = models.Recipe(
+        id=new_id,
         workspace_id=workspace_id,
         title=f"{original.title} (cópia)",
         description=original.description,
@@ -731,6 +736,49 @@ def list_pantry_items(db: Session, workspace_id: uuid.UUID) -> list[models.Pantr
         select(models.PantryItem).where(models.PantryItem.workspace_id == workspace_id).order_by(models.PantryItem.name)
     )
     return list(db.scalars(query))
+
+
+def bulk_upsert_pantry_items(db: Session, workspace_id: uuid.UUID, names: list[str]) -> list[models.PantryItem]:
+    """Usado pela importação de fatura (`extract_pantry_items_from_image`
+    + confirmação no frontend): insere os nomes novos e marca `has_it=True`
+    nos que já existiam (por nome normalizado, mesma comparação de
+    `_normalize` usada no filtro "dá para fazer") em vez de um `create_pantry_item`
+    por item — evitava rebentar a meio com `IntegrityError` da constraint
+    `uq_pantry_item_workspace_name` assim que a fatura repetisse um artigo
+    já na despensa."""
+    cleaned: list[str] = []
+    seen_keys: set[str] = set()
+    for raw_name in names:
+        name = raw_name.strip()
+        if not name:
+            continue
+        key = _normalize(name)
+        if key in seen_keys:
+            continue
+        seen_keys.add(key)
+        cleaned.append(name)
+    if not cleaned:
+        return []
+
+    existing = list(
+        db.scalars(select(models.PantryItem).where(models.PantryItem.workspace_id == workspace_id))
+    )
+    existing_by_key = {_normalize(item.name): item for item in existing}
+
+    result: list[models.PantryItem] = []
+    for name in cleaned:
+        item = existing_by_key.get(_normalize(name))
+        if item is not None:
+            item.has_it = True
+        else:
+            item = models.PantryItem(workspace_id=workspace_id, name=name)
+            db.add(item)
+        result.append(item)
+
+    db.commit()
+    for item in result:
+        db.refresh(item)
+    return result
 
 
 def create_pantry_item(db: Session, workspace_id: uuid.UUID, payload: schemas.PantryItemIn) -> models.PantryItem:

@@ -12,7 +12,13 @@ from app.config import get_settings
 from app.database import get_db
 from app.deps import get_workspace_id
 from app.models import User
-from app.images import ALLOWED_CONTENT_TYPES, copy_recipe_image, delete_recipe_image, save_recipe_image
+from app.images import (
+    ALLOWED_CONTENT_TYPES,
+    copy_recipe_image,
+    delete_recipe_image,
+    delete_recipe_images_dir,
+    save_recipe_image,
+)
 from app.schema_org import recipe_to_schema_org
 from app.tasks import import_recipe_from_url
 
@@ -175,8 +181,14 @@ def duplicate_recipe(
     if original is None:
         raise HTTPException(status_code=404, detail="Receita não encontrada")
 
-    image_path = copy_recipe_image(original.image_path, get_settings()) if original.image_path else None
-    return crud.duplicate_recipe(db, workspace_id, recipe_id, image_path)
+    # Gerado aqui (em vez de deixar o INSERT atribuir um) para a foto poder
+    # ser copiada já para a pasta certa (`receitas/<new_id>/…`) antes da
+    # receita nova existir na BD.
+    new_id = uuid.uuid4()
+    image_path = (
+        copy_recipe_image(original.image_path, get_settings(), new_id) if original.image_path else None
+    )
+    return crud.duplicate_recipe(db, workspace_id, recipe_id, image_path, new_id=new_id)
 
 
 @router.post("/{recipe_id}/favorite", response_model=schemas.RecipeOut)
@@ -267,10 +279,17 @@ def delete_recipe(
     recipe = crud.get_recipe(db, workspace_id, recipe_id)
     if recipe is None:
         raise HTTPException(status_code=404, detail="Receita não encontrada")
-    image_path = recipe.image_path
+    settings = get_settings()
+    # Caminho antigo, plano (de antes da organização por pastas) não vive
+    # dentro de receitas/<id>/ — apagado à parte, já que o rmtree da pasta
+    # não o alcança.
+    legacy_image_path = recipe.image_path if recipe.image_path and "/" not in recipe.image_path else None
     crud.delete_recipe(db, workspace_id, recipe_id)
-    if image_path:
-        delete_recipe_image(image_path, get_settings())
+    # Apaga a pasta toda (capa + galeria) duma vez — antes só a capa era
+    # apagada do disco, as fotos da galeria ficavam órfãs (ver images.py).
+    delete_recipe_images_dir(recipe_id, settings)
+    if legacy_image_path:
+        delete_recipe_image(legacy_image_path, settings)
 
 
 @router.post("/{recipe_id}/image", response_model=schemas.RecipeOut)
@@ -287,7 +306,7 @@ async def upload_recipe_image(
 
     settings = get_settings()
     old_image_path = recipe.image_path
-    filename = await save_recipe_image(file, settings)
+    filename = await save_recipe_image(file, settings, recipe_id)
     recipe = crud.set_recipe_image(db, workspace_id, recipe_id, user.id, filename)
     if old_image_path:
         delete_recipe_image(old_image_path, settings)
@@ -302,7 +321,7 @@ async def add_recipe_gallery_image(
     workspace_id: uuid.UUID = Depends(get_workspace_id),
     user: User = Depends(current_active_user),
 ):
-    filename = await save_recipe_image(file, get_settings())
+    filename = await save_recipe_image(file, get_settings(), recipe_id)
     recipe = crud.add_recipe_image(db, workspace_id, recipe_id, user.id, filename)
     if recipe is None:
         delete_recipe_image(filename, get_settings())

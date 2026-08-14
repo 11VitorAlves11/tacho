@@ -445,7 +445,6 @@ export function RecipeDetail() {
               ref={galleryInputRef}
               type="file"
               accept="image/jpeg,image/png,image/webp"
-              capture="environment"
               onChange={handleAddGalleryImage}
               className="hidden"
             />
