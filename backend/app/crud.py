@@ -362,7 +362,13 @@ def add_recipe_image(
         recipe_id=recipe.id,
         filename=filename,
         position=len(recipe.images),
-        is_cover=len(recipe.images) == 0,  # primeira foto da galeria é capa por omissão
+        # Primeira foto da galeria é capa da galeria por omissão — mas só
+        # quando a receita ainda não tem foto de capa própria
+        # (Recipe.image_path); com capa já definida, o badge "Capa" numa
+        # foto da galeria diferente ficava a contradizer a capa real
+        # mostrada no card/hero. Sem capa própria, continua a fazer
+        # sentido destacar logo a primeira foto da galeria.
+        is_cover=len(recipe.images) == 0 and recipe.image_path is None,
     )
     db.add(image)
     db.commit()
