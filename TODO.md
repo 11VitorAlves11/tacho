@@ -1298,21 +1298,26 @@ concluída** quando todos estes estiverem verificados.
       próprio Caddy, sem chegar à CT 202 (ver `homelab/inventory.md`, secção
       CT 210, para o detalhe completo).
 
-      **Por fazer, bloqueado — precisa de ti:**
-      1. Registo DNS A `partilha.alveslab.dev` → IP público de casa, na
-         zona Cloudflare (não o wildcard `*.alveslab.dev` existente).
-      2. Updater DDNS nessa CT (IP público é dinâmico, confirmaste) — só
-         depois de teres o token Cloudflare.
-      3. Firewall Proxmox restringindo a saída da CT 210 só à CT 202 —
-         ficheiros já desenhados, bloqueado pelo classificador de modo
-         automático (liga o interruptor mestre do firewall do datacenter,
-         mesmo sem afectar as outras CTs). Preciso de autorização tua ou
-         que corras os comandos.
-      4. Port-forward 80/443 no router de casa → 192.168.1.210.
-      5. Só depois de 1-4: ligar `SHARE_BASE_URL` no `.env` da CT 202 e
-         testar o link fora de casa (dados móveis, Wi-Fi desligado) — nada
-         correu dentro de uma sessão de código prova que funciona
-         publicamente.
+      **2026-08-14 — concluída, partilha pública em produção.** Registo DNS A
+      (`partilha.alveslab.dev` → IP público de casa, grey cloud na
+      Cloudflare) e port-forward 80/443 → `192.168.1.210` criados pelo
+      utilizador (a primeira tentativa do port-forward não tinha ficado
+      guardada no router — regra criada mas não persistida, corrigido).
+      Firewall Proxmox verificado já aplicado e correto (mais restritivo do
+      que o desenho original — ver `homelab/inventory.md`, secção CT 210).
+      Certificado TLS de produção emitido depois de um `docker-compose
+      restart caddy` (uma conta ACME de staging tinha ficado presa de uma
+      sessão de testes anterior). `SHARE_BASE_URL=https://partilha.alveslab.dev`
+      ligada no `.env` da CT 202 pelo utilizador (segredo de produção, fora
+      do alcance de uma sessão de código) e `web` reiniciado. Testado
+      ponta-a-ponta: token de partilha gerado na app principal, confirmado a
+      funcionar a partir de fora de casa.
+
+      **Por fazer, não bloqueante (o serviço já funciona hoje):** updater
+      DDNS na CT 210 — o IP público de casa é dinâmico, sem isto o registo A
+      fica desatualizado na próxima vez que o ISP o trocar. Precisa de um
+      token Cloudflare com scope `Zone:DNS:Edit`, criado por ti diretamente
+      na CT 210 (nunca colado numa conversa).
 
 ---
 
