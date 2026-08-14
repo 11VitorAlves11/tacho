@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
-import { estimateNutrition, type NutritionEstimate } from '../api/nutrition'
+import { estimateNutrition, OFF_UNAVAILABLE_REASON, type NutritionEstimate } from '../api/nutrition'
 import { createCategory, createTag, listCategories, listTags, recipeImageUrl } from '../api/recipes'
 import type { Category, RecipeInput, Tag } from '../api/types'
 import { CameraIcon, PlusIcon, XIcon } from './icons'
@@ -82,6 +82,9 @@ export function RecipeForm({
   const [estimatedCost, setEstimatedCost] = useState(initial?.estimated_cost?.toString() ?? '')
   const [nutritionEstimate, setNutritionEstimate] = useState<NutritionEstimate | null>(null)
   const [estimating, setEstimating] = useState(false)
+  const [estimateError, setEstimateError] = useState('')
+  const [nutritionStale, setNutritionStale] = useState(false)
+  const appliedSignatureRef = useRef<string | null>(null)
   const [ingredients, setIngredients] = useState<IngredientRow[]>(toIngredientRows(initial))
   const [steps, setSteps] = useState<StepRow[]>(toStepRows(initial))
 
@@ -169,6 +172,7 @@ export function RecipeForm({
     if (estimating) return
     setEstimating(true)
     setNutritionEstimate(null)
+    setEstimateError('')
     try {
       const result = await estimateNutrition(
         ingredients
@@ -178,7 +182,10 @@ export function RecipeForm({
       )
       setNutritionEstimate(result)
     } catch {
-      setNutritionEstimate({ calories_kcal: null, protein_g: null, carbs_g: null, fat_g: null, matched_count: 0, skipped_count: 0 })
+      // Falha ao chamar o próprio endpoint (rede local, 5xx) — distinto de
+      // um 200 com matched_count:0, que já traz skipped_ingredients a
+      // explicar cada ingrediente ignorado.
+      setEstimateError('Não foi possível pedir a estimativa agora. Tenta de novo daqui a pouco.')
     } finally {
       setEstimating(false)
     }
@@ -191,7 +198,18 @@ export function RecipeForm({
     if (nutritionEstimate.carbs_g != null) setCarbsG(nutritionEstimate.carbs_g.toString())
     if (nutritionEstimate.fat_g != null) setFatG(nutritionEstimate.fat_g.toString())
     setNutritionEstimate(null)
+    setNutritionStale(false)
+    appliedSignatureRef.current = JSON.stringify({ servings, ingredients })
   }
+
+  // Os valores nutricionais aplicados ficam gravados como números fixos,
+  // não recalculam sozinhos — avisa quando ingredientes/porções mudam
+  // depois de uma estimativa já aplicada, para não passar por actualizados
+  // sem estar.
+  useEffect(() => {
+    if (appliedSignatureRef.current === null) return
+    setNutritionStale(JSON.stringify({ servings, ingredients }) !== appliedSignatureRef.current)
+  }, [servings, ingredients])
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -526,12 +544,15 @@ export function RecipeForm({
           {estimating ? 'A estimar…' : 'Estimar a partir dos ingredientes (Open Food Facts)'}
         </button>
 
+        {estimateError && (
+          <div className="mt-2 rounded-xl bg-bg-sage p-3 text-sm text-text-secondary">{estimateError}</div>
+        )}
+
         {nutritionEstimate && (
           <div className="mt-2 rounded-xl bg-bg-sage p-3 text-sm">
             {nutritionEstimate.matched_count === 0 ? (
               <p className="text-text-secondary">
-                Não foi possível estimar agora — a Open Food Facts pode estar em baixo, ou nenhum ingrediente foi
-                reconhecido. Podes sempre preencher à mão.
+                Não foi possível estimar — nenhum ingrediente entrou na conta. Podes sempre preencher à mão.
               </p>
             ) : (
               <>
@@ -545,21 +566,39 @@ export function RecipeForm({
                   Aproximada — nem todos os ingredientes/unidades entram na conta, nunca substitui os campos abaixo
                   sem confirmares.
                 </p>
-                <div className="mt-2 flex gap-3">
-                  <button type="button" onClick={applyNutritionEstimate} className="text-sm font-medium text-forest-text">
-                    Aplicar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setNutritionEstimate(null)}
-                    className="text-sm font-medium text-text-secondary"
-                  >
-                    Descartar
-                  </button>
-                </div>
               </>
             )}
+            {nutritionEstimate.skipped_ingredients.length > 0 && (
+              <ul className="mt-2 space-y-0.5 text-xs text-text-secondary">
+                {nutritionEstimate.skipped_ingredients.map((s, i) => (
+                  <li key={i}>
+                    {s.name}: {s.reason === OFF_UNAVAILABLE_REASON ? 'a Open Food Facts pode estar em baixo' : s.reason}
+                  </li>
+                ))}
+              </ul>
+            )}
+            {nutritionEstimate.matched_count > 0 && (
+              <div className="mt-2 flex gap-3">
+                <button type="button" onClick={applyNutritionEstimate} className="text-sm font-medium text-forest-text">
+                  Aplicar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setNutritionEstimate(null)}
+                  className="text-sm font-medium text-text-secondary"
+                >
+                  Descartar
+                </button>
+              </div>
+            )}
           </div>
+        )}
+
+        {nutritionStale && (
+          <p className="mt-2 text-xs text-text-secondary">
+            Alteraste ingredientes ou porções desde a última estimativa aplicada — os valores abaixo podem estar
+            desactualizados.
+          </p>
         )}
 
         <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">

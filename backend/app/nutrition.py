@@ -8,7 +8,26 @@ OFF_SEARCH_URL = "https://world.openfoodfacts.org/api/v2/search"
 # (água) — aproximação grosseira mas aceitável para uma estimativa, não
 # para dados de saúde precisos (o próprio TODO.md já assinala esse risco
 # para a importação por foto via Gemini; aqui aplica-se o mesmo cuidado).
-_GRAMS_PER_UNIT = {"g": 1, "kg": 1000, "ml": 1, "l": 1000, "dl": 100}
+# As unidades de colher/copo são pesos aproximados típicos de receitas PT —
+# variam com o ingrediente, mas ficam muito mais próximos da realidade do
+# que ignorar por completo qualquer receita que as use. Unidades por
+# contagem ("unidade", "dente", "fatia") continuam de fora de propósito: o
+# peso varia demasiado consoante o ingrediente para uma aproximação única
+# fazer sentido.
+_GRAMS_PER_UNIT = {
+    "g": 1,
+    "kg": 1000,
+    "ml": 1,
+    "l": 1000,
+    "dl": 100,
+    "colher de sopa": 15,
+    "c.s.": 15,
+    "colher de chá": 5,
+    "c.c.": 5,
+    "chávena": 240,
+    "copo": 250,
+    "pitada": 1,
+}
 
 _NUTRIMENT_FIELDS = {
     "calories_kcal": "energy-kcal_100g",
@@ -17,13 +36,25 @@ _NUTRIMENT_FIELDS = {
     "fat_g": "fat_100g",
 }
 
+REASON_NO_QUANTITY = "sem quantidade"
+REASON_UNKNOWN_UNIT = "unidade não reconhecida"
+REASON_NO_MATCH = "sem correspondência na Open Food Facts"
+REASON_OFF_UNAVAILABLE = "Open Food Facts indisponível"
+
+
+class _OffLookupFailed(Exception):
+    """Falha de rede/timeout/resposta inesperada ao contactar a Open Food
+    Facts — distinto de "pesquisei e não há correspondência", para a
+    mensagem ao utilizador não confundir os dois motivos."""
+
 
 def _search_off(name: str) -> dict | None:
     """Pesquisa a Open Food Facts pelo nome do ingrediente, devolve o
-    primeiro produto com pelo menos um valor nutricional, ou None em
-    qualquer falha — rede em baixo, timeout, resposta inesperada, sem
-    resultados. Nunca levanta: uma estimativa nunca deve chumbar por causa
-    de um único ingrediente sem correspondência."""
+    primeiro produto com pelo menos um valor nutricional, ou None se a
+    pesquisa correu bem mas não encontrou correspondência. Levanta
+    _OffLookupFailed em caso de falha de rede/timeout/resposta inesperada —
+    ao contrário de antes, este caso já não é silenciosamente tratado como
+    "sem correspondência", para a UI poder distinguir os dois motivos."""
     try:
         response = requests.get(
             OFF_SEARCH_URL,
@@ -33,8 +64,8 @@ def _search_off(name: str) -> dict | None:
         )
         response.raise_for_status()
         products = response.json().get("products", [])
-    except (requests.RequestException, ValueError):
-        return None
+    except (requests.RequestException, ValueError) as exc:
+        raise _OffLookupFailed(name) from exc
 
     for product in products:
         nutriments = product.get("nutriments") or {}
@@ -51,20 +82,34 @@ def estimate_nutrition(ingredients: list[schemas.IngredientIn], servings: int | 
     totals = {key: 0.0 for key in _NUTRIMENT_FIELDS}
     matched = 0
     skipped = 0
+    skipped_ingredients: list[schemas.SkippedIngredient] = []
     portions = servings if servings and servings > 0 else 1
 
     for ingredient in ingredients:
         if ingredient.is_header:
             continue
-        unit = (ingredient.unit or "").strip().lower()
-        grams_per_unit = _GRAMS_PER_UNIT.get(unit)
-        if ingredient.quantity is None or grams_per_unit is None:
+
+        if ingredient.quantity is None:
             skipped += 1
+            skipped_ingredients.append(schemas.SkippedIngredient(name=ingredient.name, reason=REASON_NO_QUANTITY))
             continue
 
-        nutriments = _search_off(ingredient.name)
+        unit = (ingredient.unit or "").strip().lower()
+        grams_per_unit = _GRAMS_PER_UNIT.get(unit)
+        if grams_per_unit is None:
+            skipped += 1
+            skipped_ingredients.append(schemas.SkippedIngredient(name=ingredient.name, reason=REASON_UNKNOWN_UNIT))
+            continue
+
+        try:
+            nutriments = _search_off(ingredient.name)
+        except _OffLookupFailed:
+            skipped += 1
+            skipped_ingredients.append(schemas.SkippedIngredient(name=ingredient.name, reason=REASON_OFF_UNAVAILABLE))
+            continue
         if nutriments is None:
             skipped += 1
+            skipped_ingredients.append(schemas.SkippedIngredient(name=ingredient.name, reason=REASON_NO_MATCH))
             continue
 
         grams = float(ingredient.quantity) * grams_per_unit
@@ -76,7 +121,13 @@ def estimate_nutrition(ingredients: list[schemas.IngredientIn], servings: int | 
 
     if matched == 0:
         return schemas.NutritionEstimate(
-            calories_kcal=None, protein_g=None, carbs_g=None, fat_g=None, matched_count=0, skipped_count=skipped
+            calories_kcal=None,
+            protein_g=None,
+            carbs_g=None,
+            fat_g=None,
+            matched_count=0,
+            skipped_count=skipped,
+            skipped_ingredients=skipped_ingredients,
         )
 
     return schemas.NutritionEstimate(
@@ -86,4 +137,5 @@ def estimate_nutrition(ingredients: list[schemas.IngredientIn], servings: int | 
         fat_g=round(totals["fat_g"] / portions, 1),
         matched_count=matched,
         skipped_count=skipped,
+        skipped_ingredients=skipped_ingredients,
     )

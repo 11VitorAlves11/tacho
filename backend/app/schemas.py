@@ -17,6 +17,11 @@ class NutritionEstimateRequest(BaseModel):
     servings: int | None = None
 
 
+class SkippedIngredient(BaseModel):
+    name: str
+    reason: str
+
+
 class NutritionEstimate(BaseModel):
     calories_kcal: int | None
     protein_g: float | None
@@ -28,6 +33,10 @@ class NutritionEstimate(BaseModel):
     # ingredientes" em vez de fingir precisão que não existe.
     matched_count: int
     skipped_count: int
+    # Nome + motivo de cada ingrediente ignorado, para o frontend explicar
+    # a falha em vez do texto genérico que culpava a Open Food Facts por
+    # omissão mesmo quando o problema era a unidade não reconhecida.
+    skipped_ingredients: list[SkippedIngredient] = []
 
 
 class IngredientOut(IngredientIn):
