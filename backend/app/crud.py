@@ -870,3 +870,41 @@ def generate_shopping_list(db: Session, workspace_id: uuid.UUID, week_start: dat
 
     db.commit()
     return list_shopping_list_items(db, workspace_id)
+
+
+def add_recipe_to_shopping_list(
+    db: Session, workspace_id: uuid.UUID, recipe_id: uuid.UUID
+) -> list[models.ShoppingListItem] | None:
+    """Mesma lógica de dedup de `generate_shopping_list`, mas a partir dos
+    ingredientes de uma única receita em vez de todo o plano semanal.
+    Devolve só os itens novos (não a lista toda), para o frontend poder
+    mostrar "N ingredientes adicionados" sem ter de comparar antes/depois."""
+    recipe = get_recipe(db, workspace_id, recipe_id)
+    if recipe is None:
+        return None
+
+    existing_query = select(models.ShoppingListItem.name).where(
+        models.ShoppingListItem.workspace_id == workspace_id, models.ShoppingListItem.is_checked.is_(False)
+    )
+    existing_names = set(db.scalars(existing_query))
+
+    new_items: list[models.ShoppingListItem] = []
+    seen_this_run: set[str] = set()
+    for ingredient in recipe.ingredients:
+        if ingredient.is_header:
+            continue
+        if ingredient.name in existing_names or ingredient.name in seen_this_run:
+            continue
+        seen_this_run.add(ingredient.name)
+        item = models.ShoppingListItem(
+            workspace_id=workspace_id,
+            name=ingredient.name,
+            quantity=_format_quantity(ingredient.quantity, ingredient.unit),
+        )
+        db.add(item)
+        new_items.append(item)
+
+    db.commit()
+    for item in new_items:
+        db.refresh(item)
+    return new_items

@@ -191,6 +191,18 @@ def duplicate_recipe(
     return crud.duplicate_recipe(db, workspace_id, recipe_id, image_path, new_id=new_id)
 
 
+@router.post("/{recipe_id}/shopping-list", response_model=list[schemas.ShoppingListItemOut])
+def add_recipe_to_shopping_list(
+    recipe_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    workspace_id: uuid.UUID = Depends(get_workspace_id),
+):
+    items = crud.add_recipe_to_shopping_list(db, workspace_id, recipe_id)
+    if items is None:
+        raise HTTPException(status_code=404, detail="Receita não encontrada")
+    return items
+
+
 @router.post("/{recipe_id}/favorite", response_model=schemas.RecipeOut)
 def toggle_recipe_favorite(
     recipe_id: uuid.UUID,

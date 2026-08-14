@@ -4,6 +4,7 @@ import QRCode from 'qrcode'
 import {
   addComment,
   addRecipeGalleryImage,
+  addRecipeToShoppingList,
   deleteComment,
   deleteRecipeGalleryImage,
   duplicateRecipe,
@@ -18,6 +19,7 @@ import type { Recipe } from '../api/types'
 import { PageShell } from '../components/PageShell'
 import {
   CameraIcon,
+  CartIcon,
   ClockIcon,
   CopyIcon,
   EuroIcon,
@@ -50,6 +52,8 @@ export function RecipeDetail() {
   const [commentText, setCommentText] = useState('')
   const [postingComment, setPostingComment] = useState(false)
   const [uploadingGalleryImage, setUploadingGalleryImage] = useState(false)
+  const [addingToShoppingList, setAddingToShoppingList] = useState(false)
+  const [shoppingListFeedback, setShoppingListFeedback] = useState('')
   const galleryInputRef = useRef<HTMLInputElement>(null)
   const [shareState, setShareState] = useState<
     { status: 'loading' } | { status: 'ready'; qrDataUrl: string; shareUrl: string; expiresAt: string } | null
@@ -85,6 +89,24 @@ export function RecipeDetail() {
       navigate(`/receitas/${copy.id}/editar`)
     } finally {
       setDuplicating(false)
+    }
+  }
+
+  async function handleAddToShoppingList() {
+    if (!id || addingToShoppingList) return
+    setAddingToShoppingList(true)
+    setShoppingListFeedback('')
+    try {
+      const added = await addRecipeToShoppingList(id)
+      setShoppingListFeedback(
+        added.length > 0
+          ? `${added.length} ingrediente${added.length > 1 ? 's' : ''} adicionados à lista de compras.`
+          : 'Todos os ingredientes já estavam na lista de compras.',
+      )
+    } catch {
+      setShoppingListFeedback('Não foi possível adicionar à lista de compras.')
+    } finally {
+      setAddingToShoppingList(false)
     }
   }
 
@@ -344,7 +366,21 @@ export function RecipeDetail() {
 
         <div className="mt-8 grid gap-8 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
           <section>
-            <h2 className="text-lg font-semibold text-text-primary">Ingredientes</h2>
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-lg font-semibold text-text-primary">Ingredientes</h2>
+              <button
+                type="button"
+                onClick={handleAddToShoppingList}
+                disabled={addingToShoppingList}
+                className="flex shrink-0 items-center gap-1.5 text-sm font-medium text-forest-text disabled:opacity-50 print:hidden"
+              >
+                <CartIcon className="size-4" />
+                <span className="hidden sm:inline">Adicionar à lista</span>
+              </button>
+            </div>
+            {shoppingListFeedback && (
+              <p className="mt-1.5 text-xs text-text-secondary print:hidden">{shoppingListFeedback}</p>
+            )}
             <ul className="mt-3 space-y-2">
               {recipe.ingredients.map((ing) =>
                 ing.is_header ? (

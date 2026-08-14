@@ -1,5 +1,15 @@
 import { api } from './client'
-import type { Category, ImportStatus, Recipe, RecipeExtraction, RecipeInput, RecipeShare, RecipeSummary, Tag } from './types'
+import type {
+  Category,
+  ImportStatus,
+  Recipe,
+  RecipeExtraction,
+  RecipeInput,
+  RecipeShare,
+  RecipeSummary,
+  ShoppingListItem,
+  Tag,
+} from './types'
 
 export async function listRecipes(params?: {
   categoryId?: string
@@ -53,6 +63,11 @@ export async function shareRecipe(id: string) {
 
 export async function markRecipeMade(id: string) {
   const { data } = await api.post<Recipe>(`/recipes/${id}/mark-made`)
+  return data
+}
+
+export async function addRecipeToShoppingList(id: string) {
+  const { data } = await api.post<ShoppingListItem[]>(`/recipes/${id}/shopping-list`)
   return data
 }
 
