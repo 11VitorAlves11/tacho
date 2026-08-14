@@ -1313,11 +1313,9 @@ concluída** quando todos estes estiverem verificados.
       ponta-a-ponta: token de partilha gerado na app principal, confirmado a
       funcionar a partir de fora de casa.
 
-      **Por fazer, não bloqueante (o serviço já funciona hoje):** updater
-      DDNS na CT 210 — o IP público de casa é dinâmico, sem isto o registo A
-      fica desatualizado na próxima vez que o ISP o trocar. Precisa de um
-      token Cloudflare com scope `Zone:DNS:Edit`, criado por ti diretamente
-      na CT 210 (nunca colado numa conversa).
+      Updater DDNS na CT 210 (`/opt/tacho-share/ddns-update.sh`, cron a cada
+      10min) já existia de 2026-08-12, não estava registado aqui — nada por
+      fazer, infraestrutura da partilha pública está toda fechada.
 
 ---
 
