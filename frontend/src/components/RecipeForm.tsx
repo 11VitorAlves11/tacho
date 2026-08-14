@@ -314,8 +314,8 @@ export function RecipeForm({
 
         <div className="mt-4 grid grid-cols-3 gap-3">
           <div>
-            <label className="block text-sm font-medium text-text-secondary" htmlFor="servings">
-              Porções
+            <label className="block min-h-10 text-sm font-medium text-text-secondary" htmlFor="servings">
+              Porções (und)
             </label>
             <input
               id="servings"
@@ -327,7 +327,7 @@ export function RecipeForm({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-text-secondary" htmlFor="prep">
+            <label className="block min-h-10 text-sm font-medium text-text-secondary" htmlFor="prep">
               Preparação (min)
             </label>
             <input
@@ -340,7 +340,7 @@ export function RecipeForm({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-text-secondary" htmlFor="cook">
+            <label className="block min-h-10 text-sm font-medium text-text-secondary" htmlFor="cook">
               Confeção (min)
             </label>
             <input
