@@ -1,4 +1,9 @@
 .env
+/DESIGN.md
+/PRD-app-receitas-v2.md
+/PRD-app-receitas-v3.2.md
+/PRODUCT.md
+/TODO.md
 backend/.venv/
 backend/__pycache__/
 backend/**/__pycache__/
