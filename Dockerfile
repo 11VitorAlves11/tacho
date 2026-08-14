@@ -24,5 +24,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY backend/ .
 COPY --from=frontend-build /app/dist ./frontend_dist
+RUN chmod +x docker-entrypoint.sh
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Corre as migrações Alembic pendentes antes de arrancar — `alembic upgrade
+# head` é idempotente (não faz nada se já estiver atualizado), por isso é
+# seguro correr sempre, mesmo sem migração nova. Antes disto o passo era
+# manual (`docker-compose exec web alembic upgrade head`), o que tornava
+# perigoso qualquer atualização automática (ex.: botão do Telegram) — código
+# novo podia arrancar contra esquema antigo.
+ENTRYPOINT ["./docker-entrypoint.sh"]
