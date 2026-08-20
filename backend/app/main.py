@@ -56,14 +56,18 @@ FRONTEND_DIST = Path(__file__).resolve().parent.parent / "frontend_dist"
 if FRONTEND_DIST.is_dir():
     app.mount("/assets", StaticFiles(directory=FRONTEND_DIST / "assets"), name="frontend-assets")
 
-    @app.get("/favicon.svg", include_in_schema=False)
-    def favicon() -> FileResponse:
-        return FileResponse(FRONTEND_DIST / "favicon.svg")
-
     # Catch-all registado por último, propositadamente: só apanha caminhos
     # que nenhum router acima serviu — as rotas client-side do React Router
     # (/adicionar, /receitas/{id}, etc.) devolvem sempre o mesmo index.html,
-    # a SPA é que decide o que mostrar.
+    # a SPA é que decide o que mostrar. Mas ficheiros públicos da raiz do
+    # Vite (favicon.svg, manifest.webmanifest, apple-touch-icon.png, sw.js,
+    # ...) também caem aqui — sem este desvio, o browser recebia sempre
+    # index.html/text-html para eles (ex.: o apple-touch-icon nunca era um
+    # PNG válido, por isso o iOS não mostrava o ícone ao adicionar ao ecrã
+    # principal).
     @app.get("/{full_path:path}", include_in_schema=False)
     def spa_fallback(full_path: str) -> FileResponse:
+        candidate = FRONTEND_DIST / full_path
+        if "/" not in full_path and candidate.is_file():
+            return FileResponse(candidate)
         return FileResponse(FRONTEND_DIST / "index.html")
