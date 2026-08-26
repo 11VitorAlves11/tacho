@@ -13,3 +13,7 @@ dist/
 backend/imports/
 backend/images/
 backend/frontend_dist/
+backups/
+docker-compose.override.yml
+coverage/
+.coverage

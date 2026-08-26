@@ -1,0 +1,80 @@
+name: tacho-dev
+
+services:
+  db:
+    image: postgres:16.10-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-tacho}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-tacho-dev}
+      POSTGRES_DB: ${POSTGRES_DB:-tacho}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - tacho_dev_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-tacho} -d ${POSTGRES_DB:-tacho}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:8.2-alpine
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    build: ./backend
+    env_file: .env
+    environment:
+      ENVIRONMENT: development
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-tacho}:${POSTGRES_PASSWORD:-tacho-dev}@db:5432/${POSTGRES_DB:-tacho}
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    volumes:
+      - ./backend:/app
+      - tacho_dev_images:/app/images
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  frontend:
+    build: ./frontend
+    environment:
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
+    ports:
+      - "${FRONTEND_PORT:-5173}:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+
+  worker:
+    build: ./backend
+    env_file: .env
+    environment:
+      ENVIRONMENT: development
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-tacho}:${POSTGRES_PASSWORD:-tacho-dev}@db:5432/${POSTGRES_DB:-tacho}
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - ./backend:/app
+      - tacho_dev_images:/app/images
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: celery -A app.celery_app worker --loglevel=info
+
+volumes:
+  tacho_dev_pgdata:
+  tacho_dev_images:

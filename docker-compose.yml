@@ -1,81 +1,108 @@
 name: tacho
 
+x-app: &app
+  image: ghcr.io/11vitoralves11/tacho:${TACHO_VERSION:-latest}
+  restart: unless-stopped
+  environment:
+    ENVIRONMENT: production
+    POSTGRES_HOST: db
+    POSTGRES_USER: ${POSTGRES_USER:-tacho}
+    POSTGRES_DB: ${POSTGRES_DB:-tacho}
+    REDIS_URL: redis://redis:6379/0
+    TACHO_SECRETS_DIR: /run/tacho-secrets
+    AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-false}
+    CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:8000"]}
+    PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-}
+    SHARE_BASE_URL: ${SHARE_BASE_URL:-}
+    GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+    TRUST_FORWARD_AUTH: ${TRUST_FORWARD_AUTH:-false}
+    FORWARD_AUTH_SECRET: ${FORWARD_AUTH_SECRET:-}
+    FORWARD_AUTH_EMAIL_HEADER: ${FORWARD_AUTH_EMAIL_HEADER:-X-Forwarded-Email}
+  volumes:
+    - tacho_images:/app/images
+    - tacho_secrets:/run/tacho-secrets:ro
+  depends_on:
+    db:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+
 services:
+  secrets-init:
+    image: alpine:3.22
+    restart: "no"
+    volumes:
+      - tacho_secrets:/secrets
+    command:
+      - /bin/sh
+      - -ec
+      - |
+        umask 077
+        test -s /secrets/postgres_password || od -An -N32 -tx1 /dev/urandom | tr -d ' \n' > /secrets/postgres_password
+        test -s /secrets/auth_secret || od -An -N48 -tx1 /dev/urandom | tr -d ' \n' > /secrets/auth_secret
+
   db:
-    image: postgres:16-alpine
+    image: postgres:16.10-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER:-tacho}
+      POSTGRES_DB: ${POSTGRES_DB:-tacho}
+      POSTGRES_PASSWORD_FILE: /run/tacho-secrets/postgres_password
     volumes:
       - tacho_pgdata:/var/lib/postgresql/data
+      - tacho_secrets:/run/tacho-secrets:ro
+    depends_on:
+      secrets-init:
+        condition: service_completed_successfully
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-tacho} -d ${POSTGRES_DB:-tacho}"]
       interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 20
 
   redis:
-    image: redis:7-alpine
+    image: redis:8.2-alpine
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 5s
-      retries: 10
+      retries: 20
 
-  backend:
-    build: ./backend
-    restart: unless-stopped
-    env_file: .env
-    environment:
-      DATABASE_URL: ${DATABASE_URL}
-      REDIS_URL: ${REDIS_URL}
-    ports:
-      - "${BACKEND_PORT:-8000}:8000"
-    volumes:
-      - ./backend:/app
-      # Volume nomeado, mais específico que o bind mount acima — sobrevive a
-      # um deploy sem o bind mount de desenvolvimento (ver PRD Secção 9: as
-      # fotos entram no mesmo esquema de backups da BD).
-      - tacho_images:/app/images
+  migrate:
+    <<: *app
+    restart: "no"
+    command: ["alembic", "upgrade", "head"]
     depends_on:
+      secrets-init:
+        condition: service_completed_successfully
       db:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
-  frontend:
-    build: ./frontend
-    restart: unless-stopped
-    environment:
-      VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
+  web:
+    <<: *app
     ports:
-      - "${FRONTEND_PORT:-5173}:5173"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
+      - "${TACHO_PORT:-8000}:8000"
     depends_on:
-      - backend
+      migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
 
-  celery-worker:
-    build: ./backend
-    restart: unless-stopped
-    env_file: .env
-    environment:
-      DATABASE_URL: ${DATABASE_URL}
-      REDIS_URL: ${REDIS_URL}
-    volumes:
-      - ./backend:/app
+  worker:
+    <<: *app
+    command: ["celery", "-A", "app.celery_app", "worker", "--loglevel=info"]
     depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    command: celery -A app.celery_app worker --loglevel=info
+      migrate:
+        condition: service_completed_successfully
 
 volumes:
   tacho_pgdata:
   tacho_images:
+  tacho_secrets:
