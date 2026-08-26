@@ -1,4 +1,6 @@
 .env
+.mcp.json
+.claude/
 /DESIGN.md
 /PRD-app-receitas-v2.md
 /PRD-app-receitas-v3.2.md
