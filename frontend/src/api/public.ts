@@ -7,3 +7,7 @@ export async function getPublicRecipe(token: string) {
   const { data } = await api.get<PublicRecipe>(`/public/recipes/${token}`)
   return data
 }
+
+export function publicRecipeImageUrl(token: string) {
+  return `${api.defaults.baseURL}/public/recipes/${token}/image`
+}

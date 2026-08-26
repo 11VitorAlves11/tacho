@@ -28,7 +28,7 @@ export function formatQuantity(quantity: number): string {
 }
 
 // Recalcula a quantidade para o número de porções escolhido, sem persistir
-// nada — padrão Mealie (PRD/TODO: "sem mudanças no backend").
+// nothing — scaling is a client-side presentation feature.
 export function scaleQuantity(quantity: number, originalServings: number, desiredServings: number): number {
   return quantity * (desiredServings / originalServings)
 }

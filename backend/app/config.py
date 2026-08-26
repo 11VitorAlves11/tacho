@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -8,13 +9,14 @@ class Settings(BaseSettings):
 
     database_url: str
     redis_url: str
+    environment: str = "development"
     # Assina os cookies de sessão (JWT do fastapi-users) — tem de ser fixo
     # e secreto em produção (.env), nunca o valor por omissão; um valor
     # aleatório a cada arranque invalidava a sessão de todos ao reiniciar.
     auth_secret: str = "dev-secret-change-me-in-production"
     # Cookie "Secure" só é entregue pelo browser em HTTPS — falso por
     # omissão para o dev local (http://localhost) funcionar; produção
-    # (https://receitas.alveslab.dev) tem de o definir true no .env.
+    # HTTPS deployments should set this to true in their environment.
     auth_cookie_secure: bool = False
     cors_origins: list[str] = ["http://localhost:5173"]
     # Caminho relativo ao WORKDIR do container (/app). Em dev resolve para
@@ -33,20 +35,19 @@ class Settings(BaseSettings):
     public_base_url: str | None = None
     # Host do link/QR de partilha pública (`POST /recipes/{id}/share`) —
     # deliberadamente separado de `public_base_url`: aquele é o host
-    # privado (receitas.alveslab.dev, atrás do Authentik) usado também
-    # para `image_url` do export schema.org, enquanto este é o proxy
-    # isolado, sem autenticação, exposto à internet (partilha.alveslab.dev).
+    # private application URL used for schema.org images, while this is the
+    # optional public host used for temporary recipe sharing.
     # Trocar um pelo outro seria errado nos dois sentidos. Sem valor, cai
     # em `public_base_url` (ex. dev local, onde ambos os casos usam o
     # mesmo host único).
     share_base_url: str | None = None
     # Login silencioso quando o pedido já chega autenticado pelo forward-auth
-    # do Authentik (produção, atrás do NPM) — evita pedir login uma segunda
-    # vez a quem o Authentik já validou (ver `routers/auth.py::forward_login`).
+    # external forward-auth proxy — avoids asking for a second login to a
+    # user already authenticated upstream.
     # Desligado por omissão: só liga em produção depois de configurar o NPM
     # para injetar o header de email + o segredo partilhado nesta rota.
     trust_forward_auth: bool = False
-    forward_auth_email_header: str = "X-authentik-email"
+    forward_auth_email_header: str = "X-Forwarded-Email"
     # Só o NPM (não o Authentik) consegue injetar este valor — é o que
     # impede um pedido direto ao backend (contorna o NPM/Authentik, ex.
     # outro container na LAN) de forjar o header de email e entrar como
@@ -60,6 +61,16 @@ class Settings(BaseSettings):
     # API real nesta sessão de desenvolvimento (sem chave disponível) — ver
     # aviso em TODO.md antes de confiar cegamente na extração em produção.
     gemini_api_key: str | None = None
+
+    @model_validator(mode="after")
+    def validate_security_settings(self) -> "Settings":
+        """Refuse known development credentials in a production deployment."""
+        if self.environment.lower() == "production":
+            if self.auth_secret == "dev-secret-change-me-in-production" or len(self.auth_secret) < 32:
+                raise ValueError("AUTH_SECRET must be set to a random value of at least 32 characters")
+            if self.trust_forward_auth and (not self.forward_auth_secret or len(self.forward_auth_secret) < 32):
+                raise ValueError("FORWARD_AUTH_SECRET must contain at least 32 characters when forward auth is enabled")
+        return self
 
     @property
     def async_database_url(self) -> str:

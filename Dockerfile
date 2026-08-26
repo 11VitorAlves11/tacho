@@ -19,8 +19,8 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends libpq-dev gcc \
     && rm -rf /var/lib/apt/lists/*
 
-COPY backend/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+COPY backend/requirements.lock .
+RUN pip install --no-cache-dir -r requirements.lock
 
 COPY backend/ .
 COPY --from=frontend-build /app/dist ./frontend_dist
@@ -33,3 +33,4 @@ RUN chmod +x docker-entrypoint.sh
 # perigoso qualquer atualização automática (ex.: botão do Telegram) — código
 # novo podia arrancar contra esquema antigo.
 ENTRYPOINT ["./docker-entrypoint.sh"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -103,7 +103,7 @@ export async function uploadRecipeImage(id: string, file: File) {
 }
 
 export function recipeImageUrl(imagePath: string) {
-  return `${api.defaults.baseURL}/images/${imagePath}`
+  return `${api.defaults.baseURL}/media/${imagePath}`
 }
 
 export async function addRecipeGalleryImage(id: string, file: File) {

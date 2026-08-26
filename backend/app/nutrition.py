@@ -60,7 +60,7 @@ def _search_off(name: str) -> dict | None:
             OFF_SEARCH_URL,
             params={"search_terms": name, "fields": "nutriments", "page_size": 5},
             timeout=8,
-            headers={"User-Agent": "TachoApp/1.0 (https://receitas.alveslab.dev)"},
+            headers={"User-Agent": "Tacho/2.0 (self-hosted recipe manager)"},
         )
         response.raise_for_status()
         products = response.json().get("products", [])

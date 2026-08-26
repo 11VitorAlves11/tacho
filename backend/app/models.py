@@ -1,9 +1,11 @@
 import uuid
 from datetime import date, datetime
 
+from fastapi_users_db_sqlalchemy import SQLAlchemyBaseUserTableUUID
 from sqlalchemy import (
     Boolean,
     CheckConstraint,
+    Column,
     Date,
     DateTime,
     ForeignKey,
@@ -12,11 +14,9 @@ from sqlalchemy import (
     Table,
     Text,
     UniqueConstraint,
-    Column,
     func,
     text,
 )
-from fastapi_users_db_sqlalchemy import SQLAlchemyBaseUserTableUUID
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -83,9 +83,7 @@ class Workspace(Base):
         back_populates="workspace", cascade="all, delete-orphan"
     )
     pantry_items: Mapped[list["PantryItem"]] = relationship(back_populates="workspace", cascade="all, delete-orphan")
-    members: Mapped[list["WorkspaceMember"]] = relationship(
-        back_populates="workspace", cascade="all, delete-orphan"
-    )
+    members: Mapped[list["WorkspaceMember"]] = relationship(back_populates="workspace", cascade="all, delete-orphan")
 
 
 class User(SQLAlchemyBaseUserTableUUID, Base):
@@ -113,9 +111,7 @@ class WorkspaceMember(Base):
     __table_args__ = (UniqueConstraint("workspace_id", "user_id", name="uq_workspace_member"),)
 
     id: Mapped[uuid.UUID] = _uuid_pk()
-    workspace_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE")
-    )
+    workspace_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"))
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"))
     joined_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
@@ -140,9 +136,7 @@ class Recipe(Base):
     )
 
     id: Mapped[uuid.UUID] = _uuid_pk()
-    workspace_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE")
-    )
+    workspace_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"))
     title: Mapped[str] = mapped_column(Text)
     description: Mapped[str | None] = mapped_column(Text)
     servings: Mapped[int | None]
@@ -306,9 +300,7 @@ class Category(Base):
     __table_args__ = (UniqueConstraint("workspace_id", "name", name="uq_category_workspace_name"),)
 
     id: Mapped[uuid.UUID] = _uuid_pk()
-    workspace_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE")
-    )
+    workspace_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"))
     name: Mapped[str] = mapped_column(Text)
 
     workspace: Mapped["Workspace"] = relationship(back_populates="categories")
@@ -320,9 +312,7 @@ class Tag(Base):
     __table_args__ = (UniqueConstraint("workspace_id", "name", name="uq_tag_workspace_name"),)
 
     id: Mapped[uuid.UUID] = _uuid_pk()
-    workspace_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE")
-    )
+    workspace_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"))
     name: Mapped[str] = mapped_column(Text)
 
     workspace: Mapped["Workspace"] = relationship(back_populates="tags")
@@ -338,9 +328,7 @@ class Cookbook(Base):
     __tablename__ = "cookbooks"
 
     id: Mapped[uuid.UUID] = _uuid_pk()
-    workspace_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE")
-    )
+    workspace_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"))
     name: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
@@ -356,14 +344,10 @@ class MealPlanEntry(Base):
     tipo `date` importado do datetime na anotação da classe."""
 
     __tablename__ = "meal_plan_entries"
-    __table_args__ = (
-        UniqueConstraint("workspace_id", "day", "meal_type", name="uq_meal_plan_slot"),
-    )
+    __table_args__ = (UniqueConstraint("workspace_id", "day", "meal_type", name="uq_meal_plan_slot"),)
 
     id: Mapped[uuid.UUID] = _uuid_pk()
-    workspace_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE")
-    )
+    workspace_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"))
     day: Mapped[date] = mapped_column(Date)
     # "almoco" | "jantar" — texto simples, sem enum na BD, consistente com o
     # resto do modelo (nenhuma outra tabela usa enum do Postgres).
@@ -385,9 +369,7 @@ class ShoppingListItem(Base):
     __tablename__ = "shopping_list_items"
 
     id: Mapped[uuid.UUID] = _uuid_pk()
-    workspace_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE")
-    )
+    workspace_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"))
     name: Mapped[str] = mapped_column(Text)
     quantity: Mapped[str | None] = mapped_column(Text)
     is_checked: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
@@ -407,9 +389,7 @@ class PantryItem(Base):
     __table_args__ = (UniqueConstraint("workspace_id", "name", name="uq_pantry_item_workspace_name"),)
 
     id: Mapped[uuid.UUID] = _uuid_pk()
-    workspace_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE")
-    )
+    workspace_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"))
     name: Mapped[str] = mapped_column(Text)
     has_it: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
 

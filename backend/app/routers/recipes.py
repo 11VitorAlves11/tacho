@@ -11,14 +11,15 @@ from app.celery_app import celery_app
 from app.config import get_settings
 from app.database import get_db
 from app.deps import get_workspace_id
-from app.models import User
 from app.images import (
     ALLOWED_CONTENT_TYPES,
     copy_recipe_image,
     delete_recipe_image,
     delete_recipe_images_dir,
     save_recipe_image,
+    validate_remote_url,
 )
+from app.models import User
 from app.schema_org import recipe_to_schema_org
 from app.tasks import import_recipe_from_url
 
@@ -37,7 +38,14 @@ def list_recipes(
     user: User = Depends(current_active_user),
 ):
     return crud.list_recipes(
-        db, workspace_id, user.id, category_id=category_id, tag_id=tag_id, q=q, favorite_only=favorite, makeable_only=makeable
+        db,
+        workspace_id,
+        user.id,
+        category_id=category_id,
+        tag_id=tag_id,
+        q=q,
+        favorite_only=favorite,
+        makeable_only=makeable,
     )
 
 
@@ -58,6 +66,10 @@ def import_recipe(
     payload: schemas.ImportRequest,
     workspace_id: uuid.UUID = Depends(get_workspace_id),
 ):
+    try:
+        validate_remote_url(str(payload.url))
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
     task = import_recipe_from_url.delay(str(payload.url), str(workspace_id))
     return schemas.ImportStatus(task_id=task.id, status="pending")
 
@@ -146,7 +158,7 @@ def export_recipe_schema_org(
         raise HTTPException(status_code=404, detail="Receita não encontrada")
     settings = get_settings()
     base_url = settings.public_base_url or str(request.base_url).rstrip("/")
-    image_url = f"{base_url}/images/{recipe.image_path}" if recipe.image_path else None
+    image_url = f"{base_url}/media/{recipe.image_path}" if recipe.image_path else None
     return JSONResponse(content=recipe_to_schema_org(recipe, image_url), media_type="application/ld+json")
 
 
@@ -185,9 +197,7 @@ def duplicate_recipe(
     # ser copiada já para a pasta certa (`receitas/<new_id>/…`) antes da
     # receita nova existir na BD.
     new_id = uuid.uuid4()
-    image_path = (
-        copy_recipe_image(original.image_path, get_settings(), new_id) if original.image_path else None
-    )
+    image_path = copy_recipe_image(original.image_path, get_settings(), new_id) if original.image_path else None
     return crud.duplicate_recipe(db, workspace_id, recipe_id, image_path, new_id=new_id)
 
 

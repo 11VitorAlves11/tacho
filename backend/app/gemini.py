@@ -91,7 +91,9 @@ def extract_from_html(settings: Settings, html: str) -> schemas.RecipeExtraction
     # pedido — o essencial de uma receita está tipicamente nos primeiros
     # blocos do documento.
     truncated = html[:60_000]
-    return _extract(settings, [_EXTRACTION_PROMPT, truncated], schemas.RecipeExtraction, lambda r: bool(r.title.strip()))
+    return _extract(
+        settings, [_EXTRACTION_PROMPT, truncated], schemas.RecipeExtraction, lambda r: bool(r.title.strip())
+    )
 
 
 def extract_from_images(settings: Settings, images: list[tuple[bytes, str]]) -> schemas.RecipeExtraction | None:
@@ -101,9 +103,7 @@ def extract_from_images(settings: Settings, images: list[tuple[bytes, str]]) -> 
     if not images or len(images) > 3:
         return None
     parts = [types.Part.from_bytes(data=data, mime_type=content_type) for data, content_type in images]
-    return _extract(
-        settings, [_EXTRACTION_PROMPT, *parts], schemas.RecipeExtraction, lambda r: bool(r.title.strip())
-    )
+    return _extract(settings, [_EXTRACTION_PROMPT, *parts], schemas.RecipeExtraction, lambda r: bool(r.title.strip()))
 
 
 def extract_pantry_items_from_image(settings: Settings, image: tuple[bytes, str]) -> schemas.PantryExtraction | None:

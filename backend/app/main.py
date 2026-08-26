@@ -9,12 +9,12 @@ from fastapi.staticfiles import StaticFiles
 from app.auth import auth_backend, fastapi_users
 from app.config import get_settings
 from app.routers import auth as auth_router
-from app.routers import cookbooks, nutrition, pantry, planning, public, recipes, taxonomy
+from app.routers import cookbooks, media, nutrition, pantry, planning, public, recipes, taxonomy
 from app.schemas import UserRead, UserUpdate
 
 settings = get_settings()
 
-app = FastAPI(title="Tacho API", version="0.1.0")
+app = FastAPI(title="Tacho API", version=os.getenv("TACHO_VERSION", "development"))
 
 app.add_middleware(
     CORSMiddleware,
@@ -37,9 +37,9 @@ app.include_router(cookbooks.router)
 app.include_router(pantry.router)
 app.include_router(nutrition.router)
 app.include_router(public.router)
+app.include_router(media.router)
 
 os.makedirs(settings.images_dir, exist_ok=True)
-app.mount("/images", StaticFiles(directory=settings.images_dir), name="images")
 
 
 @app.get("/health")

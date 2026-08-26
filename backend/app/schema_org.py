@@ -53,9 +53,7 @@ def recipe_to_schema_org(recipe: models.Recipe, image_url: str | None) -> dict:
         data["recipeIngredient"] = ingredients
 
     if recipe.steps:
-        data["recipeInstructions"] = [
-            {"@type": "HowToStep", "text": step.instruction} for step in recipe.steps
-        ]
+        data["recipeInstructions"] = [{"@type": "HowToStep", "text": step.instruction} for step in recipe.steps]
 
     if recipe.categories:
         data["recipeCategory"] = [c.name for c in recipe.categories]

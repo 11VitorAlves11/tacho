@@ -2,7 +2,7 @@ import re
 import secrets
 import unicodedata
 import uuid
-from datetime import date, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
@@ -102,9 +102,7 @@ def list_recipes(
         tsquery = _prefix_tsquery(q)
         if tsquery is not None:
             query = query.where(
-                func.to_tsvector("portuguese", models.Recipe.title).op("@@")(
-                    func.to_tsquery("portuguese", tsquery)
-                )
+                func.to_tsvector("portuguese", models.Recipe.title).op("@@")(func.to_tsquery("portuguese", tsquery))
             )
     recipes = list(db.scalars(query.order_by(models.Recipe.title)))
     if makeable_only:
@@ -147,7 +145,7 @@ def create_recipe_share(db: Session, workspace_id: uuid.UUID, recipe_id: uuid.UU
     if recipe is None:
         return None
     recipe.share_token = secrets.token_urlsafe(24)
-    recipe.share_expires_at = datetime.now(timezone.utc) + timedelta(hours=5)
+    recipe.share_expires_at = datetime.now(UTC) + timedelta(hours=5)
     db.commit()
     db.refresh(recipe)
     return recipe
@@ -159,14 +157,18 @@ def get_recipe_by_share_token(db: Session, token: str) -> models.Recipe | None:
     e mais estreito que `_recipe_query`: a vista pública nunca mostra
     comentários, notas pós-confeção nem a galeria de fotos extra (decisão
     do utilizador — só o conteúdo da receita em si)."""
-    query = select(models.Recipe).where(models.Recipe.share_token == token).options(
-        selectinload(models.Recipe.ingredients),
-        selectinload(models.Recipe.steps),
-        selectinload(models.Recipe.categories),
-        selectinload(models.Recipe.tags),
+    query = (
+        select(models.Recipe)
+        .where(models.Recipe.share_token == token)
+        .options(
+            selectinload(models.Recipe.ingredients),
+            selectinload(models.Recipe.steps),
+            selectinload(models.Recipe.categories),
+            selectinload(models.Recipe.tags),
+        )
     )
     recipe = db.scalars(query).first()
-    if recipe is None or recipe.share_expires_at is None or recipe.share_expires_at < datetime.now(timezone.utc):
+    if recipe is None or recipe.share_expires_at is None or recipe.share_expires_at < datetime.now(UTC):
         return None
     return recipe
 
@@ -203,9 +205,7 @@ def create_recipe(db: Session, workspace_id: uuid.UUID, payload: schemas.RecipeC
         fat_g=payload.fat_g,
         estimated_cost=payload.estimated_cost,
         ingredients=[
-            models.Ingredient(
-                position=i, name=ing.name, quantity=ing.quantity, unit=ing.unit, is_header=ing.is_header
-            )
+            models.Ingredient(position=i, name=ing.name, quantity=ing.quantity, unit=ing.unit, is_header=ing.is_header)
             for i, ing in enumerate(payload.ingredients)
         ],
         steps=[
@@ -242,9 +242,7 @@ def update_recipe(
     recipe.fat_g = payload.fat_g
     recipe.estimated_cost = payload.estimated_cost
     recipe.ingredients = [
-        models.Ingredient(
-            position=i, name=ing.name, quantity=ing.quantity, unit=ing.unit, is_header=ing.is_header
-        )
+        models.Ingredient(position=i, name=ing.name, quantity=ing.quantity, unit=ing.unit, is_header=ing.is_header)
         for i, ing in enumerate(payload.ingredients)
     ]
     recipe.steps = [
@@ -304,11 +302,13 @@ def toggle_recipe_favorite(
     return recipe
 
 
-def mark_recipe_made(db: Session, workspace_id: uuid.UUID, recipe_id: uuid.UUID, user_id: uuid.UUID) -> models.Recipe | None:
+def mark_recipe_made(
+    db: Session, workspace_id: uuid.UUID, recipe_id: uuid.UUID, user_id: uuid.UUID
+) -> models.Recipe | None:
     recipe = get_recipe(db, workspace_id, recipe_id, user_id)
     if recipe is None:
         return None
-    recipe.last_made_at = datetime.now(timezone.utc)
+    recipe.last_made_at = datetime.now(UTC)
     db.commit()
     db.refresh(recipe)
     return recipe
@@ -376,7 +376,9 @@ def add_recipe_image(
     return recipe
 
 
-def get_recipe_image(db: Session, workspace_id: uuid.UUID, recipe_id: uuid.UUID, image_id: uuid.UUID) -> models.RecipeImage | None:
+def get_recipe_image(
+    db: Session, workspace_id: uuid.UUID, recipe_id: uuid.UUID, image_id: uuid.UUID
+) -> models.RecipeImage | None:
     query = select(models.RecipeImage).where(
         models.RecipeImage.id == image_id,
         models.RecipeImage.recipe_id == recipe_id,
@@ -632,9 +634,7 @@ def _meal_plan_query(workspace_id: uuid.UUID):
 def list_meal_plan_entries(
     db: Session, workspace_id: uuid.UUID, user_id: uuid.UUID, start: date, end: date
 ) -> list[models.MealPlanEntry]:
-    query = _meal_plan_query(workspace_id).where(
-        models.MealPlanEntry.day >= start, models.MealPlanEntry.day <= end
-    )
+    query = _meal_plan_query(workspace_id).where(models.MealPlanEntry.day >= start, models.MealPlanEntry.day <= end)
     entries = list(db.scalars(query).unique())
     # MealPlanEntryOut.recipe é um RecipeSummary — exige is_favorite, que só
     # existe depois de anotado (ver models.py/_annotate_favorites).
@@ -766,9 +766,7 @@ def bulk_upsert_pantry_items(db: Session, workspace_id: uuid.UUID, names: list[s
     if not cleaned:
         return []
 
-    existing = list(
-        db.scalars(select(models.PantryItem).where(models.PantryItem.workspace_id == workspace_id))
-    )
+    existing = list(db.scalars(select(models.PantryItem).where(models.PantryItem.workspace_id == workspace_id)))
     existing_by_key = {_normalize(item.name): item for item in existing}
 
     result: list[models.PantryItem] = []

@@ -34,7 +34,7 @@ async def get_user_db(session: AsyncSession = Depends(get_async_session)):
 
 
 class UserManager(UUIDIDMixin, BaseUserManager[User, uuid.UUID]):
-    # Sem SMTP no homelab (decisão #2 do TODO.md) — não há fluxo de
+    # No SMTP is required by the default local account flow — there is no
     # verificação de email nem de "esqueci-me da password" por link,
     # por isso estes tokens nunca chegam a ser enviados a lado nenhum;
     # só têm de existir para a classe base assinar os JWT internos.
@@ -48,7 +48,7 @@ async def get_user_manager(user_db=Depends(get_user_db)):
 
 cookie_transport = CookieTransport(
     cookie_name="tacho_session",
-    cookie_max_age=60 * 60 * 24 * 30,  # 30 dias — uso pessoal/agregado, atrás do Authentik em produção
+    cookie_max_age=60 * 60 * 24 * 30,  # 30 days; deployment-specific SSO is optional
     cookie_secure=settings.auth_cookie_secure,
     cookie_httponly=True,
     cookie_samesite="lax",

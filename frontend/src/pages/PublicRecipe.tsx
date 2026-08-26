@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { getPublicRecipe } from '../api/public'
-import { recipeImageUrl } from '../api/recipes'
+import { getPublicRecipe, publicRecipeImageUrl } from '../api/public'
 import type { PublicRecipe as PublicRecipeType } from '../api/types'
 import { ClockIcon, PotIcon, ServingsIcon } from '../components/icons'
 import { formatQuantity } from '../lib/quantity'
@@ -58,7 +57,7 @@ export function PublicRecipe() {
         <article className="rounded-2xl bg-surface p-5 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)] sm:p-8">
           {recipe.image_path && (
             <img
-              src={recipeImageUrl(recipe.image_path)}
+              src={publicRecipeImageUrl(token!)}
               alt=""
               className="aspect-video w-full rounded-2xl object-cover"
             />
