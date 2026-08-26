@@ -1,19 +1,18 @@
-# Copy this file outside the public repository or into a private infrastructure
-# repository before adding real host paths.
+# Copy this file to `docker-compose.override.yml` only when bind mounts are
+# required. Set `TACHO_DATA_DIR` to a directory you control.
 services:
   db:
     volumes:
-      - /srv/tacho/postgres:/var/lib/postgresql/data
+      - ${TACHO_DATA_DIR:-./.data}/postgres:/var/lib/postgresql/data
   web:
     volumes:
-      - /srv/tacho/images:/app/images
+      - ${TACHO_DATA_DIR:-./.data}/images:/app/images
       - tacho_secrets:/run/tacho-secrets:ro
   worker:
     volumes:
-      - /srv/tacho/images:/app/images
+      - ${TACHO_DATA_DIR:-./.data}/images:/app/images
       - tacho_secrets:/run/tacho-secrets:ro
   migrate:
     volumes:
-      - /srv/tacho/images:/app/images
+      - ${TACHO_DATA_DIR:-./.data}/images:/app/images
       - tacho_secrets:/run/tacho-secrets:ro
-
