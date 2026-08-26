@@ -1,0 +1,53 @@
+[project]
+name = "tacho"
+version = "2.0.0"
+description = "Self-hosted recipe and kitchen management"
+requires-python = ">=3.12"
+dependencies = [
+  "alembic==1.19.0",
+  "asyncpg==0.31.0",
+  "celery==5.6.3",
+  "fastapi-users[sqlalchemy]==15.0.5",
+  "fastapi==0.141.1",
+  "google-genai==2.17.0",
+  "psycopg2-binary==2.9.12",
+  "pydantic-settings==2.14.2",
+  "python-multipart==0.0.32",
+  "recipe-scrapers==15.11.0",
+  "redis==8.1.0",
+  "requests==2.34.2",
+  "sqlalchemy==2.0.51",
+  "uvicorn[standard]==0.52.1",
+]
+
+[dependency-groups]
+dev = [
+  "httpx>=0.28,<0.29",
+  "mypy>=1.17,<2",
+  "pip-audit>=2.9,<3",
+  "pytest>=9.0.3,<10",
+  "pytest-cov>=6.2,<7",
+  "ruff>=0.12,<0.13",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+pythonpath = ["."]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["B008", "B904", "E501", "UP017"]
+
+[tool.mypy]
+python_version = "3.12"
+check_untyped_defs = true
+no_implicit_optional = true
+warn_unused_ignores = true
+exclude = ["alembic/versions"]
+ignore_missing_imports = true
+disable_error_code = ["attr-defined", "arg-type", "call-arg", "return-value"]
