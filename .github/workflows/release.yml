@@ -18,10 +18,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          case "$GITHUB_REF_NAME" in
-            v[0-9]*.[0-9]*.[0-9]*) ;;
-            *) echo "Release tag must use vX.Y.Z: $GITHUB_REF_NAME" >&2; exit 1 ;;
-          esac
+          if [[ ! "$GITHUB_REF_NAME" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Release tag must use vX.Y.Z: $GITHUB_REF_NAME" >&2
+            exit 1
+          fi
           VERSION="${GITHUB_REF_NAME#v}"
           test "$VERSION" = "$(python -c 'import tomllib; print(tomllib.load(open("backend/pyproject.toml", "rb"))["project"]["version"])')"
           test "$VERSION" = "$(node -p 'require("./frontend/package.json").version')"
