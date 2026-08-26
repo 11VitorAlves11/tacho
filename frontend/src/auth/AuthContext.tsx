@@ -13,7 +13,7 @@ interface AuthState {
   // distingue "ainda não sabemos" de "sabemos que não há sessão" (null).
   user: CurrentUser | null | undefined
   needsSetup: boolean | undefined
-  // Authentik já identificou esta pessoa via forward-auth, mas falta ação
+  // O proxy já identificou esta pessoa via forward-auth, mas falta ação
   // do admin do lado do Tacho (conta inexistente/inativa/sem agregado) —
   // `App.tsx` mostra uma página de erro em vez do ecrã de login.
   forwardAuthBlocked: ForwardAuthBlock | null
@@ -34,7 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let blocked: ForwardAuthBlock | null = null
 
     // Sem sessão própria ainda — tenta o login silencioso via forward-auth
-    // (produção, atrás do Authentik) antes de assumir que é preciso mostrar
+    // (produção, atrás de um proxy confiável) antes de assumir que é preciso mostrar
     // a página de login. Best-effort: em dev ou com forward-auth desligado
     // no backend, isto dá sempre `not_applicable` e `user` continua null.
     if (!user) {

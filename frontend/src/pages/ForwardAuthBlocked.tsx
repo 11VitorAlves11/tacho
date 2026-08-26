@@ -10,7 +10,7 @@ const MESSAGES: Record<ForwardLoginBlockReason, string> = {
 
 export function ForwardAuthBlocked({ reason, email }: { reason: ForwardLoginBlockReason; email?: string }) {
   return (
-    <AuthLayout title="Tacho" subtitle="Sessão iniciada no Authentik, mas ainda falta um passo.">
+    <AuthLayout title="Tacho" subtitle="Sessão iniciada pelo proxy, mas ainda falta um passo.">
       <p className="text-sm text-text-primary">{MESSAGES[reason]}</p>
       {email && (
         <p className="mt-3 text-xs text-text-secondary">

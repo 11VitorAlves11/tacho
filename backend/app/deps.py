@@ -16,7 +16,7 @@ def get_workspace_id(
     """Resolve a workspace do utilizador com sessão válida (cookie).
 
     O Tacho tem sempre uma única workspace por utilizador — sem troca de
-    workspace nem papéis, ao contrário do Securo (decisão #1 do TODO.md) —
+    workspace nem papéis —
     por isso a primeira (e única) linha em `workspace_members` chega.
     `current_active_user` já garante 401 sem sessão válida; aqui só falta
     o caso residual de um utilizador autenticado sem membership (não

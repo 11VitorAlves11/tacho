@@ -14,14 +14,14 @@ Copy `.env.example` to `.env`. Empty optional values disable their feature.
 | `GEMINI_API_KEY` | Optional AI extraction | disabled |
 | `TRUST_FORWARD_AUTH` | Enable trusted proxy login | `false` |
 | `FORWARD_AUTH_SECRET` | Shared proxy/backend secret | empty |
-| `FORWARD_AUTH_EMAIL_HEADER` | Header containing verified email | `X-authentik-email` |
+| `FORWARD_AUTH_EMAIL_HEADER` | Header containing the verified identity email | `X-Forwarded-Email` |
 
 ## Secrets
 
 The generic Compose generates the database password and `AUTH_SECRET` inside
 `tacho_secrets`. They are not stored in `.env` or printed during normal startup.
 
-Forward-auth is different: its secret must be shared with an external proxy.
+Forward-auth is different: its secret must be shared with an external trusted proxy.
 Generate it with `openssl rand -hex 32`, store it in `.env` with restrictive
 permissions, and ensure the proxy removes client-provided identity/secret
 headers before injecting trusted values.
@@ -32,4 +32,3 @@ Named volumes are the portable default. Operators who require bind mounts
 should keep their paths in a private Compose override. A sanitized example is
 provided as `docker-compose.override.example.yml`; do not commit the effective
 override or host-specific paths to this repository.
-

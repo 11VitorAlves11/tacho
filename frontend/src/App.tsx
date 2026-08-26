@@ -45,7 +45,7 @@ function AppRoutes() {
   if (user === null) {
     if (needsSetup) {
       // Prioridade sobre forwardAuthBlocked: no arranque a frio (zero
-      // contas), a primeira pessoa a entrar via Authentik também dá
+      // contas), a primeira pessoa a entrar via forward-auth também dá
       // `no_account` — mas aqui o passo certo é criar a conta em /setup,
       // não mostrar a página de erro.
       return (

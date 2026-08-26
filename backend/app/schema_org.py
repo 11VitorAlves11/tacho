@@ -25,7 +25,7 @@ def _ingredient_line(ing: models.Ingredient) -> str:
 def recipe_to_schema_org(recipe: models.Recipe, image_url: str | None) -> dict:
     """Serializa a receita no formato schema.org/Recipe (JSON-LD) — o mesmo
     standard que os sites de receitas publicam e que o recipe-scrapers lê,
-    para qualquer app futura poder importar sem script dedicado (TODO.md)."""
+    para qualquer app futura poder importar sem script dedicado."""
     data: dict = {
         "@context": "https://schema.org/",
         "@type": "Recipe",

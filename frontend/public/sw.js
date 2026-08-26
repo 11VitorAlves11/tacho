@@ -70,7 +70,7 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  if (url.pathname.startsWith('/recipes/') || url.pathname.startsWith('/images/')) {
+  if (url.pathname.startsWith('/recipes/') || url.pathname.startsWith('/media/')) {
     event.respondWith(networkFirstActiveRecipe(request))
   }
 })

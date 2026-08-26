@@ -6,7 +6,7 @@ import { ChevronLeftIcon, ClockIcon } from '../components/icons'
 
 const LARGE_TEXT_KEY = 'tacho:cook-mode-large-text'
 
-// O Modo Cozinha já é, por design, o "modo escuro" da app (DESIGN.md: o
+// O Modo Cozinha já é, por design, o "modo escuro" da app (o
 // único lugar onde a marca vira fundo cheio) — fica sempre igual,
 // independentemente do tema claro/escuro do resto da app. Fixa aqui os
 // tokens adaptáveis aos valores de tema claro, para nunca herdar as
@@ -72,7 +72,7 @@ export function CookMode() {
       .catch(() => {})
   }, [recipe])
 
-  // "sem bloqueio automático do ecrã" (PRD 4.5) — pede um wake lock
+  // "sem bloqueio automático do ecrã" — pede um wake lock
   // enquanto o Modo Cozinha está aberto; falha em silêncio em navegadores
   // sem suporte (ex. Safari iOS mais antigo).
   useEffect(() => {

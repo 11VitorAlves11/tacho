@@ -1,13 +1,13 @@
-"""Importação inteligente via Gemini (TODO.md): (a) fallback de extração
+"""Importação inteligente via Gemini: (a) fallback de extração
 quando o `recipe-scrapers` falha ou devolve resultado incompleto; (b)
 importação por foto (Vision). Opcional — sem `Settings.gemini_api_key`,
 `is_available()` devolve False e quem chamar isto tem de tratar isso como
 "sem sugestão", nunca como erro.
 
 ⚠️ NÃO TESTADO CONTRA A API REAL nesta sessão de desenvolvimento — sem
-chave disponível. TODO.md tem o aviso completo; validar cedo com casos
+ chave disponível. Validar cedo com casos
 reais (URLs que o recipe-scrapers falha, fotos de livros PT) antes de
-confiar nisto em produção. Mesmo risco já identificado no PRD para dados
+ confiar nisto em produção. Há o mesmo risco para dados
 de saúde (nutrição): um LLM pode "corrigir" quantidades/texto
 silenciosamente — por isso isto nunca grava sozinho, só alimenta um
 rascunho para revisão manual (ver schemas.RecipeExtraction)."""

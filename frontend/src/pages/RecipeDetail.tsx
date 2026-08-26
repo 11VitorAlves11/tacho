@@ -328,7 +328,7 @@ export function RecipeDetail() {
           )}
         </div>
 
-        {/* O hero number mostra sempre o tempo total (DESIGN.md, "Hierarchy" —
+        {/* O hero number mostra sempre o tempo total ("Hierarchy" —
             um único hero number por métrica); a repartição prep/confeção fica
             como legenda secundária, só quando ambos os tempos são conhecidos. */}
         {recipe.prep_minutes != null && recipe.cook_minutes != null && (

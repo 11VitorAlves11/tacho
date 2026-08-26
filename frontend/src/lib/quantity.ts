@@ -1,5 +1,5 @@
 // Frações comuns de cozinha como glifo unicode em vez de decimal — "½
-// chávena" em vez de "0.5 chávena" (TODO.md). Tolerância cobre o
+// chávena" em vez de "0.5 chávena". Tolerância cobre o
 // arredondamento próprio do parser de importação (backend/app/tasks.py::
 // _parse_quantity arredonda a 2 casas: 1/3 vira 0.33, não 0.333…) e o erro
 // de vírgula flutuante ao escalar porções.

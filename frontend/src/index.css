@@ -5,7 +5,7 @@
 @import "@fontsource/inter/700.css";
 
 /*
-  Tokens verbatim do PRD-app-receitas-v2.md, Secção 6.2 (mini design
+  Tokens do sistema visual do produto, Secção 6.2 (mini design
   system) — este ficheiro é a autoridade visual, não invenção nossa.
 */
 @theme {
@@ -30,7 +30,7 @@
   --color-forest-text: #2d5f3f;
 }
 
-/* Dark mode — variante escura dos tokens neutros do DESIGN.md, nunca das
+/* Dark mode — variante escura dos tokens neutros do sistema visual, nunca das
    cores de marca usadas como fundo (primary-forest, accent-leaf,
    accent-orange, o gradiente do hero) — essas mantêm-se, só o contexto à
    volta escurece. --color-forest-text é a exceção: verde-floresta como

@@ -13,7 +13,7 @@ from app.models import User
 settings = get_settings()
 
 # Motor assíncrono próprio, só para autenticação — ver nota em
-# `Settings.async_database_url` e a decisão #1 do TODO.md sobre porque
+# `Settings.async_database_url` e a separação entre os drivers porque
 # `fastapi_users_db_sqlalchemy` não tem variante síncrona. Mesma BD do
 # `Session` síncrono usado em todo o resto da app, driver diferente. Pool
 # pequeno de propósito — só faz uma leitura por pedido (validar sessão),

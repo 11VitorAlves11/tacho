@@ -42,7 +42,7 @@ recipe_tags = Table(
 )
 
 # Favorito por utilizador (evolução do favorito único do workspace da v1.1 —
-# ver TODO.md). Tabela de associação simples, sem relationship() ORM para
+# ver as regras de privacidade). Tabela de associação simples, sem relationship() ORM para
 # User: `app/crud.py` consulta-a diretamente e marca `Recipe.is_favorite`
 # (atributo Python, já não coluna) por pedido, para o schema/frontend não
 # mudarem — só o significado passa de "favorito do agregado" a "favorito
@@ -54,8 +54,8 @@ recipe_favorites = Table(
     Column("user_id", UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True),
 )
 
-# Cookbooks/coleções (v2, decisão #3 do TODO.md): lista manual estilo
-# Tandoor, não coleção por filtro inteligente estilo Mealie — uma receita
+# Cookbooks/coleções (v2): lista manual
+# Uma receita pertence a uma coleção explícita, não a um filtro inteligente —
 # pode estar em várias coleções, sem filtro automático.
 cookbook_recipes = Table(
     "cookbook_recipes",
@@ -91,7 +91,7 @@ class User(SQLAlchemyBaseUserTableUUID, Base):
     `is_active`/`is_superuser`/`is_verified` vêm do mixin
     `SQLAlchemyBaseUserTableUUID`. Só é consultada pelo motor assíncrono
     (`app/auth.py`) — `fastapi_users_db_sqlalchemy` exige `AsyncSession`,
-    sem variante síncrona (verificado no código-fonte da lib, TODO.md
+    sem variante síncrona (verificado no código-fonte da lib,
     decisão #1). O resto da app (workspace_members incluído) continua a
     usar o `Session` síncrono de sempre — é a mesma tabela, só acedida por
     dois motores diferentes."""
@@ -105,7 +105,7 @@ class WorkspaceMember(Base):
     """Liga um User a um Workspace. Sem coluna de papel/role — ao
     contrário do Securo (owner/editor/viewer, várias workspaces por
     utilizador), o Tacho tem duas pessoas e uma única workspace, para
-    sempre (decisão #1 do TODO.md); qualquer membro tem acesso total."""
+    sempre; qualquer membro tem acesso total."""
 
     __tablename__ = "workspace_members"
     __table_args__ = (UniqueConstraint("workspace_id", "user_id", name="uq_workspace_member"),)
@@ -150,7 +150,7 @@ class Recipe(Base):
     # pastas, podem ainda ter só o nome do ficheiro (sem "/") — também
     # funciona, StaticFiles serve os dois na mesma.
     image_path: Mapped[str | None] = mapped_column(Text)
-    # Informação nutricional por porção, entrada manual (PRD 5.1/11.1 #5) —
+    # Informação nutricional por porção, entrada manual —
     # `app/nutrition.py` pode sugerir valores (Open Food Facts), mas nunca
     # grava sozinho, só por confirmação explícita no formulário.
     calories_kcal: Mapped[int | None]
@@ -158,17 +158,17 @@ class Recipe(Base):
     carbs_g: Mapped[float | None] = mapped_column(Numeric(6, 1))
     fat_g: Mapped[float | None] = mapped_column(Numeric(6, 1))
     # Custo estimado da receita TOTAL (não por porção) — entrada manual, sem
-    # fonte de preços automática disponível (TODO.md). Custo por porção
+    # fonte de preços automática disponível. Custo por porção
     # calculado em runtime no frontend (estimated_cost / servings).
     estimated_cost: Mapped[float | None] = mapped_column(Numeric(8, 2))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
-    # Marcado ao concluir o Modo Cozinha (PRD 5.1, alimenta a métrica M3).
+    # Marcado ao concluir o Modo Cozinha.
     last_made_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    # Avaliação por estrelas (1-5), padrão Mealie — do agregado, não por
-    # utilizador (ao contrário de is_favorite; ver TODO.md, "não do Tandoor",
+    # Avaliação por estrelas (1-5) — do agregado, não por utilizador
+    # (ao contrário de is_favorite;
     # que não tem esta funcionalidade). Validação do intervalo em
     # schemas.py + CHECK "ck_recipes_rating_range" (criado na migração
     # 1124746a9f09, declarado no __table_args__ acima desde a migração
@@ -254,7 +254,7 @@ class Step(Base):
 
 
 class CookNote(Base):
-    """Nota rápida opcional ao concluir o Modo Cozinha (PRD 5.1) — histórico
+    """Nota rápida opcional ao concluir o Modo Cozinha — histórico
     com data, não um campo único sobrescrevível (esse já existe como
     Recipe.notes, editável no formulário; conceito diferente)."""
 
@@ -320,7 +320,7 @@ class Tag(Base):
 
 
 class Cookbook(Base):
-    """Coleção manual de receitas (v2, decisão #3 do TODO.md) — sem
+    """Coleção manual de receitas (v2) — sem
     UniqueConstraint de nome ao contrário de Category/Tag, porque não há
     razão de produto para proibir duas coleções com o mesmo nome (ex. duas
     pessoas a fazerem "Favoritas de Verão" em anos diferentes)."""
@@ -361,7 +361,7 @@ class MealPlanEntry(Base):
 
 class ShoppingListItem(Base):
     """Item da lista de compras do workspace — sem semana/data associada,
-    é sempre "a lista atual" (PRD não pede histórico de listas). `quantity`
+    é sempre "a lista atual". `quantity`
     é texto livre já composto (ex. "500 g"), não número+unidade separados,
     porque agrega quantidades de várias receitas/refeições sem conversão de
     unidades (fora de âmbito — ver nota em crud.generate_shopping_list)."""
@@ -380,7 +380,7 @@ class ShoppingListItem(Base):
 
 class PantryItem(Base):
     """Despensa básica — só "tenho/não tenho" por ingrediente, sem
-    quantidades nem validades (TODO.md, âmbito contido de propósito, para
+    quantidades nem validades (âmbito contido de propósito, para
     não virar um Grocy). Alimenta o filtro "Dá para fazer" (crud.py::
     list_recipes, makeable_only) por correspondência de substring
     normalizada (sem acentos) contra o nome dos ingredientes."""

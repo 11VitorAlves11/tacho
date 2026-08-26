@@ -30,12 +30,12 @@ export async function getCurrentUser() {
   return data
 }
 
-// Best-effort — em produção, atrás do forward-auth do Authentik, inicia
+// Best-effort — em produção, atrás de um proxy forward-auth, inicia
 // sessão automaticamente sem mostrar a página de login (ver
 // `backend/app/routers/auth.py::forward_login`). Em dev, ou se desligado no
-// backend, ou se o pedido não vier via NPM/Authentik, devolve
+// backend, ou se o pedido não vier via proxy confiável, devolve
 // `not_applicable` e cai-se de volta no login normal por password. Quando o
-// Authentik já identificou a pessoa mas falta ação do admin do lado do
+// O proxy já identificou a pessoa mas falta ação do administrador do lado do
 // Tacho (`no_account`/`inactive`/`no_membership`), devolve `blocked` — o
 // `AuthContext` usa isso para mostrar uma página de erro em vez do login.
 export async function tryForwardLogin(): Promise<ForwardLoginResult> {

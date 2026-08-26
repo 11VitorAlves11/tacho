@@ -6,7 +6,7 @@ OFF_SEARCH_URL = "https://world.openfoodfacts.org/api/v2/search"
 
 # Fator de conversão para gramas-equivalente. ml/dl/l assumem densidade ~1
 # (água) — aproximação grosseira mas aceitável para uma estimativa, não
-# para dados de saúde precisos (o próprio TODO.md já assinala esse risco
+# para dados de saúde precisos (há esse risco
 # para a importação por foto via Gemini; aqui aplica-se o mesmo cuidado).
 # As unidades de colher/copo são pesos aproximados típicos de receitas PT —
 # variam com o ingrediente, mas ficam muito mais próximos da realidade do

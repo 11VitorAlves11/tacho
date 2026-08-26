@@ -44,22 +44,21 @@ class Settings(BaseSettings):
     # Login silencioso quando o pedido já chega autenticado pelo forward-auth
     # external forward-auth proxy — avoids asking for a second login to a
     # user already authenticated upstream.
-    # Desligado por omissão: só liga em produção depois de configurar o NPM
-    # para injetar o header de email + o segredo partilhado nesta rota.
+    # Desligado por omissão: só ligar depois de configurar um proxy confiável
+    # para injetar o header de identidade + o segredo partilhado nesta rota.
     trust_forward_auth: bool = False
     forward_auth_email_header: str = "X-Forwarded-Email"
-    # Só o NPM (não o Authentik) consegue injetar este valor — é o que
-    # impede um pedido direto ao backend (contorna o NPM/Authentik, ex.
-    # outro container na LAN) de forjar o header de email e entrar como
-    # qualquer pessoa. Sem valor, `trust_forward_auth` fica inerte mesmo
-    # que `True` (ver validação em `forward_login`).
+    # O proxy confiável deve ser o único componente capaz de injetar este
+    # valor. Isso impede pedidos diretos ao backend de forjar a identidade.
+    # Sem valor, `trust_forward_auth` fica inerte mesmo que `True` (ver
+    # validação em `forward_login`).
     forward_auth_secret: str | None = None
     # Importação inteligente (app/gemini.py): fallback de extração quando o
     # recipe-scrapers falha, e importação por foto (Vision). Opcional — sem
     # chave, `gemini.is_available()` devolve False e a app funciona na
-    # mesma (TODO.md: "funcionalidade opcional"). NUNCA testado contra a
+    # mesma (funcionalidade opcional). NUNCA testado contra a
     # API real nesta sessão de desenvolvimento (sem chave disponível) — ver
-    # aviso em TODO.md antes de confiar cegamente na extração em produção.
+    # validar com casos reais antes de confiar cegamente na extração em produção.
     gemini_api_key: str | None = None
 
     @model_validator(mode="after")

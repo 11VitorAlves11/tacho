@@ -33,7 +33,7 @@ async def setup(
     (`DEFAULT_WORKSPACE_ID`, migração `93c380aef9a6`) — nunca cria uma
     workspace nova. Só funciona enquanto não existir nenhum utilizador;
     é a única forma de entrar pela primeira vez, já que não há registo
-    público nem convite por email (decisão #2 do TODO.md)."""
+    público nem convite por email."""
     count = db.scalar(select(func.count()).select_from(User))
     if count and count > 0:
         raise HTTPException(status_code=403, detail="A configuração inicial já foi concluída")
@@ -52,28 +52,21 @@ async def forward_login(
     db: Session = Depends(get_db),
     user_manager: UserManager = Depends(get_user_manager),
 ):
-    """Login silencioso quando o pedido já chega autenticado pelo forward-auth
-    do Authentik (produção, atrás do NPM) — evita mostrar a página de login a
-    quem o Authentik já validou (decisão do utilizador, 2026-08-10: preferir
-    isto a um botão OIDC como o do Securo, que faria um segundo round-trip
-    desnecessário). Só confia no header de email se vier acompanhado do
-    segredo partilhado (`forward_auth_secret`, injetado só pelo NPM, nunca
-    pelo Authentik em si) — sem este segredo, qualquer pedido direto ao
-    backend que contornasse o NPM/Authentik (ex. outro container na mesma
-    LAN) conseguia forjar o header de email e entrar como qualquer pessoa.
-    Desligado por omissão (`trust_forward_auth=False`). Nunca cria conta
-    nova nem workspace — só inicia sessão para quem já é membro do agregado,
-    mesmo padrão fechado do resto da autenticação (decisão #2 do TODO.md).
+    """Login silencioso quando o pedido já chega autenticado por um proxy
+    forward-auth — evita mostrar a página de login a quem o proxy já validou.
+    Só confia no header de email se vier acompanhado do segredo partilhado
+    (`forward_auth_secret`, injetado só pelo proxy) — sem este segredo,
+    qualquer pedido direto ao backend que contornasse o proxy conseguiria
+    forjar a identidade e entrar como qualquer pessoa.
+    Desligado por omissão (`trust_forward_auth=False`). Nunca cria conta nova
+    nem workspace — só inicia sessão para quem já é membro do workspace.
     `detail` é sempre um dict com `reason` — o frontend usa esse código
     para distinguir "forward-auth nem se aplica aqui" (desligado,
     segredo/header em falta — cai em silêncio no login normal) de "o
-    Authentik já identificou esta pessoa mas falta ação do admin"
+    proxy já identificou esta pessoa mas falta ação do administrador"
     (`no_account`/`inactive`/`no_membership` — mostra uma página de erro
-    dedicada em vez do login, decisão do utilizador: não faz sentido pedir
-    password de uma conta que não existe). Ao contrário de uma nota antiga
-    aqui (revogada): já não se esconde propositadamente se o email existe
-    — só há duas pessoas conhecidas neste agregado, não um SaaS
-    multi-tenant onde isso importasse."""
+    dedicada em vez do login, porque não faz sentido pedir password de uma
+    conta que não existe."""
     settings = get_settings()
     if not settings.trust_forward_auth:
         raise HTTPException(status_code=404, detail={"reason": "disabled"})
@@ -156,8 +149,8 @@ async def remove_workspace_member(
     """Remove uma pessoa do agregado apagando a conta por completo, não só a
     linha de `workspace_members` — sem isto o email ficava reservado para
     sempre (`fastapi-users` recusa recriar conta com email já usado),
-    inviabilizando corrigir um email escrito por engano ao adicionar alguém
-    (decisão #5 do TODO.md). `WorkspaceMember.user_id` tem `ondelete=CASCADE`,
+    inviabilizando corrigir um email escrito por engano ao adicionar alguém.
+    `WorkspaceMember.user_id` tem `ondelete=CASCADE`,
     por isso apagar o `User` (motor assíncrono) já resolve a membership
     sozinho, sem escrita adicional pela sessão síncrona. Recebe o `user_id`
     (não o id da linha `WorkspaceMember`) porque é isso que `MemberOut.id`
