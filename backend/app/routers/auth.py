@@ -77,7 +77,10 @@ async def forward_login(
     settings = get_settings()
     if not settings.trust_forward_auth:
         raise HTTPException(status_code=404, detail={"reason": "disabled"})
-    if not settings.forward_auth_secret or request.headers.get("X-Tacho-Forward-Secret") != settings.forward_auth_secret:
+    if (
+        not settings.forward_auth_secret
+        or request.headers.get("X-Tacho-Forward-Secret") != settings.forward_auth_secret
+    ):
         raise HTTPException(status_code=401, detail={"reason": "bad_secret"})
     email = request.headers.get(settings.forward_auth_email_header)
     if not email:
@@ -131,9 +134,7 @@ async def add_workspace_member(
     (`app/api/workspaces.py::invite_member`), sem os extras de moeda/
     preferências/workspace pessoal automática que só fazem sentido lá."""
     try:
-        new_user = await user_manager.create(
-            fu_schemas.BaseUserCreate(email=payload.email, password=payload.password)
-        )
+        new_user = await user_manager.create(fu_schemas.BaseUserCreate(email=payload.email, password=payload.password))
     except fu_exceptions.UserAlreadyExists:
         raise HTTPException(status_code=409, detail="Já existe uma conta com este email")
 
