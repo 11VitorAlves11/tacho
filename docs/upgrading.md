@@ -12,7 +12,7 @@
 Pinning versions makes rollback explicit:
 
 ```dotenv
-TACHO_VERSION=2.0.0
+TACHO_VERSION=2.1.0
 ```
 
 Then run:
@@ -36,4 +36,3 @@ and run `docker compose up -d --wait`.
 If a migration ran, do not assume the old application supports the new schema
 and do not use `alembic downgrade` on valuable data. Stop the stack, restore the
 pre-upgrade backup, set the previous version and start again.
-

@@ -3,9 +3,8 @@
 Tacho is a self-hosted recipe and kitchen manager for collecting recipes,
 cooking step by step, planning meals and maintaining a shared shopping list.
 
-> Tacho 2.0 is being prepared for its first general self-hosted release. Keep
-> backups and pin an exact image version on installations containing important
-> data.
+> Tacho 2.1 is available for self-hosted installations. Keep verified backups
+> and pin an exact image version on installations containing important data.
 
 ## Features
 
