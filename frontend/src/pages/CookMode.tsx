@@ -6,18 +6,20 @@ import { ChevronLeftIcon, ClockIcon } from '../components/icons'
 
 const LARGE_TEXT_KEY = 'tacho:cook-mode-large-text'
 
-// O Modo Cozinha já é, por design, o "modo escuro" da app (o
-// único lugar onde a marca vira fundo cheio) — fica sempre igual,
-// independentemente do tema claro/escuro do resto da app. Fixa aqui os
-// tokens adaptáveis aos valores de tema claro, para nunca herdar as
-// variantes escuras do :root.
-const FIXED_LIGHT_TOKENS = {
-  '--color-text-primary': '#171a18',
-  '--color-text-secondary': '#69706c',
-  '--color-bg-sage': '#fafafa',
-  '--color-surface': '#ffffff',
-  '--color-forest-text': '#258c34',
+// O Modo Cozinha mantém contraste elevado e fundo escuro em qualquer tema,
+// mas usa os mesmos tokens semânticos da aplicação (em vez de cores isoladas).
+const COOK_MODE_TOKENS = {
+  '--color-bg-sage': '#101513',
+  '--color-surface': '#171c19',
+  '--color-text-primary': '#f4f7f5',
+  '--color-text-secondary': '#a2aaa5',
+  '--color-forest-text': '#62d66d',
+  '--color-border': '#2a302c',
+  '--color-muted': '#202622',
+  '--color-primary-soft': '#193320',
 } as CSSProperties
+
+type CookingTimer = { id: string; label: string; duration: number; remaining: number; running: boolean }
 
 export function CookMode() {
   const { id } = useParams<{ id: string }>()
@@ -27,7 +29,42 @@ export function CookMode() {
   // Persistido — o telemóvel fica pousado longe na bancada; uma vez ligado,
   // não faz sentido voltar ao tamanho normal a cada receita nova.
   const [largeText, setLargeText] = useState(() => localStorage.getItem(LARGE_TEXT_KEY) === '1')
+  const [timers, setTimers] = useState<CookingTimer[]>([])
   const wakeLockRef = useRef<WakeLockSentinel | null>(null)
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setTimers((current) => current.map((timer) => {
+        if (!timer.running || timer.remaining <= 0) return timer
+        const remaining = timer.remaining - 1
+        if (remaining === 0) navigator.vibrate?.([200, 100, 200])
+        return { ...timer, remaining, running: remaining > 0 }
+      }))
+    }, 1000)
+    return () => window.clearInterval(interval)
+  }, [])
+
+  function startTimer(id: string, duration: number, label: string) {
+    setTimers((current) => current.some((timer) => timer.id === id)
+      ? current.map((timer) => timer.id === id ? { ...timer, running: true } : timer)
+      : [...current, { id, label, duration, remaining: duration, running: true }])
+  }
+
+  function toggleTimer(id: string) {
+    setTimers((current) => current.map((timer) => timer.id === id ? { ...timer, running: !timer.running && timer.remaining > 0 } : timer))
+  }
+
+  function resetTimer(id: string) {
+    setTimers((current) => current.filter((timer) => timer.id !== id))
+  }
+
+  function addCustomTimer() {
+    const value = window.prompt('Duração do temporizador em minutos:')
+    const minutes = value ? Number(value.replace(',', '.')) : 0
+    if (!Number.isFinite(minutes) || minutes <= 0 || minutes > 24 * 60) return
+    const label = window.prompt('Nome do temporizador (opcional):')?.trim() || 'Temporizador adicional'
+    startTimer(`custom-${Date.now()}`, Math.round(minutes * 60), label)
+  }
 
   useEffect(() => {
     localStorage.setItem(LARGE_TEXT_KEY, largeText ? '1' : '0')
@@ -100,7 +137,7 @@ export function CookMode() {
 
   if (!recipe) {
     return (
-      <div className="flex min-h-svh items-center justify-center bg-[#101513] text-card-white" style={FIXED_LIGHT_TOKENS}>
+      <div className="flex min-h-svh items-center justify-center bg-bg-sage text-text-primary" style={COOK_MODE_TOKENS}>
         <p className="text-sm">A carregar…</p>
       </div>
     )
@@ -111,16 +148,16 @@ export function CookMode() {
   const isLast = stepIndex === steps.length - 1
 
   return (
-    <div className="flex min-h-svh flex-col bg-[#101513] text-card-white" style={FIXED_LIGHT_TOKENS}>
+    <div className="flex min-h-svh flex-col bg-bg-sage text-text-primary" style={COOK_MODE_TOKENS}>
       <header className="mx-auto flex w-full max-w-4xl items-center justify-between px-4 py-4">
         <Link
           to={`/receitas/${recipe.id}`}
-          className="flex size-10 items-center justify-center rounded-full bg-card-white/10"
+          className="flex size-10 items-center justify-center rounded-xl border border-border bg-surface/70 text-text-primary transition hover:bg-muted"
           aria-label="Sair do Modo Cozinha"
         >
           <ChevronLeftIcon className="size-5" />
         </Link>
-        <span className="text-sm font-medium text-card-white/80">
+        <span className="text-sm font-medium text-text-secondary">
           Passo {stepIndex + 1} de {steps.length}
         </span>
         <button
@@ -129,7 +166,7 @@ export function CookMode() {
           aria-pressed={largeText}
           aria-label={largeText ? 'Diminuir tamanho de letra' : 'Aumentar tamanho de letra'}
           className={`flex size-10 items-center justify-center rounded-full text-sm font-bold ${
-            largeText ? 'bg-primary-forest text-white' : 'bg-card-white/10 text-card-white'
+            largeText ? 'bg-primary-forest text-white' : 'border border-border bg-surface/70 text-text-primary'
           }`}
         >
           A{largeText ? '+' : ''}
@@ -140,7 +177,7 @@ export function CookMode() {
         {steps.map((s, i) => (
           <div
             key={s.id}
-            className={`h-1.5 flex-1 rounded-full ${i <= stepIndex ? 'bg-primary-forest' : 'bg-card-white/20'}`}
+            className={`h-1.5 flex-1 rounded-full ${i <= stepIndex ? 'bg-primary-forest' : 'bg-border'}`}
           />
         ))}
       </div>
@@ -148,7 +185,7 @@ export function CookMode() {
       <main className="relative flex flex-1 items-center justify-center overflow-hidden px-6 py-10 sm:px-16">
         <span
           aria-hidden
-          className="pointer-events-none absolute font-bold text-card-white/5 leading-none select-none"
+          className="pointer-events-none absolute font-bold text-text-primary/5 leading-none select-none"
           style={{ fontSize: 'min(60vw, 60vh)' }}
         >
           {stepIndex + 1}
@@ -162,10 +199,10 @@ export function CookMode() {
             >
               {step.instruction}
             </p>
-            {step.duration_minutes != null && <StepTimer key={step.id} minutes={step.duration_minutes} />}
+            {step.duration_minutes != null && <StepTimer minutes={step.duration_minutes} timer={timers.find((timer) => timer.id === `step-${step.id}`)} onStart={() => startTimer(`step-${step.id}`, step.duration_minutes! * 60, `Passo ${stepIndex + 1}`)} onToggle={() => toggleTimer(`step-${step.id}`)} onReset={() => resetTimer(`step-${step.id}`)} />}
           </div>
         ) : (
-          <p className="relative text-lg text-card-white/80">Esta receita ainda não tem passos registados.</p>
+          <p className="relative text-lg text-text-secondary">Esta receita ainda não tem passos registados.</p>
         )}
       </main>
 
@@ -174,7 +211,7 @@ export function CookMode() {
           type="button"
           disabled={stepIndex === 0}
           onClick={() => setStepIndex((i) => Math.max(0, i - 1))}
-          className="flex-1 rounded-full bg-card-white/10 py-4 font-medium disabled:opacity-30"
+          className="flex-1 rounded-xl border border-border bg-surface/70 py-4 font-semibold text-text-primary transition hover:bg-muted disabled:opacity-30"
         >
           Anterior
         </button>
@@ -182,7 +219,7 @@ export function CookMode() {
           <button
             type="button"
             onClick={handleFinish}
-            className="flex flex-1 items-center justify-center rounded-full bg-primary-forest py-4 font-semibold text-white"
+            className="flex flex-1 items-center justify-center rounded-xl bg-primary-forest py-4 font-semibold text-white transition hover:brightness-95"
           >
             Concluir
           </button>
@@ -190,47 +227,27 @@ export function CookMode() {
           <button
             type="button"
             onClick={() => setStepIndex((i) => Math.min(steps.length - 1, i + 1))}
-            className="flex-1 rounded-full bg-primary-forest py-4 font-semibold text-white"
+            className="flex-1 rounded-xl bg-primary-forest py-4 font-semibold text-white transition hover:brightness-95"
           >
             Seguinte
           </button>
         )}
       </footer>
+      {timers.length > 0 && <TimerDock timers={timers} onToggle={toggleTimer} onReset={resetTimer} />}
+      <button type="button" onClick={addCustomTimer} className="fixed bottom-24 right-4 z-10 rounded-xl border border-border bg-surface px-3 py-2 text-xs font-semibold text-text-primary shadow-lg transition hover:bg-muted sm:bottom-28 sm:right-6">+ Temporizador</button>
     </div>
   )
 }
 
 // `key={step.id}` no chamador garante que o estado reinicia a cada passo —
 // mais simples do que sincronizar manualmente via useEffect.
-function StepTimer({ minutes }: { minutes: number }) {
-  const [remaining, setRemaining] = useState<number | null>(null)
-  const [running, setRunning] = useState(false)
-
-  useEffect(() => {
-    if (!running || remaining === null) return
-    const timeout = setTimeout(() => {
-      setRemaining((current) => {
-        if (current === null) return null
-        if (current <= 1) {
-          setRunning(false)
-          navigator.vibrate?.(200)
-          return 0
-        }
-        return current - 1
-      })
-    }, 1000)
-    return () => clearTimeout(timeout)
-  }, [running, remaining])
-
-  if (remaining === null) {
+function StepTimer({ minutes, timer, onStart, onToggle, onReset }: { minutes: number; timer?: CookingTimer; onStart: () => void; onToggle: () => void; onReset: () => void }) {
+  if (!timer) {
     return (
       <button
         type="button"
-        onClick={() => {
-          setRemaining(minutes * 60)
-          setRunning(true)
-        }}
-        className="flex items-center gap-2 rounded-full bg-card-white/10 px-4 py-2 text-sm font-medium text-card-white"
+        onClick={onStart}
+        className="flex items-center gap-2 rounded-xl border border-border bg-surface px-4 py-3 text-sm font-semibold text-text-primary transition hover:bg-muted"
       >
         <ClockIcon className="size-4 text-accent-orange" />
         Iniciar temporizador · {minutes} min
@@ -238,28 +255,24 @@ function StepTimer({ minutes }: { minutes: number }) {
     )
   }
 
-  const done = remaining === 0
-  const mm = Math.floor(remaining / 60)
-  const ss = remaining % 60
+  const done = timer.remaining === 0
+  const mm = Math.floor(timer.remaining / 60)
+  const ss = timer.remaining % 60
 
   return (
     <div
       className={`flex items-center gap-3 rounded-full px-4 py-2 ${
-        done ? 'animate-pulse bg-accent-orange text-text-primary' : 'bg-card-white/10 text-card-white'
+        done ? 'animate-pulse bg-accent-orange text-text-primary' : 'border border-border bg-surface text-text-primary'
       }`}
     >
       <ClockIcon className={`size-4 ${done ? 'text-text-primary' : 'text-accent-orange'}`} />
       <span className="font-semibold tabular-nums">{done ? 'Tempo!' : `${mm}:${ss.toString().padStart(2, '0')}`}</span>
-      <button
-        type="button"
-        onClick={() => {
-          setRemaining(null)
-          setRunning(false)
-        }}
-        className="text-xs underline"
-      >
-        {done ? 'Repor' : 'Parar'}
-      </button>
+      {!done && <button type="button" onClick={onToggle} className="text-xs underline">{timer.running ? 'Pausar' : 'Continuar'}</button>}
+      <button type="button" onClick={onReset} className="text-xs underline">{done ? 'Repor' : 'Remover'}</button>
     </div>
   )
+}
+
+function TimerDock({ timers, onToggle, onReset }: { timers: CookingTimer[]; onToggle: (id: string) => void; onReset: (id: string) => void }) {
+  return <aside className="fixed inset-x-4 bottom-[7.5rem] z-20 mx-auto flex max-w-4xl gap-2 overflow-x-auto pb-1" aria-label="Temporizadores ativos">{timers.map((timer) => { const done = timer.remaining === 0; const mm = Math.floor(timer.remaining / 60); const ss = timer.remaining % 60; return <div key={timer.id} className={`flex min-w-44 items-center gap-2 rounded-xl border px-3 py-2 text-xs shadow-lg backdrop-blur ${done ? 'border-accent-orange bg-accent-orange text-text-primary' : 'border-border bg-surface/95 text-text-primary'}`}><span className="min-w-0 flex-1 truncate font-semibold">{timer.label}</span><span className="font-bold tabular-nums">{done ? 'Tempo!' : `${mm}:${ss.toString().padStart(2, '0')}`}</span>{!done && <button type="button" onClick={() => onToggle(timer.id)} aria-label={timer.running ? `Pausar ${timer.label}` : `Continuar ${timer.label}`} className="underline">{timer.running ? 'Pausa' : 'Play'}</button>}<button type="button" onClick={() => onReset(timer.id)} aria-label={`Remover ${timer.label}`} className="underline">×</button></div> })}</aside>
 }
