@@ -2,7 +2,7 @@
 # Ver docker-compose.prod.yml. Para desenvolvimento local usa-se
 # backend/Dockerfile + frontend/Dockerfile (vite dev) em docker-compose.yml.
 
-FROM node:22-slim AS frontend-build
+FROM node:26-slim AS frontend-build
 WORKDIR /app
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
