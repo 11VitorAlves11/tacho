@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom'
 import { listCategories, listRecipes, listTags, toggleFavorite } from '../api/recipes'
 import { listPantryItems } from '../api/pantry'
 import { listMealPlan, listShoppingList } from '../api/planning'
-import type { Category, MealPlanEntry, PantryItem, RecipeSummary, ShoppingListItem, Tag } from '../api/types'
+import { listDietaryProfiles } from '../api/profiles'
+import type { Category, DietaryProfile, MealPlanEntry, PantryItem, RecipeSummary, ShoppingListItem, Tag } from '../api/types'
 import { useAuth } from '../auth/useAuth'
 import { PageShell } from '../components/PageShell'
 import { RecipeCard } from '../components/RecipeCard'
@@ -27,6 +28,8 @@ export function Home() {
   const [makeableOnly, setMakeableOnly] = useState(false)
   const [pantrySuggestions, setPantrySuggestions] = useState(false)
   const [safeForAll, setSafeForAll] = useState(false)
+  const [dietaryProfiles, setDietaryProfiles] = useState<DietaryProfile[]>([])
+  const [selectedProfileIds, setSelectedProfileIds] = useState<string[]>([])
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [error, setError] = useState(false)
   const [upcomingMeals, setUpcomingMeals] = useState<MealPlanEntry[]>([])
@@ -36,6 +39,7 @@ export function Home() {
   useEffect(() => {
     listCategories().then(setCategories).catch(() => {})
     listTags().then(setTags).catch(() => {})
+    listDietaryProfiles().then(setDietaryProfiles).catch(() => {})
     const today = new Date()
     listMealPlan(toDateKey(today), toDateKey(addDays(today, 6))).then(setUpcomingMeals).catch(() => {})
     listPantryItems().then(setPantryItems).catch(() => {})
@@ -45,11 +49,11 @@ export function Home() {
   useEffect(() => {
     const handle = setTimeout(() => {
       setError(false)
-      listRecipes({ q: q || undefined, categoryId: categoryId ?? undefined, tagIds: tagIds.length ? tagIds : undefined, ingredient: ingredient || undefined, ratingMin: ratingMin ?? undefined, maxTotalMinutes: maxTotalMinutes ?? undefined, favorite: favoriteOnly || undefined, makeable: makeableOnly || undefined, pantrySuggestions: pantrySuggestions || undefined, safeForAll: safeForAll || undefined })
+      listRecipes({ q: q || undefined, categoryId: categoryId ?? undefined, tagIds: tagIds.length ? tagIds : undefined, ingredient: ingredient || undefined, ratingMin: ratingMin ?? undefined, maxTotalMinutes: maxTotalMinutes ?? undefined, favorite: favoriteOnly || undefined, makeable: makeableOnly || undefined, pantrySuggestions: pantrySuggestions || undefined, safeForAll: safeForAll || selectedProfileIds.length > 0 || undefined, profileIds: selectedProfileIds.length ? selectedProfileIds : undefined })
         .then(setRecipes).catch(() => setError(true))
     }, 250)
     return () => clearTimeout(handle)
-  }, [q, categoryId, tagIds, ingredient, ratingMin, maxTotalMinutes, favoriteOnly, makeableOnly, pantrySuggestions, safeForAll])
+  }, [q, categoryId, tagIds, ingredient, ratingMin, maxTotalMinutes, favoriteOnly, makeableOnly, pantrySuggestions, safeForAll, selectedProfileIds])
 
   async function handleToggleFavorite(id: string) {
     const updated = await toggleFavorite(id)
@@ -69,16 +73,17 @@ export function Home() {
   }
 
   function clearFilters() {
-    setCategoryId(null); setTagIds([]); setIngredient(''); setRatingMin(null); setMaxTotalMinutes(null); setFavoriteOnly(false); setMakeableOnly(false); setPantrySuggestions(false); setSafeForAll(false)
+    setCategoryId(null); setTagIds([]); setIngredient(''); setRatingMin(null); setMaxTotalMinutes(null); setFavoriteOnly(false); setMakeableOnly(false); setPantrySuggestions(false); setSafeForAll(false); setSelectedProfileIds([])
   }
 
   const firstName = user?.name?.trim().split(/\s+/)[0] ?? user?.email.split('@')[0] ?? ''
-  const hasFilter = Boolean(categoryId || tagIds.length || ingredient || ratingMin || maxTotalMinutes || favoriteOnly || makeableOnly || pantrySuggestions || safeForAll)
+  const hasFilter = Boolean(categoryId || tagIds.length || ingredient || ratingMin || maxTotalMinutes || favoriteOnly || makeableOnly || pantrySuggestions || safeForAll || selectedProfileIds.length)
   const allFilters = <>
     <Chip active={favoriteOnly} onClick={() => setFavoriteOnly((value) => !value)}><HeartIcon className="size-4" fill={favoriteOnly ? 'currentColor' : 'none'} /> Favoritos</Chip>
     <Chip active={makeableOnly} onClick={() => setMakeableOnly((value) => !value)}><CartIcon className="size-4" /> Dá para fazer</Chip>
     <Chip active={pantrySuggestions} onClick={() => setPantrySuggestions((value) => !value)}><CartIcon className="size-4" /> Mais próximas</Chip>
     <Chip active={safeForAll} onClick={() => setSafeForAll((value) => !value)}>Adequadas a todos</Chip>
+    {dietaryProfiles.map((profile) => <Chip key={profile.id} active={selectedProfileIds.includes(profile.id)} onClick={() => setSelectedProfileIds((current) => current.includes(profile.id) ? current.filter((id) => id !== profile.id) : [...current, profile.id])}>Seguro: {profile.name}</Chip>)}
     {categories.map((category) => <Chip key={category.id} kind="category" accentColor={category.color} icon={category.icon} active={categoryId === category.id} onClick={() => selectCategory(category.id)}>{category.name}</Chip>)}
     {tags.map((tag) => <Chip key={tag.id} kind="tag" active={tagIds.includes(tag.id)} onClick={() => selectTag(tag.id)}>#{tag.name}</Chip>)}
   </>
@@ -113,6 +118,7 @@ export function Home() {
         <Chip active={makeableOnly} onClick={() => setMakeableOnly((value) => !value)}><CartIcon className="size-4" /> Dá para fazer</Chip>
         <Chip active={pantrySuggestions} onClick={() => setPantrySuggestions((value) => !value)}><CartIcon className="size-4" /> Mais próximas</Chip>
         <Chip active={safeForAll} onClick={() => setSafeForAll((value) => !value)}>Adequadas a todos</Chip>
+        {dietaryProfiles.map((profile) => <Chip key={profile.id} active={selectedProfileIds.includes(profile.id)} onClick={() => setSelectedProfileIds((current) => current.includes(profile.id) ? current.filter((id) => id !== profile.id) : [...current, profile.id])}>Seguro: {profile.name}</Chip>)}
         {categories.slice(0, 3).map((category) => <Chip key={category.id} kind="category" accentColor={category.color} icon={category.icon} active={categoryId === category.id} onClick={() => selectCategory(category.id)}>{category.name}</Chip>)}
         <Chip onClick={() => setFiltersOpen(true)} className="lg:hidden"><SlidersIcon className="size-4" /> Mais</Chip>
         <span className="hidden contents lg:contents">{categories.slice(3).map((category) => <Chip key={category.id} kind="category" accentColor={category.color} icon={category.icon} active={categoryId === category.id} onClick={() => selectCategory(category.id)}>{category.name}</Chip>)}{tags.map((tag) => <Chip key={tag.id} kind="tag" active={tagIds.includes(tag.id)} onClick={() => selectTag(tag.id)}>#{tag.name}</Chip>)}</span>

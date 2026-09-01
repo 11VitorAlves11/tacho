@@ -98,9 +98,15 @@ def _annotate_availability(recipes: list[models.Recipe], normalized_pantry: list
 
 
 def _annotate_dietary_warnings(
-    db: Session, workspace_id: uuid.UUID, recipes: list[models.Recipe]
+    db: Session,
+    workspace_id: uuid.UUID,
+    recipes: list[models.Recipe],
+    profile_ids: list[uuid.UUID] | None = None,
 ) -> list[models.Recipe]:
-    profiles = list(db.scalars(select(models.DietaryProfile).where(models.DietaryProfile.workspace_id == workspace_id)))
+    profile_query = select(models.DietaryProfile).where(models.DietaryProfile.workspace_id == workspace_id)
+    if profile_ids:
+        profile_query = profile_query.where(models.DietaryProfile.id.in_(profile_ids))
+    profiles = list(db.scalars(profile_query))
     for recipe in recipes:
         ingredient_text = " | ".join(_normalize(item.name) for item in recipe.ingredients if not item.is_header)
         warnings: list[str] = []
@@ -147,6 +153,7 @@ def list_recipes(
     makeable_only: bool = False,
     pantry_suggestions: bool = False,
     safe_for_all: bool = False,
+    dietary_profile_ids: list[uuid.UUID] | None = None,
 ) -> list[models.Recipe]:
     query = _recipe_query(workspace_id)
     if category_id is not None:
@@ -180,7 +187,7 @@ def list_recipes(
     )
     normalized_pantry = [_normalize(name) for name in db.scalars(pantry_query)]
     _annotate_availability(recipes, normalized_pantry)
-    _annotate_dietary_warnings(db, workspace_id, recipes)
+    _annotate_dietary_warnings(db, workspace_id, recipes, dietary_profile_ids)
     if makeable_only:
         recipes = [r for r in recipes if _is_makeable(r, normalized_pantry)]
     if pantry_suggestions:

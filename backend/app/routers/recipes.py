@@ -38,6 +38,7 @@ def list_recipes(
     makeable: bool = False,
     pantry_suggestions: bool = False,
     safe_for_all: bool = False,
+    profile_ids: str | None = None,
     db: Session = Depends(get_db),
     workspace_id: uuid.UUID = Depends(get_workspace_id),
     user: User = Depends(current_active_user),
@@ -48,6 +49,12 @@ def list_recipes(
             parsed_tag_ids = [uuid.UUID(value) for value in tag_ids.split(",") if value]
         except ValueError as exc:
             raise HTTPException(status_code=422, detail="Uma das tags não é válida") from exc
+    parsed_profile_ids: list[uuid.UUID] = []
+    if profile_ids:
+        try:
+            parsed_profile_ids = [uuid.UUID(value) for value in profile_ids.split(",") if value]
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail="Um dos perfis alimentares não é válido") from exc
     return crud.list_recipes(
         db,
         workspace_id,
@@ -62,6 +69,7 @@ def list_recipes(
         makeable_only=makeable,
         pantry_suggestions=pantry_suggestions,
         safe_for_all=safe_for_all,
+        dietary_profile_ids=parsed_profile_ids,
     )
 
 

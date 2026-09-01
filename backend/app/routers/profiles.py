@@ -15,6 +15,20 @@ def _clean(values: list[str]) -> list[str]:
     return list(dict.fromkeys(value.strip() for value in values if value.strip()))
 
 
+def _validate_member(db: Session, workspace_id: uuid.UUID, user_id: uuid.UUID | None) -> None:
+    if (
+        user_id is not None
+        and db.scalar(
+            select(models.WorkspaceMember.id).where(
+                models.WorkspaceMember.workspace_id == workspace_id,
+                models.WorkspaceMember.user_id == user_id,
+            )
+        )
+        is None
+    ):
+        raise HTTPException(status_code=422, detail="O membro escolhido não pertence a este agregado")
+
+
 @router.get("", response_model=list[schemas.DietaryProfileOut])
 def list_profiles(db: Session = Depends(get_db), workspace_id: uuid.UUID = Depends(get_workspace_id)):
     return list(
@@ -32,6 +46,7 @@ def create_profile(
     db: Session = Depends(get_db),
     workspace_id: uuid.UUID = Depends(get_workspace_id),
 ):
+    _validate_member(db, workspace_id, payload.user_id)
     profile = models.DietaryProfile(
         workspace_id=workspace_id,
         **payload.model_dump(exclude={"allergies", "intolerances", "preferences"}),
@@ -60,6 +75,7 @@ def update_profile(
     )
     if profile is None:
         raise HTTPException(status_code=404, detail="Perfil não encontrado")
+    _validate_member(db, workspace_id, payload.user_id)
     for field, value in payload.model_dump().items():
         setattr(profile, field, _clean(value) if isinstance(value, list) else value)
     db.commit()
