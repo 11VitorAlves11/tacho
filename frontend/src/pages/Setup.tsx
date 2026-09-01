@@ -2,12 +2,15 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getSetupStatus, setup } from '../api/auth'
 import { AuthLayout } from '../auth/AuthLayout'
-import { useAuth } from '../auth/AuthContext'
+import { useAuth } from '../auth/useAuth'
+import { PasswordInput } from '../components/ui'
 
 export function Setup() {
   const [checking, setChecking] = useState(true)
+  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [passwordConfirmation, setPasswordConfirmation] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
@@ -28,9 +31,13 @@ export function Setup() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
+    if (password !== passwordConfirmation) {
+      setError('As passwords não coincidem.')
+      return
+    }
     setLoading(true)
     try {
-      await setup(email, password)
+      await setup(name.trim(), email, password)
       // O guard de rotas em App.tsx decide entre /setup e /login com base
       // no `needsSetup` do AuthContext — sem atualizá-lo aqui primeiro, o
       // guard continuava a achar que a configuração inicial ainda faltava
@@ -48,28 +55,50 @@ export function Setup() {
 
   return (
     <AuthLayout title="Configuração inicial" subtitle="Cria a primeira conta do agregado para começar a usar o Tacho.">
-      <form onSubmit={handleSubmit} className="space-y-3">
+      <form onSubmit={handleSubmit} className="space-y-4">
         <label className="block">
-          <span className="mb-1 block text-xs font-medium text-text-secondary">Email</span>
+          <span className="mb-1.5 block text-xs font-medium text-text-secondary">Nome de utilizador</span>
+          <input
+            type="text"
+            required
+            minLength={2}
+            maxLength={80}
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            autoComplete="name"
+            placeholder="Como queres ser tratado?"
+            className="min-h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text-primary outline-none focus:border-primary-forest focus:ring-2 focus:ring-primary-forest/15"
+          />
+        </label>
+        <label className="block">
+          <span className="mb-1.5 block text-xs font-medium text-text-secondary">Email</span>
           <input
             type="email"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             autoComplete="username"
-            className="w-full rounded-lg bg-bg-sage/60 px-3 py-2 text-sm text-text-primary outline-none focus:ring-2 focus:ring-accent-leaf"
+            className="min-h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text-primary outline-none focus:border-primary-forest focus:ring-2 focus:ring-primary-forest/15"
           />
         </label>
         <label className="block">
-          <span className="mb-1 block text-xs font-medium text-text-secondary">Password</span>
-          <input
-            type="password"
+          <span className="mb-1.5 block text-xs font-medium text-text-secondary">Password</span>
+          <PasswordInput
             required
             minLength={8}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             autoComplete="new-password"
-            className="w-full rounded-lg bg-bg-sage/60 px-3 py-2 text-sm text-text-primary outline-none focus:ring-2 focus:ring-accent-leaf"
+          />
+        </label>
+        <label className="block">
+          <span className="mb-1.5 block text-xs font-medium text-text-secondary">Confirmar password</span>
+          <PasswordInput
+            required
+            minLength={8}
+            value={passwordConfirmation}
+            onChange={(e) => setPasswordConfirmation(e.target.value)}
+            autoComplete="new-password"
           />
         </label>
         {error && <p className="text-sm text-accent-orange">{error}</p>}

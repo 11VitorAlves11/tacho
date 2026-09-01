@@ -4,7 +4,7 @@ import QRCode from 'qrcode'
 import {
   addComment,
   addRecipeGalleryImage,
-  addRecipeToShoppingList,
+  addMissingRecipeIngredientsToShoppingList,
   deleteComment,
   deleteRecipeGalleryImage,
   duplicateRecipe,
@@ -17,6 +17,7 @@ import {
 } from '../api/recipes'
 import type { Recipe } from '../api/types'
 import { PageShell } from '../components/PageShell'
+import { Brand } from '../components/Brand'
 import {
   CameraIcon,
   CartIcon,
@@ -29,7 +30,6 @@ import {
   PencilIcon,
   PlayIcon,
   PlusIcon,
-  PotIcon,
   PrinterIcon,
   QrIcon,
   ServingsIcon,
@@ -37,6 +37,7 @@ import {
   XIcon,
 } from '../components/icons'
 import { formatQuantity, scaleQuantity } from '../lib/quantity'
+import { CategoryBadge, TagBadge } from '../components/ui'
 
 function formatLastMade(iso: string): string {
   return new Date(iso).toLocaleDateString('pt-PT', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -97,11 +98,11 @@ export function RecipeDetail() {
     setAddingToShoppingList(true)
     setShoppingListFeedback('')
     try {
-      const added = await addRecipeToShoppingList(id)
+      const added = await addMissingRecipeIngredientsToShoppingList(id)
       setShoppingListFeedback(
         added.length > 0
           ? `${added.length} ingrediente${added.length > 1 ? 's' : ''} adicionados à lista de compras.`
-          : 'Todos os ingredientes já estavam na lista de compras.',
+          : 'Já tens estes ingredientes na despensa ou na lista de compras.',
       )
     } catch {
       setShoppingListFeedback('Não foi possível adicionar à lista de compras.')
@@ -190,13 +191,13 @@ export function RecipeDetail() {
   const totalMinutes = (recipe.prep_minutes ?? 0) + (recipe.cook_minutes ?? 0)
 
   return (
-    <PageShell>
+    <PageShell wide>
       <article>
         {/* Só na folha impressa — a app troca o cabeçalho normal (nav,
             avatar) por um mastro pequeno, para a folha ter identidade
             própria sem trazer chrome que só faz sentido no ecrã. */}
         <div className="hidden items-center gap-1.5 border-b border-black/10 pb-3 text-xs font-semibold uppercase tracking-wide text-text-secondary print:mb-4 print:flex">
-          <PotIcon className="size-3.5 text-forest-text" />
+          <Brand compact className="size-5" />
           Tacho
         </div>
 
@@ -204,19 +205,19 @@ export function RecipeDetail() {
           <img
             src={recipeImageUrl(recipe.image_path)}
             alt=""
-            className="aspect-video w-full rounded-2xl object-cover shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)]"
+            className="max-h-[560px] aspect-video w-full rounded-2xl border border-border object-cover"
           />
         )}
 
-        <div className={`flex items-start justify-between gap-3 ${recipe.image_path ? 'mt-5' : ''}`}>
-          <h1 className="text-2xl font-bold text-text-primary sm:text-3xl">{recipe.title}</h1>
-          <div className="flex shrink-0 gap-2 print:hidden">
+        <div className={`flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between ${recipe.image_path ? 'mt-5' : ''}`}>
+          <div className="min-w-0"><h1 className="text-2xl font-bold text-text-primary sm:text-3xl">{recipe.title}</h1>{recipe.source_recipe_id && <Link to={`/receitas/${recipe.source_recipe_id}`} className="mt-1 inline-flex text-sm font-medium text-forest-text">Variante de uma receita original →</Link>}</div>
+          <div className="flex max-w-full flex-wrap gap-2 print:hidden sm:shrink-0 sm:justify-end">
             <button
               type="button"
               onClick={handleToggleFavorite}
               aria-pressed={recipe.is_favorite}
               aria-label={recipe.is_favorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
-              className={`flex items-center gap-1.5 rounded-full bg-surface px-3 py-1.5 text-sm font-medium shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)] ${
+              className={`flex min-h-11 items-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-1.5 text-sm font-medium ${
                 recipe.is_favorite ? 'text-accent-leaf' : 'text-text-secondary hover:text-accent-leaf'
               }`}
             >
@@ -227,7 +228,7 @@ export function RecipeDetail() {
               type="button"
               onClick={handleDuplicate}
               disabled={duplicating}
-              className="flex items-center gap-1.5 rounded-full bg-surface px-3 py-1.5 text-sm font-medium text-text-secondary shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)] hover:text-forest-text disabled:opacity-50"
+              className="flex min-h-11 items-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-1.5 text-sm font-medium text-text-secondary hover:text-forest-text disabled:opacity-50"
             >
               <CopyIcon className="size-4" />
               <span className="hidden sm:inline">Duplicar</span>
@@ -235,7 +236,7 @@ export function RecipeDetail() {
             <button
               type="button"
               onClick={() => window.print()}
-              className="flex items-center gap-1.5 rounded-full bg-surface px-3 py-1.5 text-sm font-medium text-text-secondary shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)] hover:text-forest-text"
+              className="flex min-h-11 items-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-1.5 text-sm font-medium text-text-secondary hover:text-forest-text"
             >
               <PrinterIcon className="size-4" />
               <span className="hidden sm:inline">Imprimir</span>
@@ -244,14 +245,14 @@ export function RecipeDetail() {
               type="button"
               onClick={handleShare}
               disabled={shareState?.status === 'loading'}
-              className="flex items-center gap-1.5 rounded-full bg-surface px-3 py-1.5 text-sm font-medium text-text-secondary shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)] hover:text-forest-text disabled:opacity-50"
+              className="flex min-h-11 items-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-1.5 text-sm font-medium text-text-secondary hover:text-forest-text disabled:opacity-50"
             >
               <QrIcon className="size-4" />
               <span className="hidden sm:inline">Partilhar</span>
             </button>
             <Link
               to={`/receitas/${recipe.id}/editar`}
-              className="flex items-center gap-1.5 rounded-full bg-surface px-3 py-1.5 text-sm font-medium text-text-secondary shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)] hover:text-forest-text"
+              className="flex min-h-11 items-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-1.5 text-sm font-medium text-text-secondary hover:text-forest-text"
             >
               <PencilIcon className="size-4" />
               <span className="hidden sm:inline">Editar</span>
@@ -259,6 +260,7 @@ export function RecipeDetail() {
           </div>
         </div>
         {recipe.description && <p className="mt-2 text-text-secondary">{recipe.description}</p>}
+        {recipe.dietary_warnings.length > 0 && <div role="alert" className="mt-4 rounded-xl border border-danger/20 bg-danger/10 p-4 text-sm text-danger"><p className="font-bold">Potencial risco alimentar</p><ul className="mt-1 list-disc pl-5">{recipe.dietary_warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul><p className="mt-2 text-xs">Confirma sempre os rótulos e possíveis contaminações cruzadas.</p></div>}
 
         <div className="mt-2 flex items-center gap-0.5" role="radiogroup" aria-label="Avaliação por estrelas">
           {[1, 2, 3, 4, 5].map((value) => {
@@ -278,7 +280,7 @@ export function RecipeDetail() {
           })}
         </div>
 
-        <div className="mt-5 flex gap-6 rounded-2xl bg-surface p-5 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)] print:break-inside-avoid print:border print:border-black/15 print:shadow-none">
+        <div className="mt-5 flex flex-wrap gap-6 rounded-2xl border border-border bg-surface p-5 print:break-inside-avoid print:border-black/15">
           {totalMinutes > 0 && (
             <HeroStat icon={<ClockIcon className="size-5" />} value={totalMinutes} label="min" tone="orange" />
           )}
@@ -340,19 +342,12 @@ export function RecipeDetail() {
         {recipe.last_made_at && (
           <p className="mt-2 text-xs text-text-secondary">Feita pela última vez em {formatLastMade(recipe.last_made_at)}.</p>
         )}
+        {recipe.cook_history.length > 1 && <details className="mt-2 text-xs text-text-secondary"><summary className="cursor-pointer font-medium text-forest-text">Histórico de confeções ({recipe.cook_history.length})</summary><ul className="mt-2 space-y-1 pl-4">{recipe.cook_history.map((entry) => <li key={entry.id}>{formatLastMade(entry.made_at)}</li>)}</ul></details>}
 
         {(recipe.categories.length > 0 || recipe.tags.length > 0) && (
           <div className="mt-4 flex flex-wrap gap-1.5">
-            {recipe.categories.map((c) => (
-              <span key={c.id} className="rounded-full bg-primary-forest/10 px-2.5 py-0.5 text-xs font-medium text-forest-text">
-                {c.name}
-              </span>
-            ))}
-            {recipe.tags.map((t) => (
-              <span key={t.id} className="rounded-full bg-accent-leaf/10 px-2.5 py-0.5 text-xs font-medium text-accent-leaf">
-                {t.name}
-              </span>
-            ))}
+            {recipe.categories.map((c) => <CategoryBadge key={c.id} color={c.color} icon={c.icon}>{c.name}</CategoryBadge>)}
+            {recipe.tags.map((t) => <TagBadge key={t.id}>{t.name}</TagBadge>)}
           </div>
         )}
 
@@ -364,8 +359,8 @@ export function RecipeDetail() {
           Iniciar Modo Cozinha
         </Link>
 
-        <div className="mt-8 grid gap-8 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
-          <section>
+        <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(280px,0.8fr)_minmax(0,1.5fr)] xl:gap-16">
+          <section className="lg:sticky lg:top-24 lg:self-start">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-lg font-semibold text-text-primary">Ingredientes</h2>
               <button
@@ -375,7 +370,7 @@ export function RecipeDetail() {
                 className="flex shrink-0 items-center gap-1.5 text-sm font-medium text-forest-text disabled:opacity-50 print:hidden"
               >
                 <CartIcon className="size-4" />
-                <span className="hidden sm:inline">Adicionar à lista</span>
+                <span className="hidden sm:inline">Adicionar o que falta</span>
               </button>
             </div>
             {shoppingListFeedback && (
@@ -416,6 +411,7 @@ export function RecipeDetail() {
                 <li className="text-sm text-text-secondary">Sem ingredientes registados.</li>
               )}
             </ul>
+            {recipe.substitution_suggestions.length > 0 && <div className="mt-4 rounded-xl border border-border bg-muted/50 p-3"><h3 className="text-sm font-bold text-text-primary">Alternativas para o que falta</h3><ul className="mt-2 space-y-2 text-sm">{recipe.substitution_suggestions.map(({ ingredient_name, substitution }) => <li key={`${ingredient_name}-${substitution.id}`}><span className="font-semibold text-text-primary">{ingredient_name}</span>: usar {substitution.substitute_name}{substitution.quantity_ratio ? ` (${substitution.quantity_ratio}× a quantidade)` : ''}. <span className={substitution.is_verified ? 'text-forest-text' : 'text-accent-orange'}>{substitution.is_verified ? 'Verificada' : 'Por verificar'}</span>{substitution.note ? ` — ${substitution.note}` : ''}</li>)}</ul></div>}
           </section>
 
           <section>

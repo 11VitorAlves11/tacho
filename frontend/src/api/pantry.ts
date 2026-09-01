@@ -1,13 +1,13 @@
 import { api } from './client'
-import type { PantryExtraction, PantryItem } from './types'
+import type { PantryExtraction, PantryItem, PantryItemInput } from './types'
 
 export async function listPantryItems() {
   const { data } = await api.get<PantryItem[]>('/pantry')
   return data
 }
 
-export async function createPantryItem(name: string) {
-  const { data } = await api.post<PantryItem>('/pantry', { name })
+export async function createPantryItem(payload: PantryItemInput & { name: string }) {
+  const { data } = await api.post<PantryItem>('/pantry', payload)
   return data
 }
 
@@ -24,7 +24,11 @@ export async function bulkCreatePantryItems(names: string[]) {
 }
 
 export async function setPantryItemHasIt(id: string, hasIt: boolean) {
-  const { data } = await api.patch<PantryItem>(`/pantry/${id}`, { has_it: hasIt })
+  return updatePantryItem(id, { has_it: hasIt })
+}
+
+export async function updatePantryItem(id: string, patch: PantryItemInput) {
+  const { data } = await api.patch<PantryItem>(`/pantry/${id}`, patch)
   return data
 }
 

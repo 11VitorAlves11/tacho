@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { getPublicRecipe, publicRecipeImageUrl } from '../api/public'
 import type { PublicRecipe as PublicRecipeType } from '../api/types'
-import { ClockIcon, PotIcon, ServingsIcon } from '../components/icons'
+import { Brand } from '../components/Brand'
+import { ClockIcon, ServingsIcon } from '../components/icons'
 import { formatQuantity } from '../lib/quantity'
+import { CategoryBadge, TagBadge } from '../components/ui'
 
 // Página pública, sem sessão — o link/QR gerado em RecipeDetail.tsx
 // ("Partilhar") aponta para aqui. Ao contrário do Detalhe normal, é só
@@ -25,7 +27,7 @@ export function PublicRecipe() {
   if (error) {
     return (
       <div className="flex min-h-svh flex-col items-center justify-center bg-bg-sage px-4 text-center">
-        <PotIcon className="size-8 text-forest-text" />
+        <Brand compact className="size-12" />
         <h1 className="mt-3 text-lg font-semibold text-text-primary">Link expirado</h1>
         <p className="mt-1 max-w-xs text-sm text-text-secondary">
           Este link de partilha já não é válido — os links do Tacho duram 5 horas. Pede a quem partilhou contigo
@@ -48,7 +50,7 @@ export function PublicRecipe() {
   return (
     <div className="min-h-svh bg-bg-sage pb-10">
       <div className="mx-auto flex max-w-4xl items-center gap-1.5 px-4 py-4 text-sm font-semibold text-forest-text sm:px-6">
-        <PotIcon className="size-5" />
+        <Brand compact className="size-7" />
         Tacho
         <span className="font-normal text-text-secondary">· receita partilhada</span>
       </div>
@@ -102,14 +104,10 @@ export function PublicRecipe() {
           {(recipe.categories.length > 0 || recipe.tags.length > 0) && (
             <div className="mt-4 flex flex-wrap gap-1.5">
               {recipe.categories.map((c) => (
-                <span key={c.id} className="rounded-full bg-primary-forest/10 px-2.5 py-0.5 text-xs font-medium text-forest-text">
-                  {c.name}
-                </span>
+                <CategoryBadge key={c.id} color={c.color} icon={c.icon}>{c.name}</CategoryBadge>
               ))}
               {recipe.tags.map((t) => (
-                <span key={t.id} className="rounded-full bg-accent-leaf/10 px-2.5 py-0.5 text-xs font-medium text-accent-leaf">
-                  {t.name}
-                </span>
+                <TagBadge key={t.id}>{t.name}</TagBadge>
               ))}
             </div>
           )}

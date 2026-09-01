@@ -1,27 +1,13 @@
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { getCurrentUser, getSetupStatus, logout as apiLogout, tryForwardLogin } from '../api/auth'
 import { setUnauthorizedHandler } from '../api/client'
 import type { CurrentUser, ForwardLoginBlockReason } from '../api/types'
+import { AuthContext } from './authContext'
 
 interface ForwardAuthBlock {
   reason: ForwardLoginBlockReason
   email?: string
 }
-
-interface AuthState {
-  // undefined enquanto a verificação inicial (GET /users/me) não responde —
-  // distingue "ainda não sabemos" de "sabemos que não há sessão" (null).
-  user: CurrentUser | null | undefined
-  needsSetup: boolean | undefined
-  // O proxy já identificou esta pessoa via forward-auth, mas falta ação
-  // do admin do lado do Tacho (conta inexistente/inativa/sem agregado) —
-  // `App.tsx` mostra uma página de erro em vez do ecrã de login.
-  forwardAuthBlocked: ForwardAuthBlock | null
-  refresh: () => Promise<void>
-  logout: () => Promise<void>
-}
-
-const AuthContext = createContext<AuthState | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<CurrentUser | null | undefined>(undefined)
@@ -52,6 +38,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
+    // O carregamento inicial sincroniza este contexto com a sessão e o
+    // estado de configuração mantidos pelo backend.
+    // oxlint-disable-next-line react/set-state-in-effect
     refresh()
     // Sessão expirada a meio do uso (cookie caducado, revogado, etc.) — o
     // interceptor do axios avisa aqui, para deixar de mostrar o utilizador
@@ -70,10 +59,4 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       {children}
     </AuthContext.Provider>
   )
-}
-
-export function useAuth() {
-  const ctx = useContext(AuthContext)
-  if (!ctx) throw new Error('useAuth só pode ser usado dentro de AuthProvider')
-  return ctx
 }

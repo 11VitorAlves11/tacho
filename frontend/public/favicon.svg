@@ -1,11 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="14" fill="#2D5F3F"/>
-  <svg x="10" y="10" width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#EAF0E7" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M6 11h12v5.5a3.5 3.5 0 0 1-3.5 3.5h-5A3.5 3.5 0 0 1 6 16.5V11Z"/>
-    <path d="M4 11h16"/>
-    <path d="M4 11c-1.1 0-2-.67-2-1.5S2.9 8 4 8"/>
-    <path d="M20 11c1.1 0 2-.67 2-1.5S21.1 8 20 8"/>
-    <circle cx="12" cy="5" r="1"/>
-    <path d="M12 6v1.3"/>
-  </svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-hidden="true" >
+
+<path d="M 62.000 4.000 H 194.000 C 226.033 4.000 252.000 29.967 252.000 62.000 V 194.000 C 252.000 226.033 226.033 252.000 194.000 252.000 H 62.000 C 29.967 252.000 4.000 226.033 4.000 194.000 V 62.000 C 4.000 29.967 29.967 4.000 62.000 4.000 Z" fill="#43BF50"/>
+<g transform="translate(-4 -4) scale(1.03)" style="color:#FFFFFF">
+  <path d="M 75.000 74.000 H 181.000 C 185.418 74.000 189.000 77.582 189.000 82.000 V 82.000 C 189.000 86.418 185.418 90.000 181.000 90.000 H 75.000 C 70.582 90.000 67.000 86.418 67.000 82.000 V 82.000 C 67.000 77.582 70.582 74.000 75.000 74.000 Z" fill="currentColor"/><circle cx="54" cy="103" r="14" fill="currentColor"/><circle cx="202" cy="103" r="14" fill="currentColor"/><path d="M60 103h8v46c0 29 16 43 40 43h40c24 0 40-14 40-43v-46h8v46c0 35-20 53-48 53h-40c-28 0-48-18-48-53v-46Zm19 9h98v37c0 20-11 32-30 32h-38c-19 0-30-12-30-32v-37Z" fill="currentColor" fill-rule="evenodd"/><path d="M 139.000 53.000 C 139.000 59.075 134.075 64.000 128.000 64.000 C 121.925 64.000 117.000 59.075 117.000 53.000 C 117.000 46.925 121.925 42.000 128.000 42.000 C 134.075 42.000 139.000 46.925 139.000 53.000 Z" fill="currentColor"/>
+</g>
 </svg>

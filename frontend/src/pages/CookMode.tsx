@@ -12,11 +12,11 @@ const LARGE_TEXT_KEY = 'tacho:cook-mode-large-text'
 // tokens adaptáveis aos valores de tema claro, para nunca herdar as
 // variantes escuras do :root.
 const FIXED_LIGHT_TOKENS = {
-  '--color-text-primary': '#1c2b1f',
-  '--color-text-secondary': '#5c6b5e',
-  '--color-bg-sage': '#eaf0e7',
+  '--color-text-primary': '#171a18',
+  '--color-text-secondary': '#69706c',
+  '--color-bg-sage': '#fafafa',
   '--color-surface': '#ffffff',
-  '--color-forest-text': '#2d5f3f',
+  '--color-forest-text': '#258c34',
 } as CSSProperties
 
 export function CookMode() {
@@ -100,7 +100,7 @@ export function CookMode() {
 
   if (!recipe) {
     return (
-      <div className="flex min-h-svh items-center justify-center bg-primary-forest text-card-white" style={FIXED_LIGHT_TOKENS}>
+      <div className="flex min-h-svh items-center justify-center bg-[#101513] text-card-white" style={FIXED_LIGHT_TOKENS}>
         <p className="text-sm">A carregar…</p>
       </div>
     )
@@ -111,7 +111,7 @@ export function CookMode() {
   const isLast = stepIndex === steps.length - 1
 
   return (
-    <div className="flex min-h-svh flex-col bg-primary-forest text-card-white" style={FIXED_LIGHT_TOKENS}>
+    <div className="flex min-h-svh flex-col bg-[#101513] text-card-white" style={FIXED_LIGHT_TOKENS}>
       <header className="mx-auto flex w-full max-w-4xl items-center justify-between px-4 py-4">
         <Link
           to={`/receitas/${recipe.id}`}
@@ -129,7 +129,7 @@ export function CookMode() {
           aria-pressed={largeText}
           aria-label={largeText ? 'Diminuir tamanho de letra' : 'Aumentar tamanho de letra'}
           className={`flex size-10 items-center justify-center rounded-full text-sm font-bold ${
-            largeText ? 'bg-accent-orange text-text-primary' : 'bg-card-white/10 text-card-white'
+            largeText ? 'bg-primary-forest text-white' : 'bg-card-white/10 text-card-white'
           }`}
         >
           A{largeText ? '+' : ''}
@@ -140,7 +140,7 @@ export function CookMode() {
         {steps.map((s, i) => (
           <div
             key={s.id}
-            className={`h-1.5 flex-1 rounded-full ${i <= stepIndex ? 'bg-accent-orange' : 'bg-card-white/20'}`}
+            className={`h-1.5 flex-1 rounded-full ${i <= stepIndex ? 'bg-primary-forest' : 'bg-card-white/20'}`}
           />
         ))}
       </div>
@@ -182,7 +182,7 @@ export function CookMode() {
           <button
             type="button"
             onClick={handleFinish}
-            className="flex flex-1 items-center justify-center rounded-full bg-accent-orange py-4 font-semibold text-text-primary"
+            className="flex flex-1 items-center justify-center rounded-full bg-primary-forest py-4 font-semibold text-white"
           >
             Concluir
           </button>
@@ -190,7 +190,7 @@ export function CookMode() {
           <button
             type="button"
             onClick={() => setStepIndex((i) => Math.min(steps.length - 1, i + 1))}
-            className="flex-1 rounded-full bg-accent-orange py-4 font-semibold text-text-primary"
+            className="flex-1 rounded-full bg-primary-forest py-4 font-semibold text-white"
           >
             Seguinte
           </button>
@@ -208,12 +208,17 @@ function StepTimer({ minutes }: { minutes: number }) {
 
   useEffect(() => {
     if (!running || remaining === null) return
-    if (remaining <= 0) {
-      setRunning(false)
-      navigator.vibrate?.(200)
-      return
-    }
-    const timeout = setTimeout(() => setRemaining((r) => (r ?? 0) - 1), 1000)
+    const timeout = setTimeout(() => {
+      setRemaining((current) => {
+        if (current === null) return null
+        if (current <= 1) {
+          setRunning(false)
+          navigator.vibrate?.(200)
+          return 0
+        }
+        return current - 1
+      })
+    }, 1000)
     return () => clearTimeout(timeout)
   }, [running, remaining])
 

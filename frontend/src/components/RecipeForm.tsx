@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import { estimateNutrition, OFF_UNAVAILABLE_REASON, type NutritionEstimate } from '../api/nutrition'
-import { createCategory, createTag, listCategories, listTags, recipeImageUrl } from '../api/recipes'
-import type { Category, RecipeInput, Tag } from '../api/types'
+import { createCategory, createTag, listCategories, listTags, recipeImageUrl, updateCategory } from '../api/recipes'
+import type { Category, CategoryIcon, RecipeInput, Tag } from '../api/types'
 import { CameraIcon, PlusIcon, XIcon } from './icons'
 
 interface IngredientRow {
@@ -14,6 +14,19 @@ interface IngredientRow {
 interface StepRow {
   instruction: string
   durationMinutes: string
+}
+
+const CATEGORY_ICON_OPTIONS: { value: CategoryIcon; symbol: string }[] = [
+  { value: 'breakfast', symbol: '☀' },
+  { value: 'main', symbol: '🍲' },
+  { value: 'dessert', symbol: '♨' },
+  { value: 'drink', symbol: '◒' },
+  { value: 'snack', symbol: '◇' },
+  { value: 'other', symbol: '●' },
+]
+
+function categoryIconLabel(icon: CategoryIcon | null) {
+  return icon ? `${CATEGORY_ICON_OPTIONS.find((option) => option.value === icon)?.symbol ?? ''} ` : ''
 }
 
 // Mais fraco do que `Recipe` de propósito — permite pré-preencher o
@@ -106,6 +119,8 @@ export function RecipeForm({
   const [categoryIds, setCategoryIds] = useState<string[]>(initial?.categories?.map((c) => c.id) ?? [])
   const [tagIds, setTagIds] = useState<string[]>(initial?.tags?.map((t) => t.id) ?? [])
   const [newCategoryName, setNewCategoryName] = useState('')
+  const [newCategoryColor, setNewCategoryColor] = useState('#2F6B45')
+  const [newCategoryIcon, setNewCategoryIcon] = useState<CategoryIcon>('main')
   const [newTagName, setNewTagName] = useState('')
 
   const [saving, setSaving] = useState(false)
@@ -147,11 +162,16 @@ export function RecipeForm({
     if (existing) {
       if (!categoryIds.includes(existing.id)) setCategoryIds((ids) => [...ids, existing.id])
     } else {
-      const created = await createCategory(name)
+      const created = await createCategory(name, newCategoryColor, newCategoryIcon)
       setCategories((cats) => [...cats, created])
       setCategoryIds((ids) => [...ids, created.id])
     }
     setNewCategoryName('')
+  }
+
+  async function changeCategoryVisual(category: Category, patch: { color?: string | null; icon?: CategoryIcon | null }) {
+    const updated = await updateCategory(category.id, patch)
+    setCategories((current) => current.map((item) => item.id === updated.id ? updated : item))
   }
 
   async function addNewTag() {
@@ -517,9 +537,13 @@ export function RecipeForm({
         <p className="mt-3 text-sm font-medium text-text-secondary">Categorias</p>
         <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
           {categories.map((c) => (
-            <Chip key={c.id} label={c.name} active={categoryIds.includes(c.id)} onClick={() => toggleCategory(c.id)} tone="forest" />
+            <span key={c.id} className="inline-flex items-center gap-1 rounded-xl border border-border bg-muted/50 p-1">
+              <Chip label={`${categoryIconLabel(c.icon)}${c.name}`} active={categoryIds.includes(c.id)} onClick={() => toggleCategory(c.id)} tone="forest" />
+              <input type="color" value={c.color ?? '#2F6B45'} onChange={(event) => changeCategoryVisual(c, { color: event.target.value })} aria-label={`Cor de ${c.name}`} className="size-7 cursor-pointer rounded border-0 bg-transparent p-0" />
+              <select value={c.icon ?? ''} onChange={(event) => changeCategoryVisual(c, { icon: (event.target.value || null) as CategoryIcon | null })} aria-label={`Ícone de ${c.name}`} className="h-7 max-w-8 rounded bg-surface text-xs text-text-primary"><option value="">•</option>{CATEGORY_ICON_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.symbol}</option>)}</select>
+            </span>
           ))}
-          <InlineAdd value={newCategoryName} onChange={setNewCategoryName} onAdd={addNewCategory} placeholder="nova categoria" />
+          <span className="inline-flex items-center gap-1"><input type="color" value={newCategoryColor} onChange={(event) => setNewCategoryColor(event.target.value)} aria-label="Cor da nova categoria" className="size-7 cursor-pointer rounded border-0 bg-transparent p-0" /><select value={newCategoryIcon} onChange={(event) => setNewCategoryIcon(event.target.value as CategoryIcon)} aria-label="Ícone da nova categoria" className="h-8 rounded-lg border border-border bg-surface px-1 text-xs text-text-primary">{CATEGORY_ICON_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.symbol}</option>)}</select><InlineAdd value={newCategoryName} onChange={setNewCategoryName} onAdd={addNewCategory} placeholder="nova categoria" /></span>
         </div>
 
         <p className="mt-4 text-sm font-medium text-text-secondary">Tags</p>
@@ -685,12 +709,15 @@ function Chip({
   tone: 'forest' | 'leaf'
 }) {
   const activeClass = tone === 'forest' ? 'bg-primary-forest text-card-white' : 'bg-accent-leaf text-card-white'
+  const inactiveClass = tone === 'forest'
+    ? 'border border-primary-forest/30 bg-primary-soft text-forest-text hover:border-primary-forest/60'
+    : 'border border-dashed border-accent-orange/40 bg-accent-orange/10 text-accent-orange hover:border-accent-orange/70'
   return (
     <button
       type="button"
       onClick={onClick}
       className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-        active ? activeClass : 'bg-bg-sage text-text-secondary hover:bg-bg-sage/70'
+        active ? activeClass : inactiveClass
       }`}
     >
       {label}

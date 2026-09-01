@@ -4,12 +4,14 @@ import { createCookbook, deleteCookbook, listCookbooks } from '../api/cookbooks'
 import type { CookbookSummary } from '../api/types'
 import { PageShell } from '../components/PageShell'
 import { PlusIcon, TrashIcon } from '../components/icons'
+import { ConfirmDialog } from '../components/ui'
 
 export function Cookbooks() {
   const [cookbooks, setCookbooks] = useState<CookbookSummary[] | null>(null)
   const [error, setError] = useState(false)
   const [newName, setNewName] = useState('')
   const [creating, setCreating] = useState(false)
+  const [deleteId, setDeleteId] = useState<string | null>(null)
 
   useEffect(() => {
     listCookbooks().then(setCookbooks).catch(() => setError(true))
@@ -29,10 +31,11 @@ export function Cookbooks() {
     }
   }
 
-  async function handleDelete(id: string) {
-    if (!window.confirm('Apagar esta coleção? As receitas em si não são apagadas.')) return
-    await deleteCookbook(id)
-    setCookbooks((prev) => prev?.filter((c) => c.id !== id) ?? prev)
+  async function handleDelete() {
+    if (!deleteId) return
+    await deleteCookbook(deleteId)
+    setCookbooks((prev) => prev?.filter((c) => c.id !== deleteId) ?? prev)
+    setDeleteId(null)
   }
 
   return (
@@ -65,7 +68,7 @@ export function Cookbooks() {
               </Link>
               <button
                 type="button"
-                onClick={() => handleDelete(c.id)}
+                onClick={() => setDeleteId(c.id)}
                 className="shrink-0 rounded-full p-2 text-text-secondary hover:bg-bg-sage hover:text-accent-orange"
                 aria-label={`Apagar coleção ${c.name}`}
               >
@@ -92,6 +95,7 @@ export function Cookbooks() {
           Criar
         </button>
       </form>
+      <ConfirmDialog open={deleteId !== null} title="Apagar coleção?" description="As receitas da coleção não serão apagadas." confirmLabel="Apagar" onCancel={() => setDeleteId(null)} onConfirm={handleDelete} />
     </PageShell>
   )
 }

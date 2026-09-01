@@ -234,3 +234,39 @@ export function CartIcon(props: SVGProps<SVGSVGElement>) {
     </svg>
   )
 }
+
+export function HomeIcon(props: SVGProps<SVGSVGElement>) {
+  return <svg {...base} {...props}><path d="m3.5 10 8.5-7 8.5 7" /><path d="M5.5 8.5V20h13V8.5M9.5 20v-6h5v6" /></svg>
+}
+
+export function FolderIcon(props: SVGProps<SVGSVGElement>) {
+  return <svg {...base} {...props}><path d="M3.5 6.5A1.5 1.5 0 0 1 5 5h5l2 2h7A1.5 1.5 0 0 1 20.5 8.5v9A1.5 1.5 0 0 1 19 19H5a1.5 1.5 0 0 1-1.5-1.5v-11Z" /></svg>
+}
+
+export function PantryIcon(props: SVGProps<SVGSVGElement>) {
+  return <svg {...base} {...props}><path d="M5 4h14M6 4v16h12V4M6 10h12M9 7h6M9 14h6" /></svg>
+}
+
+export function SlidersIcon(props: SVGProps<SVGSVGElement>) {
+  return <svg {...base} {...props}><path d="M4 6h5M15 6h5M4 12h9M17 12h3M4 18h3M11 18h9" /><circle cx="12" cy="6" r="2" /><circle cx="15" cy="12" r="2" /><circle cx="9" cy="18" r="2" /></svg>
+}
+
+export function SunIcon(props: SVGProps<SVGSVGElement>) {
+  return <svg {...base} {...props}><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" /></svg>
+}
+
+export function MoonIcon(props: SVGProps<SVGSVGElement>) {
+  return <svg {...base} {...props}><path d="M20 15.2A8.5 8.5 0 0 1 8.8 4a8.5 8.5 0 1 0 11.2 11.2Z" /></svg>
+}
+
+export function MoreIcon(props: SVGProps<SVGSVGElement>) {
+  return <svg {...base} {...props}><circle cx="5" cy="12" r="1" fill="currentColor" stroke="none" /><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" /><circle cx="19" cy="12" r="1" fill="currentColor" stroke="none" /></svg>
+}
+
+export function EyeIcon(props: SVGProps<SVGSVGElement>) {
+  return <svg {...base} {...props}><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" /><circle cx="12" cy="12" r="2.75" /></svg>
+}
+
+export function EyeOffIcon(props: SVGProps<SVGSVGElement>) {
+  return <svg {...base} {...props}><path d="m4 4 16 16" /><path d="M9.6 6.4A9 9 0 0 1 12 6c6 0 9.5 6 9.5 6a15 15 0 0 1-2.2 2.8M14.6 17.6A9 9 0 0 1 12 18c-6 0-9.5-6-9.5-6a15 15 0 0 1 2.3-2.9" /><path d="M10.1 10.1a2.75 2.75 0 0 0 3.8 3.8" /></svg>
+}

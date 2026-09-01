@@ -2,14 +2,16 @@ import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   addWorkspaceMember,
+  getOIDCStatus,
   listWorkspaceMembers,
   removeWorkspaceMember,
   updateEmail,
   updateName,
   updatePassword,
+  oidcStartUrl,
 } from '../api/auth'
-import type { WorkspaceMember } from '../api/types'
-import { useAuth } from '../auth/AuthContext'
+import type { OIDCStatus, WorkspaceMember } from '../api/types'
+import { useAuth } from '../auth/useAuth'
 import { applyTheme, getStoredTheme, type Theme } from '../theme'
 import { ChevronDownIcon, PlusIcon, XIcon } from './icons'
 
@@ -117,10 +119,11 @@ function InlineEditField({ label, type = 'text', minLength, placeholder, errorMe
   )
 }
 
-export function UserMenu() {
+export function UserMenu({ variant = 'header' }: { variant?: 'header' | 'mobile' }) {
   const [open, setOpen] = useState(false)
   const [theme, setTheme] = useState<Theme>(() => getStoredTheme())
   const [members, setMembers] = useState<WorkspaceMember[] | null>(null)
+  const [oidcStatus, setOIDCStatus] = useState<OIDCStatus | null>(null)
   const [showAddForm, setShowAddForm] = useState(false)
   const [newEmail, setNewEmail] = useState('')
   const [newPassword, setNewPassword] = useState('')
@@ -134,6 +137,7 @@ export function UserMenu() {
   useEffect(() => {
     if (open && members === null) {
       listWorkspaceMembers().then(setMembers).catch(() => {})
+      getOIDCStatus().then(setOIDCStatus).catch(() => {})
     }
   }, [open, members])
 
@@ -194,12 +198,17 @@ export function UserMenu() {
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
         aria-haspopup="true"
-        className="flex items-center gap-1.5 rounded-full bg-card-white/15 py-1.5 pl-1.5 pr-2.5 text-sm font-medium transition-colors hover:bg-card-white/25"
+        className={`flex min-h-11 items-center gap-1.5 rounded-xl text-sm font-medium transition-colors ${
+          variant === 'mobile'
+            ? 'border border-border bg-surface p-1.5 text-text-primary shadow-sm hover:bg-muted'
+            : 'bg-card-white/15 py-1.5 pl-1.5 pr-2.5 text-white hover:bg-card-white/25'
+        }`}
       >
-        <span className="flex size-7 items-center justify-center rounded-full bg-card-white text-xs font-semibold text-primary-forest">
+        <span className={`flex items-center justify-center rounded-xl bg-card-white text-xs font-semibold text-primary-forest ${variant === 'mobile' ? 'size-9 bg-primary-soft' : 'size-7'}`}>
           {initials(user.email, user.name)}
         </span>
-        <ChevronDownIcon className={`size-4 transition-transform ${open ? 'rotate-180' : ''}`} />
+        <span className={`${variant === 'mobile' ? 'sr-only' : 'hidden max-w-36 truncate xl:inline'}`}>{user.name ?? user.email}</span>
+        <ChevronDownIcon className={`${variant === 'mobile' ? 'hidden' : 'size-4'} transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
       {open && (
@@ -209,6 +218,7 @@ export function UserMenu() {
           {user.name && <p className="px-2 text-xs text-text-secondary">{user.email}</p>}
 
           <div className="mt-2 space-y-1">
+            {oidcStatus?.enabled && <a href={oidcStartUrl('/')} className="block px-2 text-xs text-text-secondary underline decoration-dotted underline-offset-2 hover:text-text-primary">Associar {oidcStatus.display_name}</a>}
             <InlineEditField
               label="Alterar nome"
               placeholder="Nome"
@@ -243,6 +253,8 @@ export function UserMenu() {
 
           <div className="mt-3 border-t border-black/5 pt-3">
             <p className="px-2 text-xs font-medium uppercase tracking-wide text-text-secondary">Agregado</p>
+            <button type="button" onClick={() => { setOpen(false); navigate('/perfis-alimentares') }} className="mb-1 w-full rounded-lg px-2 py-1.5 text-left text-sm font-semibold text-forest-text hover:bg-primary-soft">Perfis alimentares</button>
+            <button type="button" onClick={() => { setOpen(false); navigate('/substituicoes') }} className="mb-1 w-full rounded-lg px-2 py-1.5 text-left text-sm font-semibold text-forest-text hover:bg-primary-soft">Substituições</button>
             <ul className="mt-1 space-y-0.5">
               {members?.map((m) => (
                 <li key={m.id} className="flex items-center justify-between gap-2 px-2 py-0.5 text-sm text-text-primary">

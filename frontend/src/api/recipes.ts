@@ -13,18 +13,28 @@ import type {
 
 export async function listRecipes(params?: {
   categoryId?: string
-  tagId?: string
+  tagIds?: string[]
   q?: string
+  ingredient?: string
+  ratingMin?: number
+  maxTotalMinutes?: number
   favorite?: boolean
   makeable?: boolean
+  pantrySuggestions?: boolean
+  safeForAll?: boolean
 }) {
   const { data } = await api.get<RecipeSummary[]>('/recipes', {
     params: {
       category_id: params?.categoryId,
-      tag_id: params?.tagId,
+      tag_ids: params?.tagIds?.join(','),
       q: params?.q,
+      ingredient: params?.ingredient,
+      rating_min: params?.ratingMin,
+      max_total_minutes: params?.maxTotalMinutes,
       favorite: params?.favorite,
       makeable: params?.makeable,
+      pantry_suggestions: params?.pantrySuggestions,
+      safe_for_all: params?.safeForAll,
     },
   })
   return data
@@ -68,6 +78,11 @@ export async function markRecipeMade(id: string) {
 
 export async function addRecipeToShoppingList(id: string) {
   const { data } = await api.post<ShoppingListItem[]>(`/recipes/${id}/shopping-list`)
+  return data
+}
+
+export async function addMissingRecipeIngredientsToShoppingList(id: string) {
+  const { data } = await api.post<ShoppingListItem[]>(`/recipes/${id}/shopping-list/missing`)
   return data
 }
 
@@ -148,8 +163,13 @@ export async function listCategories() {
   return data
 }
 
-export async function createCategory(name: string) {
-  const { data } = await api.post<Category>('/categories', { name })
+export async function createCategory(name: string, color?: string | null, icon?: Category['icon']) {
+  const { data } = await api.post<Category>('/categories', { name, color: color ?? null, icon: icon ?? null })
+  return data
+}
+
+export async function updateCategory(id: string, patch: { name?: string; color?: string | null; icon?: Category['icon'] }) {
+  const { data } = await api.patch<Category>(`/categories/${id}`, patch)
   return data
 }
 

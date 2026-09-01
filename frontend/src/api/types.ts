@@ -4,7 +4,11 @@
 export interface Category {
   id: string
   name: string
+  color: string | null
+  icon: CategoryIcon | null
 }
+
+export type CategoryIcon = 'breakfast' | 'main' | 'dessert' | 'drink' | 'snack' | 'other'
 
 export interface Tag {
   id: string
@@ -31,6 +35,12 @@ export interface CookNote {
   id: string
   text: string
   created_at: string
+  cook_history_id: string | null
+}
+
+export interface CookHistoryEntry {
+  id: string
+  made_at: string
 }
 
 export interface RecipeImage {
@@ -55,10 +65,15 @@ export interface RecipeSummary {
   prep_minutes: number | null
   cook_minutes: number | null
   image_path: string | null
+  source_recipe_id: string | null
   is_favorite: boolean
   rating: number | null
   categories: Category[]
   tags: Tag[]
+  missing_ingredients: string[] | null
+  missing_ingredient_count: number | null
+  is_makeable: boolean | null
+  dietary_warnings: string[]
 }
 
 export interface Recipe {
@@ -72,6 +87,7 @@ export interface Recipe {
   source_url: string | null
   notes: string | null
   image_path: string | null
+  source_recipe_id: string | null
   is_favorite: boolean
   rating: number | null
   calories_kcal: number | null
@@ -87,8 +103,26 @@ export interface Recipe {
   categories: Category[]
   tags: Tag[]
   cook_notes: CookNote[]
+  cook_history: CookHistoryEntry[]
   comments: Comment[]
   images: RecipeImage[]
+  dietary_warnings: string[]
+  substitution_suggestions: RecipeSubstitutionSuggestion[]
+}
+
+export interface IngredientSubstitution {
+  id: string
+  ingredient_name: string
+  substitute_name: string
+  quantity_ratio: number | null
+  note: string | null
+  is_verified: boolean
+  created_at: string
+}
+
+export interface RecipeSubstitutionSuggestion {
+  ingredient_name: string
+  substitution: IngredientSubstitution
 }
 
 export interface RecipeShare {
@@ -115,6 +149,19 @@ export interface PantryItem {
   id: string
   name: string
   has_it: boolean
+  quantity: number | null
+  unit: string | null
+  expires_on: string | null
+  minimum_quantity: number | null
+}
+
+export interface PantryItemInput {
+  name?: string
+  has_it?: boolean
+  quantity?: number | null
+  unit?: string | null
+  expires_on?: string | null
+  minimum_quantity?: number | null
 }
 
 export interface PantryExtraction {
@@ -168,13 +215,47 @@ export interface ImportStatus {
   recipe_id: string | null
 }
 
-export type MealType = 'almoco' | 'jantar'
+export type MealType = 'pequeno_almoco' | 'almoco' | 'lanche' | 'jantar'
 
 export interface MealPlanEntry {
   id: string
   day: string
   meal_type: MealType
   recipe: RecipeSummary
+}
+
+export interface MealPlanTemplate {
+  id: string
+  name: string
+  slots: { day_offset: number; meal_type: MealType; recipe_id: string }[]
+  created_at: string
+}
+
+export interface MealPlanRecurrence {
+  id: string
+  recipe_id: string
+  weekday: number
+  meal_type: MealType
+  interval_weeks: number
+  starts_on: string
+  ends_on: string | null
+  active: boolean
+}
+
+export interface MealPlanSuggestionItem {
+  day: string
+  meal_type: MealType
+  recipe: RecipeSummary
+}
+
+export interface DietaryProfile {
+  id: string
+  name: string
+  user_id: string | null
+  allergies: string[]
+  intolerances: string[]
+  preferences: string[]
+  created_at: string
 }
 
 export interface ShoppingListItem {
@@ -203,6 +284,12 @@ export interface WorkspaceMember {
 
 export interface SetupStatus {
   needs_setup: boolean
+}
+
+export interface OIDCStatus {
+  enabled: boolean
+  display_name: string
+  local_login_enabled: boolean
 }
 
 export type ForwardLoginBlockReason = 'no_account' | 'inactive' | 'no_membership'

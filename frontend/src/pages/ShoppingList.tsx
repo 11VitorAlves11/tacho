@@ -20,15 +20,10 @@ export function ShoppingList() {
   const [newQuantity, setNewQuantity] = useState('')
 
   useEffect(() => {
-    refresh()
-  }, [])
-
-  function refresh() {
-    setError(false)
     listShoppingList()
       .then(setItems)
       .catch(() => setError(true))
-  }
+  }, [])
 
   async function handleGenerate() {
     setGenerating(true)
@@ -64,11 +59,12 @@ export function ShoppingList() {
 
   const unchecked = items?.filter((i) => !i.is_checked) ?? []
   const checked = items?.filter((i) => i.is_checked) ?? []
+  const progress = items?.length ? Math.round((checked.length / items.length) * 100) : 0
 
   return (
-    <PageShell>
+    <PageShell wide>
       <div className="mb-1 flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold text-text-primary sm:text-3xl">Lista de Compras</h1>
+        <div><h1 className="text-2xl font-bold tracking-tight text-text-primary sm:text-3xl">Lista de compras</h1>{items && items.length > 0 && <p className="mt-1 text-sm text-text-secondary">{checked.length} de {items.length} concluídos</p>}</div>
         <button
           type="button"
           onClick={handleGenerate}
@@ -83,24 +79,26 @@ export function ShoppingList() {
         Despensa →
       </Link>
 
+      {items && items.length > 0 && <div className="mb-6 h-2 overflow-hidden rounded-full bg-muted" aria-label={`${progress}% da lista concluída`} role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}><div className="h-full rounded-full bg-primary-forest transition-[width]" style={{ width: `${progress}%` }} /></div>}
+
       {error && (
         <p className="mb-4 rounded-xl bg-surface p-4 text-sm text-text-secondary">
           Não foi possível ligar ao backend. Confirma se está a correr em {import.meta.env.VITE_API_URL}.
         </p>
       )}
 
-      <form onSubmit={handleAdd} className="mb-6 flex gap-2 rounded-2xl bg-surface p-3 shadow-sm">
+      <form onSubmit={handleAdd} className="mb-6 flex gap-2 rounded-2xl border border-border bg-surface p-3">
         <input
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           placeholder="Adicionar item…"
-          className="min-w-0 flex-1 rounded-lg bg-bg-sage/60 px-3 py-2 text-sm text-text-primary outline-none placeholder:text-text-secondary focus:ring-2 focus:ring-accent-leaf"
+          className="min-w-0 flex-1 rounded-lg bg-muted px-3 py-2 text-sm text-text-primary outline-none placeholder:text-text-secondary focus:ring-2 focus:ring-accent-leaf"
         />
         <input
           value={newQuantity}
           onChange={(e) => setNewQuantity(e.target.value)}
           placeholder="Qtd."
-          className="w-20 rounded-lg bg-bg-sage/60 px-3 py-2 text-sm text-text-primary outline-none placeholder:text-text-secondary focus:ring-2 focus:ring-accent-leaf"
+          className="w-20 rounded-lg bg-muted px-3 py-2 text-sm text-text-primary outline-none placeholder:text-text-secondary focus:ring-2 focus:ring-accent-leaf"
         />
         <button
           type="submit"
@@ -123,7 +121,7 @@ export function ShoppingList() {
       )}
 
       {items !== null && items.length > 0 && (
-        <ul className="space-y-2">
+        <ul className="grid gap-2 lg:grid-cols-2">
           {[...unchecked, ...checked].map((item) => (
             <ShoppingListRow key={item.id} item={item} onToggle={() => handleToggle(item)} onDelete={() => handleDelete(item.id)} />
           ))}
@@ -143,13 +141,13 @@ function ShoppingListRow({
   onDelete: () => void
 }) {
   return (
-    <li className="flex items-center gap-3 rounded-xl bg-surface p-3 shadow-sm">
+    <li className="flex min-h-14 items-center gap-3 rounded-xl border border-border bg-surface p-3">
       <button
         type="button"
         onClick={onToggle}
         aria-pressed={item.is_checked}
         aria-label={item.is_checked ? `Desmarcar ${item.name}` : `Marcar ${item.name} como comprado`}
-        className={`size-5 shrink-0 rounded-full border-2 transition-colors ${
+        className={`size-6 shrink-0 rounded-md border-2 transition-colors ${
           item.is_checked ? 'border-accent-leaf bg-accent-leaf' : 'border-text-secondary/40'
         }`}
       />

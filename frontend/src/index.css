@@ -4,55 +4,50 @@
 @import "@fontsource/inter/600.css";
 @import "@fontsource/inter/700.css";
 
-/*
-  Tokens do sistema visual do produto, Secção 6.2 (mini design
-  system) — este ficheiro é a autoridade visual, não invenção nossa.
-*/
+/* Tokens do sistema visual. Os aliases antigos mantêm-se para permitir que as
+   páginas migrem sem duplicar cores nem quebrar comportamento. */
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
 
-  --color-bg-sage: #eaf0e7;
-  --color-bg-sage-deep-start: #1f3d2b;
-  --color-bg-sage-deep-end: #2d6a4f;
+  --color-bg-sage: #fafafa;
+  --color-bg-sage-deep-start: #43bf50;
+  --color-bg-sage-deep-end: #35a943;
   --color-card-white: #ffffff;
-  --color-primary-forest: #2d5f3f;
-  --color-accent-leaf: #4caf50;
-  --color-accent-orange: #f2994a;
-  --color-text-primary: #1c2b1f;
-  --color-text-secondary: #5c6b5e;
-
-  /* Tokens adaptáveis ao tema (dark mode) — ver bloco mais abaixo.
-     --color-card-white NÃO entra aqui de propósito: é usado tanto como
-     fundo de card como texto/overlay branco fixo sobre o hero e o Modo
-     Cozinha (que nunca mudam de cor), por isso fica sempre #FFFFFF.
-     --color-surface é o equivalente que muda com o tema, só para cards. */
+  --color-primary-forest: #43bf50;
+  --color-accent-leaf: #43bf50;
+  --color-accent-orange: #e27732;
+  --color-text-primary: #171a18;
+  --color-text-secondary: #69706c;
   --color-surface: #ffffff;
-  --color-forest-text: #2d5f3f;
+  --color-forest-text: #258c34;
+  --color-border: #e7e9e8;
+  --color-muted: #f3f5f3;
+  --color-primary-soft: #edf9ef;
+  --color-danger: #d64b4b;
 }
 
-/* Dark mode — variante escura dos tokens neutros do sistema visual, nunca das
-   cores de marca usadas como fundo (primary-forest, accent-leaf,
-   accent-orange, o gradiente do hero) — essas mantêm-se, só o contexto à
-   volta escurece. --color-forest-text é a exceção: verde-floresta como
-   TEXTO sobre uma superfície escura falha o contraste WCAG (~2.1:1), por
-   isso ganha uma variante mais clara só para esse uso; accent-leaf não
-   precisa (já passa, ~5.3:1, mantém-se igual nos dois temas). */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --color-bg-sage: #141f17;
-    --color-surface: #1e2a21;
-    --color-text-primary: #eaf0e7;
-    --color-text-secondary: #9aaa9c;
-    --color-forest-text: #5fa97c;
+    --color-bg-sage: #101513;
+    --color-surface: #171c19;
+    --color-text-primary: #f4f7f5;
+    --color-text-secondary: #a2aaa5;
+    --color-forest-text: #62d66d;
+    --color-border: #2a302c;
+    --color-muted: #202622;
+    --color-primary-soft: #193320;
   }
 }
 
 :root[data-theme="dark"] {
-  --color-bg-sage: #141f17;
-  --color-surface: #1e2a21;
-  --color-text-primary: #eaf0e7;
-  --color-text-secondary: #9aaa9c;
-  --color-forest-text: #5fa97c;
+  --color-bg-sage: #101513;
+  --color-surface: #171c19;
+  --color-text-primary: #f4f7f5;
+  --color-text-secondary: #a2aaa5;
+  --color-forest-text: #62d66d;
+  --color-border: #2a302c;
+  --color-muted: #202622;
+  --color-primary-soft: #193320;
 }
 
 body {
@@ -61,6 +56,28 @@ body {
   color: var(--color-text-primary);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-primary-forest);
+  outline-offset: 3px;
+}
+
+button,
+a {
+  touch-action: manipulation;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-primary-forest) 25%, transparent);
 }
 
 #root {
@@ -76,11 +93,13 @@ body {
   :root,
   :root:not([data-theme="light"]),
   :root[data-theme="dark"] {
-    --color-bg-sage: #eaf0e7;
+    --color-bg-sage: #fafafa;
     --color-surface: #ffffff;
-    --color-text-primary: #1c2b1f;
-    --color-text-secondary: #5c6b5e;
-    --color-forest-text: #2d5f3f;
+    --color-text-primary: #171a18;
+    --color-text-secondary: #69706c;
+    --color-forest-text: #258c34;
+    --color-border: #e7e9e8;
+    --color-muted: #f3f5f3;
   }
 
   body {
@@ -107,5 +126,16 @@ body {
   }
   li {
     break-inside: avoid;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

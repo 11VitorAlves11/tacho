@@ -1,14 +1,14 @@
 import axios from 'axios'
 import { api } from './client'
-import type { CurrentUser, ForwardLoginResult, SetupStatus, WorkspaceMember } from './types'
+import type { CurrentUser, ForwardLoginResult, OIDCStatus, SetupStatus, WorkspaceMember } from './types'
 
 export async function getSetupStatus() {
   const { data } = await api.get<SetupStatus>('/setup/status')
   return data
 }
 
-export async function setup(email: string, password: string) {
-  const { data } = await api.post<SetupStatus>('/setup', { email, password })
+export async function setup(name: string, email: string, password: string) {
+  const { data } = await api.post<SetupStatus>('/setup', { name, email, password })
   return data
 }
 
@@ -22,7 +22,17 @@ export async function login(email: string, password: string) {
 }
 
 export async function logout() {
-  await api.post('/auth/cookie/logout')
+  await api.post('/auth/logout')
+}
+
+export async function getOIDCStatus() {
+  const { data } = await api.get<OIDCStatus>('/auth/oidc/status')
+  return data
+}
+
+export function oidcStartUrl(next = '/') {
+  const base = api.defaults.baseURL ?? ''
+  return `${base}/auth/oidc/start?next=${encodeURIComponent(next)}`
 }
 
 export async function getCurrentUser() {

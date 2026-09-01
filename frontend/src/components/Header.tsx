@@ -1,45 +1,24 @@
-import { NavLink, Link } from 'react-router-dom'
-import { CalendarIcon, CartIcon, PlusIcon, PotIcon } from './icons'
+import { Link } from 'react-router-dom'
+import { Brand } from './Brand'
+import { SunIcon } from './icons'
 import { UserMenu } from './UserMenu'
-
-const navLinkClass = ({ isActive }: { isActive: boolean }) =>
-  `flex items-center gap-1.5 rounded-full px-3 py-2 text-sm font-medium transition-colors ${
-    isActive ? 'bg-card-white/20' : 'text-card-white/85 hover:bg-card-white/10'
-  }`
+import { applyTheme, getStoredTheme } from '../theme'
 
 export function Header() {
+  function toggleTheme() {
+    applyTheme(getStoredTheme() === 'dark' ? 'light' : 'dark')
+  }
   return (
-    <header className="bg-gradient-to-br from-bg-sage-deep-start to-bg-sage-deep-end text-card-white print:hidden">
-      <div className="mx-auto flex max-w-4xl items-center justify-between gap-3 px-4 py-4 sm:px-6">
-        <div className="flex items-center gap-5">
-          <Link to="/" className="flex shrink-0 items-center gap-2 font-semibold tracking-tight">
-            <PotIcon className="size-6" />
-            <span className="text-lg">Tacho</span>
-          </Link>
-          {/* Equivalente desktop do BottomNav (sm:hidden) — em ecrã pequeno a
-              navegação vive só no BottomNav, para não duplicar destinos.
-              Agrupado com o logótipo (em vez de centrado sozinho no meio do
-              header) para ler como uma barra de navegação normal — marca +
-              destinos à esquerda, ações à direita. */}
-          <nav className="hidden items-center gap-1 sm:flex" aria-label="Navegação principal">
-            <NavLink to="/lista-compras" className={navLinkClass}>
-              <CartIcon className="size-4" />
-              Lista
-            </NavLink>
-            <NavLink to="/planeamento" className={navLinkClass}>
-              <CalendarIcon className="size-4" />
-              Plano
-            </NavLink>
-          </nav>
-        </div>
+    <header className="sticky top-0 z-40 hidden h-16 bg-primary-forest text-white lg:block print:hidden">
+      <div className="flex h-full items-center justify-between gap-4 px-6 xl:px-8">
+        <Link to="/" className="flex h-12 shrink-0 items-center gap-2.5 text-white" aria-label="Tacho — início">
+          <Brand compact className="size-[55px] brightness-0 invert" />
+          <span className="text-[28px] font-bold tracking-tight">Tacho</span>
+        </Link>
         <div className="flex items-center gap-2">
-          <Link
-            to="/adicionar"
-            className="hidden items-center gap-1.5 rounded-full bg-card-white/15 px-4 py-2 text-sm font-medium transition-colors hover:bg-card-white/25 sm:flex"
-          >
-            <PlusIcon className="size-4" />
-            Adicionar receita
-          </Link>
+          <button onClick={toggleTheme} className="flex size-11 items-center justify-center rounded-xl text-white transition-colors hover:bg-white/15" aria-label="Alternar tema">
+            <SunIcon className="size-5" />
+          </button>
           <UserMenu />
         </div>
       </div>

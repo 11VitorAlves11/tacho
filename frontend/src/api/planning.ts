@@ -1,5 +1,5 @@
 import { api } from './client'
-import type { MealPlanEntry, MealType, ShoppingListItem } from './types'
+import type { MealPlanEntry, MealPlanRecurrence, MealPlanSuggestionItem, MealPlanTemplate, MealType, ShoppingListItem } from './types'
 
 export async function listMealPlan(start: string, end: string) {
   const { data } = await api.get<MealPlanEntry[]>('/meal-plan', { params: { start, end } })
@@ -13,6 +13,59 @@ export async function assignMealPlanEntry(day: string, mealType: MealType, recip
 
 export async function removeMealPlanEntry(day: string, mealType: MealType) {
   await api.delete(`/meal-plan/${day}/${mealType}`)
+}
+
+export async function copyMealPlanWeek(sourceWeekStart: string, targetWeekStart: string, overwrite = false) {
+  const { data } = await api.post<MealPlanEntry[]>('/meal-plan/copy-week', {
+    source_week_start: sourceWeekStart,
+    target_week_start: targetWeekStart,
+    overwrite,
+  })
+  return data
+}
+
+export async function listMealPlanTemplates() {
+  const { data } = await api.get<MealPlanTemplate[]>('/meal-plan-templates')
+  return data
+}
+
+export async function saveMealPlanTemplate(name: string, weekStart: string) {
+  const { data } = await api.post<MealPlanTemplate>('/meal-plan-templates', { name, week_start: weekStart })
+  return data
+}
+
+export async function applyMealPlanTemplate(templateId: string, weekStart: string, overwrite = false) {
+  const { data } = await api.post<MealPlanEntry[]>(`/meal-plan-templates/${templateId}/apply`, {
+    week_start: weekStart,
+    overwrite,
+  })
+  return data
+}
+
+export async function createMealPlanRecurrence(
+  recipeId: string,
+  weekday: number,
+  mealType: MealType,
+  startsOn: string,
+  intervalWeeks = 1,
+  endsOn?: string | null,
+) {
+  const { data } = await api.post<MealPlanRecurrence>('/meal-plan-recurrences', {
+    recipe_id: recipeId,
+    weekday,
+    meal_type: mealType,
+    starts_on: startsOn,
+    interval_weeks: intervalWeeks,
+    ends_on: endsOn ?? null,
+  })
+  return data
+}
+
+export async function suggestMealPlan(weekStart: string) {
+  const { data } = await api.get<MealPlanSuggestionItem[]>('/meal-plan-suggestion', {
+    params: { week_start: weekStart },
+  })
+  return data
 }
 
 export async function listShoppingList() {

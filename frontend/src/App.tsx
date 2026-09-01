@@ -1,9 +1,11 @@
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
-import { AuthProvider, useAuth } from './auth/AuthContext'
+import { AuthProvider } from './auth/AuthContext'
+import { useAuth } from './auth/useAuth'
 import { AddRecipe } from './pages/AddRecipe'
 import { CookbookDetail } from './pages/CookbookDetail'
 import { Cookbooks } from './pages/Cookbooks'
 import { CookMode } from './pages/CookMode'
+import { DietaryProfiles } from './pages/DietaryProfiles'
 import { EditRecipe } from './pages/EditRecipe'
 import { ForwardAuthBlocked } from './pages/ForwardAuthBlocked'
 import { Home } from './pages/Home'
@@ -14,6 +16,7 @@ import { PublicRecipe } from './pages/PublicRecipe'
 import { RecipeDetail } from './pages/RecipeDetail'
 import { Setup } from './pages/Setup'
 import { ShoppingList } from './pages/ShoppingList'
+import { Substitutions } from './pages/Substitutions'
 
 export default function App() {
   return (
@@ -79,6 +82,8 @@ function AppRoutes() {
       <Route path="/colecoes" element={<Cookbooks />} />
       <Route path="/colecoes/:id" element={<CookbookDetail />} />
       <Route path="/despensa" element={<Pantry />} />
+      <Route path="/perfis-alimentares" element={<DietaryProfiles />} />
+      <Route path="/substituicoes" element={<Substitutions />} />
       <Route path="/login" element={<Navigate to="/" replace />} />
       <Route path="/setup" element={<Navigate to="/" replace />} />
     </Routes>
