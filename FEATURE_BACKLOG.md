@@ -193,6 +193,7 @@ Ajudar a decidir o que cozinhar com os ingredientes disponíveis.
 ### 17. Importação e exportação portável
 
 - Exportar uma receita individual num formato documentado.
+- Exportar todas as receitas e metadados do workspace num JSON versionado (`tacho.recipe-export`, v1).
 - Exportar todos os dados de um workspace.
 - Importar dados exportados sem criar duplicados inesperados.
 - Distinguir exportação funcional de backup integral da instalação.

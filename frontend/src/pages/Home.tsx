@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { listCategories, listRecipes, listTags, toggleFavorite } from '../api/recipes'
+import { exportWorkspaceRecipes, listCategories, listRecipes, listTags, toggleFavorite } from '../api/recipes'
 import { listPantryItems } from '../api/pantry'
 import { listMealPlan, listShoppingList } from '../api/planning'
 import { listDietaryProfiles } from '../api/profiles'
@@ -62,6 +62,17 @@ export function Home() {
       if (favoriteOnly && !updated.is_favorite) return previous.filter((recipe) => recipe.id !== id)
       return previous.map((recipe) => recipe.id === id ? { ...recipe, is_favorite: updated.is_favorite } : recipe)
     })
+  }
+
+  async function handleExport() {
+    const payload = await exportWorkspaceRecipes()
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `tacho-receitas-${toDateKey(new Date())}.json`
+    link.click()
+    URL.revokeObjectURL(url)
   }
 
   function selectCategory(id: string) {
@@ -131,7 +142,7 @@ export function Home() {
     </section>
 
     <section className="mt-8">
-      <div className="mb-4 flex items-end justify-between gap-3"><div><h2 className="text-xl font-bold tracking-tight text-text-primary lg:text-2xl">Receitas</h2>{recipes && <p className="mt-0.5 text-sm text-text-secondary">{recipes.length} {recipes.length === 1 ? 'receita' : 'receitas'}</p>}</div><Link to="/colecoes" className="text-sm font-semibold text-forest-text">Ver coleções <span aria-hidden>›</span></Link></div>
+      <div className="mb-4 flex items-end justify-between gap-3"><div><h2 className="text-xl font-bold tracking-tight text-text-primary lg:text-2xl">Receitas</h2>{recipes && <p className="mt-0.5 text-sm text-text-secondary">{recipes.length} {recipes.length === 1 ? 'receita' : 'receitas'}</p>}</div><div className="flex items-center gap-3"><button type="button" onClick={() => void handleExport()} className="text-sm font-semibold text-forest-text">Exportar</button><Link to="/colecoes" className="text-sm font-semibold text-forest-text">Ver coleções <span aria-hidden>›</span></Link></div></div>
       {error && <ErrorState>Não foi possível ligar ao backend. Confirma se está a correr em {import.meta.env.VITE_API_URL}.</ErrorState>}
       {!error && recipes === null && <RecipeGridSkeleton />}
       {!error && recipes !== null && recipes.length === 0 && <EmptyState title={favoriteOnly ? 'Ainda não marcaste receitas favoritas.' : makeableOnly ? 'Nenhuma receita corresponde à despensa.' : 'Ainda não há receitas por aqui.'} description="Ajusta os filtros ou adiciona uma nova receita ao teu livro." action={<Link to="/adicionar" className="font-semibold text-forest-text">Adicionar receita</Link>} />}

@@ -42,6 +42,11 @@ export async function listRecipes(params?: {
   return data
 }
 
+export async function exportWorkspaceRecipes() {
+  const { data } = await api.get('/recipes/export')
+  return data as { format: string; version: number; recipes: unknown[] }
+}
+
 export async function getRecipe(id: string) {
   const { data } = await api.get<Recipe>(`/recipes/${id}`)
   return data

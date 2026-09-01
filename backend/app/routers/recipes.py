@@ -2,6 +2,7 @@ import uuid
 
 from celery.result import AsyncResult
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile
+from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
@@ -24,6 +25,22 @@ from app.schema_org import recipe_to_schema_org
 from app.tasks import import_recipe_from_url
 
 router = APIRouter(prefix="/recipes", tags=["recipes"])
+
+
+@router.get("/export")
+def export_workspace_recipes(
+    db: Session = Depends(get_db),
+    workspace_id: uuid.UUID = Depends(get_workspace_id),
+    user: User = Depends(current_active_user),
+):
+    """Exporta o conteúdo de receitas num formato portátil e versionado."""
+    summaries = crud.list_recipes(db, workspace_id, user.id)
+    recipes = [crud.get_recipe(db, workspace_id, summary.id, user.id) for summary in summaries]
+    return JSONResponse(content=jsonable_encoder({
+        "format": "tacho.recipe-export",
+        "version": 1,
+        "recipes": [schemas.RecipeOut.model_validate(recipe).model_dump(mode="json") for recipe in recipes if recipe],
+    }))
 
 
 @router.get("", response_model=list[schemas.RecipeSummary])
