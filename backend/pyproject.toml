@@ -1,6 +1,6 @@
 [project]
 name = "tacho"
-version = "2.0.0"
+version = "2.1.0"
 description = "Self-hosted recipe and kitchen management"
 requires-python = ">=3.12"
 dependencies = [
@@ -12,6 +12,7 @@ dependencies = [
   "google-genai==2.17.0",
   "psycopg2-binary==2.9.12",
   "pydantic-settings==2.14.2",
+  "pyjwt[crypto]==2.13.0",
   "python-multipart==0.0.32",
   "recipe-scrapers==15.11.0",
   "redis==8.1.0",

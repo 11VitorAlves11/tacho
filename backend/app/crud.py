@@ -42,6 +42,8 @@ def _recipe_query(workspace_id: uuid.UUID):
             selectinload(models.Recipe.tags),
             selectinload(models.Recipe.comments).selectinload(models.Comment.user),
             selectinload(models.Recipe.images),
+            selectinload(models.Recipe.cook_notes),
+            selectinload(models.Recipe.cook_history),
         )
     )
 
@@ -77,21 +79,89 @@ def _is_makeable(recipe: models.Recipe, normalized_pantry: list[str]) -> bool:
     )
 
 
+def _missing_ingredients(recipe: models.Recipe, normalized_pantry: list[str]) -> list[str]:
+    return [
+        ingredient.name
+        for ingredient in recipe.ingredients
+        if not ingredient.is_header
+        and not any(pantry_name in _normalize(ingredient.name) for pantry_name in normalized_pantry)
+    ]
+
+
+def _annotate_availability(recipes: list[models.Recipe], normalized_pantry: list[str]) -> list[models.Recipe]:
+    for recipe in recipes:
+        missing = _missing_ingredients(recipe, normalized_pantry)
+        recipe.missing_ingredients = missing
+        recipe.missing_ingredient_count = len(missing)
+        recipe.is_makeable = bool(recipe.ingredients) and len(missing) == 0
+    return recipes
+
+
+def _annotate_dietary_warnings(
+    db: Session, workspace_id: uuid.UUID, recipes: list[models.Recipe]
+) -> list[models.Recipe]:
+    profiles = list(db.scalars(select(models.DietaryProfile).where(models.DietaryProfile.workspace_id == workspace_id)))
+    for recipe in recipes:
+        ingredient_text = " | ".join(_normalize(item.name) for item in recipe.ingredients if not item.is_header)
+        warnings: list[str] = []
+        for profile in profiles:
+            for kind, terms in (("alergia", profile.allergies), ("intolerância", profile.intolerances)):
+                for term in terms:
+                    if _normalize(term) in ingredient_text:
+                        warnings.append(f"{profile.name}: {term} ({kind})")
+        recipe.dietary_warnings = warnings
+    return recipes
+
+
+def _annotate_substitution_suggestions(
+    db: Session, workspace_id: uuid.UUID, recipes: list[models.Recipe], normalized_pantry: list[str]
+) -> list[models.Recipe]:
+    substitutions = list(
+        db.scalars(
+            select(models.IngredientSubstitution).where(models.IngredientSubstitution.workspace_id == workspace_id)
+        )
+    )
+    for recipe in recipes:
+        suggestions = []
+        for ingredient in recipe.ingredients:
+            if ingredient.is_header or any(name in _normalize(ingredient.name) for name in normalized_pantry):
+                continue
+            for substitution in substitutions:
+                if _normalize(substitution.ingredient_name) in _normalize(ingredient.name):
+                    suggestions.append({"ingredient_name": ingredient.name, "substitution": substitution})
+        recipe.substitution_suggestions = suggestions
+    return recipes
+
+
 def list_recipes(
     db: Session,
     workspace_id: uuid.UUID,
     user_id: uuid.UUID,
     category_id: uuid.UUID | None = None,
-    tag_id: uuid.UUID | None = None,
+    tag_ids: list[uuid.UUID] | None = None,
     q: str | None = None,
+    ingredient: str | None = None,
+    rating_min: int | None = None,
+    max_total_minutes: int | None = None,
     favorite_only: bool = False,
     makeable_only: bool = False,
+    pantry_suggestions: bool = False,
+    safe_for_all: bool = False,
 ) -> list[models.Recipe]:
     query = _recipe_query(workspace_id)
     if category_id is not None:
         query = query.where(models.Recipe.categories.any(models.Category.id == category_id))
-    if tag_id is not None:
+    for tag_id in tag_ids or []:
         query = query.where(models.Recipe.tags.any(models.Tag.id == tag_id))
+    if ingredient:
+        query = query.where(models.Recipe.ingredients.any(models.Ingredient.name.ilike(f"%{ingredient.strip()}%")))
+    if rating_min is not None:
+        query = query.where(models.Recipe.rating >= rating_min)
+    if max_total_minutes is not None:
+        query = query.where(
+            func.coalesce(models.Recipe.prep_minutes, 0) + func.coalesce(models.Recipe.cook_minutes, 0)
+            <= max_total_minutes
+        )
     if favorite_only:
         query = query.where(
             models.Recipe.id.in_(
@@ -105,16 +175,18 @@ def list_recipes(
                 func.to_tsvector("portuguese", models.Recipe.title).op("@@")(func.to_tsquery("portuguese", tsquery))
             )
     recipes = list(db.scalars(query.order_by(models.Recipe.title)))
+    pantry_query = select(models.PantryItem.name).where(
+        models.PantryItem.workspace_id == workspace_id, models.PantryItem.has_it.is_(True)
+    )
+    normalized_pantry = [_normalize(name) for name in db.scalars(pantry_query)]
+    _annotate_availability(recipes, normalized_pantry)
+    _annotate_dietary_warnings(db, workspace_id, recipes)
     if makeable_only:
-        # Correspondência em Python, não em SQL: precisa de comparar contra
-        # todos os ingredientes de cada receita (já carregados por
-        # selectinload em _recipe_query) e a lista de despensa é tipicamente
-        # pequena — não vale a pena um JOIN/subquery SQL para isto.
-        pantry_query = select(models.PantryItem.name).where(
-            models.PantryItem.workspace_id == workspace_id, models.PantryItem.has_it.is_(True)
-        )
-        normalized_pantry = [_normalize(name) for name in db.scalars(pantry_query)]
         recipes = [r for r in recipes if _is_makeable(r, normalized_pantry)]
+    if pantry_suggestions:
+        recipes.sort(key=lambda recipe: (recipe.missing_ingredient_count, recipe.title.lower()))
+    if safe_for_all:
+        recipes = [recipe for recipe in recipes if not recipe.dietary_warnings]
     return _annotate_favorites(db, user_id, recipes)
 
 
@@ -131,6 +203,17 @@ def get_recipe(
         return None
     if user_id is not None:
         recipe = _annotate_favorites(db, user_id, [recipe])[0]
+        recipe = _annotate_dietary_warnings(db, workspace_id, [recipe])[0]
+        normalized_pantry = [
+            _normalize(name)
+            for name in db.scalars(
+                select(models.PantryItem.name).where(
+                    models.PantryItem.workspace_id == workspace_id,
+                    models.PantryItem.has_it.is_(True),
+                )
+            )
+        ]
+        recipe = _annotate_substitution_suggestions(db, workspace_id, [recipe], normalized_pantry)[0]
     return recipe
 
 
@@ -309,6 +392,7 @@ def mark_recipe_made(
     if recipe is None:
         return None
     recipe.last_made_at = datetime.now(UTC)
+    db.add(models.CookHistoryEntry(recipe_id=recipe.id, made_at=recipe.last_made_at))
     db.commit()
     db.refresh(recipe)
     return recipe
@@ -320,7 +404,8 @@ def add_cook_note(
     recipe = get_recipe(db, workspace_id, recipe_id, user_id)
     if recipe is None:
         return None
-    db.add(models.CookNote(recipe_id=recipe.id, text=text))
+    history_id = recipe.cook_history[0].id if recipe.cook_history else None
+    db.add(models.CookNote(recipe_id=recipe.id, cook_history_id=history_id, text=text))
     db.commit()
     db.refresh(recipe)
     return recipe
@@ -452,6 +537,7 @@ def duplicate_recipe(
         source_url=original.source_url,
         notes=original.notes,
         image_path=image_path,
+        source_recipe_id=original.source_recipe_id or original.id,
         calories_kcal=original.calories_kcal,
         protein_g=original.protein_g,
         carbs_g=original.carbs_g,
@@ -492,8 +578,26 @@ def list_categories(db: Session, workspace_id: uuid.UUID) -> list[models.Categor
 
 
 def create_category(db: Session, workspace_id: uuid.UUID, payload: schemas.CategoryCreate) -> models.Category:
-    category = models.Category(workspace_id=workspace_id, name=payload.name)
+    category = models.Category(workspace_id=workspace_id, **payload.model_dump())
     db.add(category)
+    db.commit()
+    db.refresh(category)
+    return category
+
+
+def update_category(
+    db: Session, workspace_id: uuid.UUID, category_id: uuid.UUID, payload: schemas.CategoryUpdate
+) -> models.Category | None:
+    category = db.scalar(
+        select(models.Category).where(
+            models.Category.workspace_id == workspace_id,
+            models.Category.id == category_id,
+        )
+    )
+    if category is None:
+        return None
+    for key, value in payload.model_dump(exclude_unset=True).items():
+        setattr(category, key, value)
     db.commit()
     db.refresh(category)
     return category
@@ -634,12 +738,156 @@ def _meal_plan_query(workspace_id: uuid.UUID):
 def list_meal_plan_entries(
     db: Session, workspace_id: uuid.UUID, user_id: uuid.UUID, start: date, end: date
 ) -> list[models.MealPlanEntry]:
+    materialize_meal_plan_recurrences(db, workspace_id, start, end)
     query = _meal_plan_query(workspace_id).where(models.MealPlanEntry.day >= start, models.MealPlanEntry.day <= end)
     entries = list(db.scalars(query).unique())
     # MealPlanEntryOut.recipe é um RecipeSummary — exige is_favorite, que só
     # existe depois de anotado (ver models.py/_annotate_favorites).
     _annotate_favorites(db, user_id, [e.recipe for e in entries])
     return entries
+
+
+def materialize_meal_plan_recurrences(db: Session, workspace_id: uuid.UUID, start: date, end: date) -> None:
+    recurrences = list(
+        db.scalars(
+            select(models.MealPlanRecurrence).where(
+                models.MealPlanRecurrence.workspace_id == workspace_id,
+                models.MealPlanRecurrence.active.is_(True),
+                models.MealPlanRecurrence.starts_on <= end,
+                (models.MealPlanRecurrence.ends_on.is_(None) | (models.MealPlanRecurrence.ends_on >= start)),
+            )
+        )
+    )
+    if not recurrences:
+        return
+    existing = list(
+        db.scalars(
+            select(models.MealPlanEntry).where(
+                models.MealPlanEntry.workspace_id == workspace_id,
+                models.MealPlanEntry.day >= start,
+                models.MealPlanEntry.day <= end,
+            )
+        )
+    )
+    occupied = {(entry.day, entry.meal_type) for entry in existing}
+    changed = False
+    for recurrence in recurrences:
+        candidate = max(start, recurrence.starts_on)
+        while candidate <= end:
+            weeks_since_start = (candidate - recurrence.starts_on).days // 7
+            if (
+                candidate.weekday() == recurrence.weekday
+                and weeks_since_start % recurrence.interval_weeks == 0
+                and (recurrence.ends_on is None or candidate <= recurrence.ends_on)
+                and (candidate, recurrence.meal_type) not in occupied
+            ):
+                db.add(
+                    models.MealPlanEntry(
+                        workspace_id=workspace_id,
+                        day=candidate,
+                        meal_type=recurrence.meal_type,
+                        recipe_id=recurrence.recipe_id,
+                    )
+                )
+                occupied.add((candidate, recurrence.meal_type))
+                changed = True
+            candidate += timedelta(days=1)
+    if changed:
+        db.commit()
+
+
+def list_meal_plan_recurrences(db: Session, workspace_id: uuid.UUID) -> list[models.MealPlanRecurrence]:
+    return list(
+        db.scalars(
+            select(models.MealPlanRecurrence)
+            .where(models.MealPlanRecurrence.workspace_id == workspace_id)
+            .order_by(models.MealPlanRecurrence.weekday, models.MealPlanRecurrence.meal_type)
+        )
+    )
+
+
+def create_meal_plan_recurrence(
+    db: Session, workspace_id: uuid.UUID, payload: schemas.MealPlanRecurrenceCreate
+) -> models.MealPlanRecurrence | None:
+    if get_recipe(db, workspace_id, payload.recipe_id) is None:
+        return None
+    recurrence = models.MealPlanRecurrence(workspace_id=workspace_id, **payload.model_dump())
+    db.add(recurrence)
+    db.commit()
+    db.refresh(recurrence)
+    return recurrence
+
+
+def delete_meal_plan_recurrence(db: Session, workspace_id: uuid.UUID, recurrence_id: uuid.UUID) -> bool:
+    recurrence = db.scalar(
+        select(models.MealPlanRecurrence).where(
+            models.MealPlanRecurrence.workspace_id == workspace_id,
+            models.MealPlanRecurrence.id == recurrence_id,
+        )
+    )
+    if recurrence is None:
+        return False
+    db.delete(recurrence)
+    db.commit()
+    return True
+
+
+def suggest_meal_plan(db: Session, workspace_id: uuid.UUID, user_id: uuid.UUID, week_start: date) -> list[dict]:
+    recipes = list_recipes(db, workspace_id, user_id, pantry_suggestions=True, safe_for_all=True)
+    if not recipes:
+        return []
+    expiring_names = [
+        _normalize(name)
+        for name in db.scalars(
+            select(models.PantryItem.name).where(
+                models.PantryItem.workspace_id == workspace_id,
+                models.PantryItem.has_it.is_(True),
+                models.PantryItem.expires_on.is_not(None),
+                models.PantryItem.expires_on <= week_start + timedelta(days=7),
+            )
+        )
+    ]
+
+    def uses_expiring_product(recipe: models.Recipe) -> bool:
+        return any(
+            pantry_name in _normalize(ingredient.name)
+            for ingredient in recipe.ingredients
+            for pantry_name in expiring_names
+        )
+
+    recipes.sort(
+        key=lambda recipe: (
+            not uses_expiring_product(recipe),
+            not recipe.is_favorite,
+            -(recipe.rating or 0),
+            recipe.missing_ingredient_count,
+            recipe.last_made_at is not None,
+            recipe.last_made_at or datetime.min.replace(tzinfo=UTC),
+            (recipe.prep_minutes or 0) + (recipe.cook_minutes or 0),
+            recipe.title.lower(),
+        )
+    )
+    existing = list(
+        db.scalars(
+            select(models.MealPlanEntry).where(
+                models.MealPlanEntry.workspace_id == workspace_id,
+                models.MealPlanEntry.day >= week_start,
+                models.MealPlanEntry.day <= week_start + timedelta(days=6),
+            )
+        )
+    )
+    occupied = {(entry.day, entry.meal_type) for entry in existing}
+    suggestions: list[dict] = []
+    recipe_index = 0
+    for day_offset in range(7):
+        day = week_start + timedelta(days=day_offset)
+        for meal_type in ("almoco", "jantar"):
+            if (day, meal_type) in occupied:
+                continue
+            recipe = recipes[recipe_index % len(recipes)]
+            recipe_index += 1
+            suggestions.append({"day": day, "meal_type": meal_type, "recipe": recipe})
+    return suggestions
 
 
 def upsert_meal_plan_entry(
@@ -682,6 +930,156 @@ def delete_meal_plan_entry(db: Session, workspace_id: uuid.UUID, day: date, meal
     if entry is None:
         return False
     db.delete(entry)
+    db.commit()
+    return True
+
+
+def _apply_meal_plan_slots(
+    db: Session,
+    workspace_id: uuid.UUID,
+    week_start: date,
+    slots: list[dict],
+    overwrite: bool,
+) -> None:
+    week_end = week_start + timedelta(days=6)
+    existing = list(
+        db.scalars(
+            select(models.MealPlanEntry).where(
+                models.MealPlanEntry.workspace_id == workspace_id,
+                models.MealPlanEntry.day >= week_start,
+                models.MealPlanEntry.day <= week_end,
+            )
+        )
+    )
+    by_slot = {(entry.day, entry.meal_type): entry for entry in existing}
+    valid_recipe_ids = set(db.scalars(select(models.Recipe.id).where(models.Recipe.workspace_id == workspace_id)))
+    for slot in slots:
+        recipe_id = uuid.UUID(str(slot["recipe_id"]))
+        if recipe_id not in valid_recipe_ids:
+            continue
+        target = week_start + timedelta(days=int(slot["day_offset"]))
+        key = (target, str(slot["meal_type"]))
+        current = by_slot.get(key)
+        if current is not None and not overwrite:
+            continue
+        if current is None:
+            current = models.MealPlanEntry(
+                workspace_id=workspace_id,
+                day=target,
+                meal_type=str(slot["meal_type"]),
+                recipe_id=recipe_id,
+            )
+            db.add(current)
+            by_slot[key] = current
+        else:
+            current.recipe_id = recipe_id
+    db.commit()
+
+
+def copy_meal_plan_week(
+    db: Session,
+    workspace_id: uuid.UUID,
+    user_id: uuid.UUID,
+    source_week_start: date,
+    target_week_start: date,
+    overwrite: bool,
+) -> list[models.MealPlanEntry]:
+    source_entries = list(
+        db.scalars(
+            select(models.MealPlanEntry).where(
+                models.MealPlanEntry.workspace_id == workspace_id,
+                models.MealPlanEntry.day >= source_week_start,
+                models.MealPlanEntry.day <= source_week_start + timedelta(days=6),
+            )
+        )
+    )
+    slots = [
+        {
+            "day_offset": (entry.day - source_week_start).days,
+            "meal_type": entry.meal_type,
+            "recipe_id": str(entry.recipe_id),
+        }
+        for entry in source_entries
+    ]
+    _apply_meal_plan_slots(db, workspace_id, target_week_start, slots, overwrite)
+    return list_meal_plan_entries(db, workspace_id, user_id, target_week_start, target_week_start + timedelta(days=6))
+
+
+def list_meal_plan_templates(db: Session, workspace_id: uuid.UUID) -> list[models.MealPlanTemplate]:
+    return list(
+        db.scalars(
+            select(models.MealPlanTemplate)
+            .where(models.MealPlanTemplate.workspace_id == workspace_id)
+            .order_by(models.MealPlanTemplate.name)
+        )
+    )
+
+
+def save_meal_plan_template(
+    db: Session, workspace_id: uuid.UUID, payload: schemas.MealPlanTemplateCreate
+) -> models.MealPlanTemplate:
+    entries = list(
+        db.scalars(
+            select(models.MealPlanEntry).where(
+                models.MealPlanEntry.workspace_id == workspace_id,
+                models.MealPlanEntry.day >= payload.week_start,
+                models.MealPlanEntry.day <= payload.week_start + timedelta(days=6),
+            )
+        )
+    )
+    slots = [
+        {
+            "day_offset": (entry.day - payload.week_start).days,
+            "meal_type": entry.meal_type,
+            "recipe_id": str(entry.recipe_id),
+        }
+        for entry in entries
+    ]
+    template = db.scalar(
+        select(models.MealPlanTemplate).where(
+            models.MealPlanTemplate.workspace_id == workspace_id,
+            func.lower(models.MealPlanTemplate.name) == payload.name.strip().lower(),
+        )
+    )
+    if template is None:
+        template = models.MealPlanTemplate(workspace_id=workspace_id, name=payload.name.strip(), slots=slots)
+        db.add(template)
+    else:
+        template.slots = slots
+    db.commit()
+    db.refresh(template)
+    return template
+
+
+def apply_meal_plan_template(
+    db: Session,
+    workspace_id: uuid.UUID,
+    user_id: uuid.UUID,
+    template_id: uuid.UUID,
+    payload: schemas.MealPlanTemplateApply,
+) -> list[models.MealPlanEntry] | None:
+    template = db.scalar(
+        select(models.MealPlanTemplate).where(
+            models.MealPlanTemplate.workspace_id == workspace_id,
+            models.MealPlanTemplate.id == template_id,
+        )
+    )
+    if template is None:
+        return None
+    _apply_meal_plan_slots(db, workspace_id, payload.week_start, template.slots, payload.overwrite)
+    return list_meal_plan_entries(db, workspace_id, user_id, payload.week_start, payload.week_start + timedelta(days=6))
+
+
+def delete_meal_plan_template(db: Session, workspace_id: uuid.UUID, template_id: uuid.UUID) -> bool:
+    template = db.scalar(
+        select(models.MealPlanTemplate).where(
+            models.MealPlanTemplate.workspace_id == workspace_id,
+            models.MealPlanTemplate.id == template_id,
+        )
+    )
+    if template is None:
+        return False
+    db.delete(template)
     db.commit()
     return True
 
@@ -786,7 +1184,7 @@ def bulk_upsert_pantry_items(db: Session, workspace_id: uuid.UUID, names: list[s
 
 
 def create_pantry_item(db: Session, workspace_id: uuid.UUID, payload: schemas.PantryItemIn) -> models.PantryItem:
-    item = models.PantryItem(workspace_id=workspace_id, name=payload.name)
+    item = models.PantryItem(workspace_id=workspace_id, **payload.model_dump())
     db.add(item)
     db.commit()
     db.refresh(item)
@@ -802,7 +1200,8 @@ def update_pantry_item(
     item = db.scalars(query).first()
     if item is None:
         return None
-    item.has_it = payload.has_it
+    for key, value in payload.model_dump(exclude_unset=True).items():
+        setattr(item, key, value)
     db.commit()
     db.refresh(item)
     return item
@@ -831,40 +1230,67 @@ def _format_quantity(quantity, unit: str | None) -> str | None:
 
 def generate_shopping_list(db: Session, workspace_id: uuid.UUID, week_start: date) -> list[models.ShoppingListItem]:
     """Agrega os ingredientes de todas as receitas planeadas na semana
-    (week_start .. +6 dias) para a lista de compras. Um item por ingrediente
-    de nome distinto na semana — a quantidade fica a da primeira ocorrência
-    encontrada, as seguintes são descartadas (ex. bacalhau ao almoço e ao
-    jantar não soma 800g, fica só a quantidade de uma das duas); somar a
-    sério entre receitas exigiria conversão de unidades, fora de âmbito.
+    (week_start .. +6 dias) para a lista de compras. Quantidades com o mesmo
+    nome e unidade são somadas; unidades diferentes permanecem separadas,
+    pois não devem ser convertidas sem uma regra explícita.
     Cabeçalhos de secção (`is_header`) são ignorados, não são ingredientes
-    reais. Para gerar não duplicar ao carregar duas vezes, salta ingredientes
+    reais. Ingredientes já disponíveis na despensa são excluídos. Para gerar
+    não duplicar ao carregar duas vezes, salta ingredientes
     cujo nome já existe como item por marcar na lista — itens já comprados
     (marcados) não bloqueiam, para poder voltar a gerar depois de esvaziar o
     carrinho."""
     week_end = week_start + timedelta(days=6)
-    entries = list_meal_plan_entries(db, workspace_id, week_start, week_end)
+    entries = list(
+        db.scalars(
+            _meal_plan_query(workspace_id).where(
+                models.MealPlanEntry.day >= week_start,
+                models.MealPlanEntry.day <= week_end,
+            )
+        ).unique()
+    )
 
     existing_query = select(models.ShoppingListItem.name).where(
         models.ShoppingListItem.workspace_id == workspace_id, models.ShoppingListItem.is_checked.is_(False)
     )
-    existing_names = set(db.scalars(existing_query))
+    existing_names = {_normalize(name) for name in db.scalars(existing_query)}
 
-    new_items: list[models.ShoppingListItem] = []
-    seen_this_run: set[str] = set()
+    pantry_query = select(models.PantryItem.name).where(
+        models.PantryItem.workspace_id == workspace_id,
+        models.PantryItem.has_it.is_(True),
+    )
+    pantry_names = [_normalize(name) for name in db.scalars(pantry_query)]
+
+    aggregated: dict[tuple[str, str], tuple[str, float, bool, str | None]] = {}
     for entry in entries:
         for ingredient in entry.recipe.ingredients:
             if ingredient.is_header:
                 continue
-            if ingredient.name in existing_names or ingredient.name in seen_this_run:
+            normalized_name = _normalize(ingredient.name)
+            if normalized_name in existing_names or any(name in normalized_name for name in pantry_names):
                 continue
-            seen_this_run.add(ingredient.name)
-            item = models.ShoppingListItem(
-                workspace_id=workspace_id,
-                name=ingredient.name,
-                quantity=_format_quantity(ingredient.quantity, ingredient.unit),
-            )
-            db.add(item)
-            new_items.append(item)
+            normalized_unit = _normalize(ingredient.unit or "")
+            key = (normalized_name, normalized_unit)
+            previous = aggregated.get(key)
+            amount = float(ingredient.quantity) if ingredient.quantity is not None else 0.0
+            if previous is None:
+                aggregated[key] = (ingredient.name, amount, ingredient.quantity is not None, ingredient.unit)
+            else:
+                aggregated[key] = (
+                    previous[0],
+                    previous[1] + amount,
+                    previous[2] or ingredient.quantity is not None,
+                    previous[3],
+                )
+
+    new_items: list[models.ShoppingListItem] = []
+    for name, amount, has_quantity, unit in aggregated.values():
+        item = models.ShoppingListItem(
+            workspace_id=workspace_id,
+            name=name,
+            quantity=_format_quantity(amount if has_quantity else None, unit),
+        )
+        db.add(item)
+        new_items.append(item)
 
     db.commit()
     return list_shopping_list_items(db, workspace_id)
@@ -902,6 +1328,48 @@ def add_recipe_to_shopping_list(
         db.add(item)
         new_items.append(item)
 
+    db.commit()
+    for item in new_items:
+        db.refresh(item)
+    return new_items
+
+
+def add_missing_recipe_ingredients_to_shopping_list(
+    db: Session, workspace_id: uuid.UUID, recipe_id: uuid.UUID
+) -> list[models.ShoppingListItem] | None:
+    recipe = get_recipe(db, workspace_id, recipe_id)
+    if recipe is None:
+        return None
+    pantry_query = select(models.PantryItem.name).where(
+        models.PantryItem.workspace_id == workspace_id,
+        models.PantryItem.has_it.is_(True),
+    )
+    pantry_names = [_normalize(name) for name in db.scalars(pantry_query)]
+    existing_query = select(models.ShoppingListItem.name).where(
+        models.ShoppingListItem.workspace_id == workspace_id,
+        models.ShoppingListItem.is_checked.is_(False),
+    )
+    existing_names = {_normalize(name) for name in db.scalars(existing_query)}
+
+    new_items: list[models.ShoppingListItem] = []
+    seen: set[str] = set()
+    for ingredient in recipe.ingredients:
+        normalized_name = _normalize(ingredient.name)
+        if (
+            ingredient.is_header
+            or normalized_name in existing_names
+            or normalized_name in seen
+            or any(pantry_name in normalized_name for pantry_name in pantry_names)
+        ):
+            continue
+        seen.add(normalized_name)
+        item = models.ShoppingListItem(
+            workspace_id=workspace_id,
+            name=ingredient.name,
+            quantity=_format_quantity(ingredient.quantity, ingredient.unit),
+        )
+        db.add(item)
+        new_items.append(item)
     db.commit()
     for item in new_items:
         db.refresh(item)

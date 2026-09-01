@@ -34,6 +34,19 @@ def delete_category(
         raise HTTPException(status_code=404, detail="Categoria não encontrada")
 
 
+@router.patch("/categories/{category_id}", response_model=schemas.CategoryOut)
+def update_category(
+    category_id: uuid.UUID,
+    payload: schemas.CategoryUpdate,
+    db: Session = Depends(get_db),
+    workspace_id: uuid.UUID = Depends(get_workspace_id),
+):
+    category = crud.update_category(db, workspace_id, category_id, payload)
+    if category is None:
+        raise HTTPException(status_code=404, detail="Categoria não encontrada")
+    return category
+
+
 @router.get("/tags", response_model=list[schemas.TagOut])
 def list_tags(db: Session = Depends(get_db), workspace_id: uuid.UUID = Depends(get_workspace_id)):
     return crud.list_tags(db, workspace_id)

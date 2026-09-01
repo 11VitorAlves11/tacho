@@ -9,7 +9,18 @@ from fastapi.staticfiles import StaticFiles
 from app.auth import auth_backend, fastapi_users
 from app.config import get_settings
 from app.routers import auth as auth_router
-from app.routers import cookbooks, media, nutrition, pantry, planning, public, recipes, taxonomy
+from app.routers import (
+    cookbooks,
+    media,
+    nutrition,
+    pantry,
+    planning,
+    profiles,
+    public,
+    recipes,
+    substitutions,
+    taxonomy,
+)
 from app.schemas import UserRead, UserUpdate
 
 settings = get_settings()
@@ -27,7 +38,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(fastapi_users.get_auth_router(auth_backend), prefix="/auth/cookie", tags=["auth"])
+if not settings.oidc_disable_local_login:
+    app.include_router(fastapi_users.get_auth_router(auth_backend), prefix="/auth/cookie", tags=["auth"])
 app.include_router(fastapi_users.get_users_router(UserRead, UserUpdate), prefix="/users", tags=["users"])
 app.include_router(auth_router.router)
 app.include_router(recipes.router)
@@ -35,6 +47,8 @@ app.include_router(taxonomy.router)
 app.include_router(planning.router)
 app.include_router(cookbooks.router)
 app.include_router(pantry.router)
+app.include_router(profiles.router)
+app.include_router(substitutions.router)
 app.include_router(nutrition.router)
 app.include_router(public.router)
 app.include_router(media.router)

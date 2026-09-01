@@ -3,6 +3,7 @@ from datetime import date, datetime
 
 from fastapi_users_db_sqlalchemy import SQLAlchemyBaseUserTableUUID
 from sqlalchemy import (
+    JSON,
     Boolean,
     CheckConstraint,
     Column,
@@ -79,10 +80,22 @@ class Workspace(Base):
     meal_plan_entries: Mapped[list["MealPlanEntry"]] = relationship(
         back_populates="workspace", cascade="all, delete-orphan"
     )
+    meal_plan_templates: Mapped[list["MealPlanTemplate"]] = relationship(
+        back_populates="workspace", cascade="all, delete-orphan"
+    )
+    meal_plan_recurrences: Mapped[list["MealPlanRecurrence"]] = relationship(
+        back_populates="workspace", cascade="all, delete-orphan"
+    )
     shopping_list_items: Mapped[list["ShoppingListItem"]] = relationship(
         back_populates="workspace", cascade="all, delete-orphan"
     )
     pantry_items: Mapped[list["PantryItem"]] = relationship(back_populates="workspace", cascade="all, delete-orphan")
+    dietary_profiles: Mapped[list["DietaryProfile"]] = relationship(
+        back_populates="workspace", cascade="all, delete-orphan"
+    )
+    ingredient_substitutions: Mapped[list["IngredientSubstitution"]] = relationship(
+        back_populates="workspace", cascade="all, delete-orphan"
+    )
     members: Mapped[list["WorkspaceMember"]] = relationship(back_populates="workspace", cascade="all, delete-orphan")
 
 
@@ -99,6 +112,24 @@ class User(SQLAlchemyBaseUserTableUUID, Base):
     __tablename__ = "users"
 
     name: Mapped[str | None] = mapped_column(Text, nullable=True)
+    oidc_identities: Mapped[list["OIDCIdentity"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+
+
+class OIDCIdentity(Base):
+    __tablename__ = "oidc_identities"
+    __table_args__ = (
+        UniqueConstraint("issuer", "subject", name="uq_oidc_identity_issuer_subject"),
+        UniqueConstraint("user_id", "issuer", name="uq_oidc_identity_user_issuer"),
+    )
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"))
+    issuer: Mapped[str] = mapped_column(Text)
+    subject: Mapped[str] = mapped_column(Text)
+    email: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    user: Mapped["User"] = relationship(back_populates="oidc_identities")
 
 
 class WorkspaceMember(Base):
@@ -116,6 +147,36 @@ class WorkspaceMember(Base):
     joined_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     workspace: Mapped["Workspace"] = relationship(back_populates="members")
+
+
+class DietaryProfile(Base):
+    __tablename__ = "dietary_profiles"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    workspace_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"))
+    user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"))
+    name: Mapped[str] = mapped_column(Text)
+    allergies: Mapped[list[str]] = mapped_column(JSON, default=list)
+    intolerances: Mapped[list[str]] = mapped_column(JSON, default=list)
+    preferences: Mapped[list[str]] = mapped_column(JSON, default=list)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    workspace: Mapped["Workspace"] = relationship(back_populates="dietary_profiles")
+
+
+class IngredientSubstitution(Base):
+    __tablename__ = "ingredient_substitutions"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    workspace_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"))
+    ingredient_name: Mapped[str] = mapped_column(Text)
+    substitute_name: Mapped[str] = mapped_column(Text)
+    quantity_ratio: Mapped[float | None] = mapped_column(Numeric(8, 3))
+    note: Mapped[str | None] = mapped_column(Text)
+    is_verified: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    workspace: Mapped["Workspace"] = relationship(back_populates="ingredient_substitutions")
 
 
 class Recipe(Base):
@@ -150,6 +211,9 @@ class Recipe(Base):
     # pastas, podem ainda ter só o nome do ficheiro (sem "/") — também
     # funciona, StaticFiles serve os dois na mesma.
     image_path: Mapped[str | None] = mapped_column(Text)
+    source_recipe_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("recipes.id", ondelete="SET NULL")
+    )
     # Informação nutricional por porção, entrada manual —
     # `app/nutrition.py` pode sugerir valores (Open Food Facts), mas nunca
     # grava sozinho, só por confirmação explícita no formulário.
@@ -200,6 +264,9 @@ class Recipe(Base):
     cookbooks: Mapped[list["Cookbook"]] = relationship(secondary=cookbook_recipes, back_populates="recipes")
     cook_notes: Mapped[list["CookNote"]] = relationship(
         back_populates="recipe", cascade="all, delete-orphan", order_by="CookNote.created_at.desc()"
+    )
+    cook_history: Mapped[list["CookHistoryEntry"]] = relationship(
+        back_populates="recipe", cascade="all, delete-orphan", order_by="CookHistoryEntry.made_at.desc()"
     )
     comments: Mapped[list["Comment"]] = relationship(
         back_populates="recipe", cascade="all, delete-orphan", order_by="Comment.created_at.asc()"
@@ -262,10 +329,23 @@ class CookNote(Base):
 
     id: Mapped[uuid.UUID] = _uuid_pk()
     recipe_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("recipes.id", ondelete="CASCADE"))
+    cook_history_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("cook_history.id", ondelete="SET NULL")
+    )
     text: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     recipe: Mapped["Recipe"] = relationship(back_populates="cook_notes")
+
+
+class CookHistoryEntry(Base):
+    __tablename__ = "cook_history"
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    recipe_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("recipes.id", ondelete="CASCADE"))
+    made_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    recipe: Mapped["Recipe"] = relationship(back_populates="cook_history")
 
 
 class Comment(Base):
@@ -302,6 +382,8 @@ class Category(Base):
     id: Mapped[uuid.UUID] = _uuid_pk()
     workspace_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"))
     name: Mapped[str] = mapped_column(Text)
+    color: Mapped[str | None] = mapped_column(Text)
+    icon: Mapped[str | None] = mapped_column(Text)
 
     workspace: Mapped["Workspace"] = relationship(back_populates="categories")
     recipes: Mapped[list["Recipe"]] = relationship(secondary=recipe_categories, back_populates="categories")
@@ -337,7 +419,7 @@ class Cookbook(Base):
 
 
 class MealPlanEntry(Base):
-    """Uma receita atribuída a uma refeição (almoço/jantar) de um dia. A
+    """Uma receita atribuída a um período de refeição de um dia. A
     ausência de linha para um dia/refeição é o estado "vazio" — não há um
     valor nulo de receita, atribuir outra substitui a linha (upsert) e
     remover apaga-a. Coluna chama-se `day`, não `date`, para não sombrear o
@@ -349,13 +431,47 @@ class MealPlanEntry(Base):
     id: Mapped[uuid.UUID] = _uuid_pk()
     workspace_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"))
     day: Mapped[date] = mapped_column(Date)
-    # "almoco" | "jantar" — texto simples, sem enum na BD, consistente com o
+    # O período é texto simples, sem enum na BD, consistente com o
     # resto do modelo (nenhuma outra tabela usa enum do Postgres).
     meal_type: Mapped[str] = mapped_column(Text)
     recipe_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("recipes.id", ondelete="CASCADE"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     workspace: Mapped["Workspace"] = relationship(back_populates="meal_plan_entries")
+    recipe: Mapped["Recipe"] = relationship()
+
+
+class MealPlanTemplate(Base):
+    __tablename__ = "meal_plan_templates"
+    __table_args__ = (UniqueConstraint("workspace_id", "name", name="uq_meal_plan_template_workspace_name"),)
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    workspace_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"))
+    name: Mapped[str] = mapped_column(Text)
+    slots: Mapped[list[dict]] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    workspace: Mapped["Workspace"] = relationship(back_populates="meal_plan_templates")
+
+
+class MealPlanRecurrence(Base):
+    __tablename__ = "meal_plan_recurrences"
+    __table_args__ = (
+        CheckConstraint("weekday BETWEEN 0 AND 6", name="ck_meal_plan_recurrence_weekday"),
+        CheckConstraint("interval_weeks >= 1", name="ck_meal_plan_recurrence_interval"),
+    )
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    workspace_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"))
+    recipe_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("recipes.id", ondelete="CASCADE"))
+    weekday: Mapped[int]
+    meal_type: Mapped[str] = mapped_column(Text)
+    interval_weeks: Mapped[int] = mapped_column(default=1, server_default="1")
+    starts_on: Mapped[date] = mapped_column(Date)
+    ends_on: Mapped[date | None] = mapped_column(Date)
+    active: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+
+    workspace: Mapped["Workspace"] = relationship(back_populates="meal_plan_recurrences")
     recipe: Mapped["Recipe"] = relationship()
 
 
@@ -379,9 +495,8 @@ class ShoppingListItem(Base):
 
 
 class PantryItem(Base):
-    """Despensa básica — só "tenho/não tenho" por ingrediente, sem
-    quantidades nem validades (âmbito contido de propósito, para
-    não virar um Grocy). Alimenta o filtro "Dá para fazer" (crud.py::
+    """Produto disponível no agregado, com stock e validade opcionais.
+    Alimenta o filtro "Dá para fazer" (crud.py::
     list_recipes, makeable_only) por correspondência de substring
     normalizada (sem acentos) contra o nome dos ingredientes."""
 
@@ -392,5 +507,9 @@ class PantryItem(Base):
     workspace_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"))
     name: Mapped[str] = mapped_column(Text)
     has_it: Mapped[bool] = mapped_column(Boolean, default=True, server_default="true")
+    quantity: Mapped[float | None] = mapped_column(Numeric(10, 2))
+    unit: Mapped[str | None] = mapped_column(Text)
+    expires_on: Mapped[date | None] = mapped_column(Date)
+    minimum_quantity: Mapped[float | None] = mapped_column(Numeric(10, 2))
 
     workspace: Mapped["Workspace"] = relationship(back_populates="pantry_items")

@@ -53,6 +53,16 @@ class Settings(BaseSettings):
     # Sem valor, `trust_forward_auth` fica inerte mesmo que `True` (ver
     # validação em `forward_login`).
     forward_auth_secret: str | None = None
+    # OpenID Connect standard (Authorization Code + PKCE). O fluxo só fica
+    # disponível quando issuer, client id e redirect URI estão configurados.
+    oidc_issuer: str | None = None
+    oidc_client_id: str | None = None
+    oidc_client_secret: str | None = None
+    oidc_redirect_uri: str | None = None
+    oidc_scopes: str = "openid email profile"
+    oidc_display_name: str = "OpenID Connect"
+    oidc_allow_provisioning: bool = False
+    oidc_disable_local_login: bool = False
     # Importação inteligente (app/gemini.py): fallback de extração quando o
     # recipe-scrapers falha, e importação por foto (Vision). Opcional — sem
     # chave, `gemini.is_available()` devolve False e a app funciona na
@@ -69,7 +79,13 @@ class Settings(BaseSettings):
                 raise ValueError("AUTH_SECRET must be set to a random value of at least 32 characters")
             if self.trust_forward_auth and (not self.forward_auth_secret or len(self.forward_auth_secret) < 32):
                 raise ValueError("FORWARD_AUTH_SECRET must contain at least 32 characters when forward auth is enabled")
+            if self.oidc_issuer and not self.oidc_issuer.startswith("https://"):
+                raise ValueError("OIDC_ISSUER must use HTTPS in production")
         return self
+
+    @property
+    def oidc_enabled(self) -> bool:
+        return bool(self.oidc_issuer and self.oidc_client_id and self.oidc_redirect_uri)
 
     @property
     def async_database_url(self) -> str:

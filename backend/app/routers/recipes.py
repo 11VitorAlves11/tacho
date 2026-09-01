@@ -1,7 +1,7 @@
 import uuid
 
 from celery.result import AsyncResult
-from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
@@ -29,23 +29,39 @@ router = APIRouter(prefix="/recipes", tags=["recipes"])
 @router.get("", response_model=list[schemas.RecipeSummary])
 def list_recipes(
     category_id: uuid.UUID | None = None,
-    tag_id: uuid.UUID | None = None,
+    tag_ids: str | None = None,
     q: str | None = None,
+    ingredient: str | None = None,
+    rating_min: int | None = Query(default=None, ge=1, le=5),
+    max_total_minutes: int | None = Query(default=None, ge=1, le=1440),
     favorite: bool = False,
     makeable: bool = False,
+    pantry_suggestions: bool = False,
+    safe_for_all: bool = False,
     db: Session = Depends(get_db),
     workspace_id: uuid.UUID = Depends(get_workspace_id),
     user: User = Depends(current_active_user),
 ):
+    parsed_tag_ids: list[uuid.UUID] = []
+    if tag_ids:
+        try:
+            parsed_tag_ids = [uuid.UUID(value) for value in tag_ids.split(",") if value]
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail="Uma das tags não é válida") from exc
     return crud.list_recipes(
         db,
         workspace_id,
         user.id,
         category_id=category_id,
-        tag_id=tag_id,
+        tag_ids=parsed_tag_ids,
         q=q,
+        ingredient=ingredient,
+        rating_min=rating_min,
+        max_total_minutes=max_total_minutes,
         favorite_only=favorite,
         makeable_only=makeable,
+        pantry_suggestions=pantry_suggestions,
+        safe_for_all=safe_for_all,
     )
 
 
@@ -208,6 +224,18 @@ def add_recipe_to_shopping_list(
     workspace_id: uuid.UUID = Depends(get_workspace_id),
 ):
     items = crud.add_recipe_to_shopping_list(db, workspace_id, recipe_id)
+    if items is None:
+        raise HTTPException(status_code=404, detail="Receita não encontrada")
+    return items
+
+
+@router.post("/{recipe_id}/shopping-list/missing", response_model=list[schemas.ShoppingListItemOut])
+def add_missing_recipe_ingredients_to_shopping_list(
+    recipe_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    workspace_id: uuid.UUID = Depends(get_workspace_id),
+):
+    items = crud.add_missing_recipe_ingredients_to_shopping_list(db, workspace_id, recipe_id)
     if items is None:
         raise HTTPException(status_code=404, detail="Receita não encontrada")
     return items

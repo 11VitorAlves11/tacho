@@ -1,8 +1,9 @@
 import uuid
 from datetime import date, datetime
+from typing import Annotated
 
 from fastapi_users import schemas as fu_schemas
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, HttpUrl
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, HttpUrl, StringConstraints
 
 
 class IngredientIn(BaseModel):
@@ -59,7 +60,15 @@ class StepOut(StepIn):
 
 
 class CategoryCreate(BaseModel):
-    name: str
+    name: str = Field(min_length=1, max_length=80)
+    color: str | None = Field(default=None, pattern=r"^#[0-9A-Fa-f]{6}$")
+    icon: str | None = Field(default=None, pattern=r"^(breakfast|main|dessert|drink|snack|other)$")
+
+
+class CategoryUpdate(BaseModel):
+    name: str | None = Field(default=None, min_length=1, max_length=80)
+    color: str | None = Field(default=None, pattern=r"^#[0-9A-Fa-f]{6}$")
+    icon: str | None = Field(default=None, pattern=r"^(breakfast|main|dessert|drink|snack|other)$")
 
 
 class CategoryOut(CategoryCreate):
@@ -76,6 +85,26 @@ class TagOut(TagCreate):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
+
+
+class IngredientSubstitutionWrite(BaseModel):
+    ingredient_name: str = Field(min_length=1, max_length=160)
+    substitute_name: str = Field(min_length=1, max_length=160)
+    quantity_ratio: float | None = Field(default=None, gt=0, le=100)
+    note: str | None = Field(default=None, max_length=500)
+    is_verified: bool = False
+
+
+class IngredientSubstitutionOut(IngredientSubstitutionWrite):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    created_at: datetime
+
+
+class RecipeSubstitutionSuggestion(BaseModel):
+    ingredient_name: str
+    substitution: IngredientSubstitutionOut
 
 
 class CookbookCreate(BaseModel):
@@ -124,10 +153,15 @@ class RecipeSummary(BaseModel):
     prep_minutes: int | None
     cook_minutes: int | None
     image_path: str | None
+    source_recipe_id: uuid.UUID | None
     is_favorite: bool
     rating: int | None
     categories: list[CategoryOut]
     tags: list[TagOut]
+    missing_ingredients: list[str] | None = None
+    missing_ingredient_count: int | None = None
+    is_makeable: bool | None = None
+    dietary_warnings: list[str] = []
 
 
 class CookbookDetail(BaseModel):
@@ -148,10 +182,18 @@ class CookNoteOut(BaseModel):
     id: uuid.UUID
     text: str
     created_at: datetime
+    cook_history_id: uuid.UUID | None
 
 
 class CookNoteIn(BaseModel):
     text: str
+
+
+class CookHistoryOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    made_at: datetime
 
 
 class CommentOut(BaseModel):
@@ -220,6 +262,7 @@ class RecipeOut(BaseModel):
     source_url: str | None
     notes: str | None
     image_path: str | None
+    source_recipe_id: uuid.UUID | None
     is_favorite: bool
     rating: int | None
     calories_kcal: int | None
@@ -235,8 +278,11 @@ class RecipeOut(BaseModel):
     categories: list[CategoryOut]
     tags: list[TagOut]
     cook_notes: list[CookNoteOut]
+    cook_history: list[CookHistoryOut]
     comments: list[CommentOut]
     images: list[RecipeImageOut]
+    dietary_warnings: list[str] = []
+    substitution_suggestions: list[RecipeSubstitutionSuggestion] = []
 
 
 class RecipeShareOut(BaseModel):
@@ -299,11 +345,20 @@ class ShoppingListItemOut(BaseModel):
 
 
 class PantryItemIn(BaseModel):
-    name: str
+    name: str = Field(min_length=1, max_length=160)
+    quantity: float | None = Field(default=None, ge=0)
+    unit: str | None = Field(default=None, max_length=40)
+    expires_on: date | None = None
+    minimum_quantity: float | None = Field(default=None, ge=0)
 
 
 class PantryItemUpdate(BaseModel):
-    has_it: bool
+    name: str | None = Field(default=None, min_length=1, max_length=160)
+    has_it: bool | None = None
+    quantity: float | None = Field(default=None, ge=0)
+    unit: str | None = Field(default=None, max_length=40)
+    expires_on: date | None = None
+    minimum_quantity: float | None = Field(default=None, ge=0)
 
 
 class PantryItemOut(BaseModel):
@@ -312,6 +367,10 @@ class PantryItemOut(BaseModel):
     id: uuid.UUID
     name: str
     has_it: bool
+    quantity: float | None
+    unit: str | None
+    expires_on: date | None
+    minimum_quantity: float | None
 
 
 class PantryExtraction(BaseModel):
@@ -333,6 +392,68 @@ class GenerateShoppingListRequest(BaseModel):
     week_start: date
 
 
+class CopyMealPlanWeekRequest(BaseModel):
+    source_week_start: date
+    target_week_start: date
+    overwrite: bool = False
+
+
+class MealPlanTemplateCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+    week_start: date
+
+
+class MealPlanTemplateApply(BaseModel):
+    week_start: date
+    overwrite: bool = False
+
+
+class MealPlanTemplateOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    name: str
+    slots: list[dict]
+    created_at: datetime
+
+
+class MealPlanRecurrenceCreate(BaseModel):
+    recipe_id: uuid.UUID
+    weekday: int = Field(ge=0, le=6)
+    meal_type: str = Field(pattern=r"^(pequeno_almoco|almoco|lanche|jantar)$")
+    interval_weeks: int = Field(default=1, ge=1, le=52)
+    starts_on: date
+    ends_on: date | None = None
+
+
+class MealPlanRecurrenceOut(MealPlanRecurrenceCreate):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    active: bool
+
+
+class MealPlanSuggestionItem(BaseModel):
+    day: date
+    meal_type: str
+    recipe: RecipeSummary
+
+
+class DietaryProfileWrite(BaseModel):
+    name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=80)]
+    user_id: uuid.UUID | None = None
+    allergies: list[str] = Field(default_factory=list, max_length=50)
+    intolerances: list[str] = Field(default_factory=list, max_length=50)
+    preferences: list[str] = Field(default_factory=list, max_length=50)
+
+
+class DietaryProfileOut(DietaryProfileWrite):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    created_at: datetime
+
+
 class UserRead(fu_schemas.BaseUser[uuid.UUID]):
     name: str | None = None
 
@@ -345,9 +466,16 @@ class SetupStatus(BaseModel):
     needs_setup: bool
 
 
+class OIDCStatus(BaseModel):
+    enabled: bool
+    display_name: str
+    local_login_enabled: bool
+
+
 class SetupRequest(BaseModel):
+    name: Annotated[str, StringConstraints(strip_whitespace=True, min_length=2, max_length=80)]
     email: EmailStr
-    password: str
+    password: str = Field(min_length=8)
 
 
 class MemberInvite(BaseModel):

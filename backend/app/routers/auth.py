@@ -1,20 +1,164 @@
+import asyncio
+import secrets
 import uuid
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import RedirectResponse
 from fastapi_users import exceptions as fu_exceptions
 from fastapi_users import schemas as fu_schemas
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app import schemas
-from app.auth import UserManager, cookie_transport, current_active_user, get_jwt_strategy, get_user_manager
+from app import oidc, schemas
+from app.auth import (
+    UserManager,
+    cookie_transport,
+    current_active_user,
+    current_active_user_optional,
+    get_jwt_strategy,
+    get_user_manager,
+)
 from app.config import get_settings
 from app.constants import DEFAULT_WORKSPACE_ID
 from app.database import get_db
 from app.deps import get_workspace_id
-from app.models import User, WorkspaceMember
+from app.models import OIDCIdentity, User, WorkspaceMember
 
 router = APIRouter(tags=["auth"])
+
+
+def _frontend_url(path: str) -> str:
+    settings = get_settings()
+    base = settings.public_base_url or (settings.cors_origins[0] if settings.cors_origins else "http://localhost:5173")
+    return f"{base.rstrip('/')}{path}"
+
+
+@router.get("/auth/oidc/status", response_model=schemas.OIDCStatus)
+def oidc_status():
+    settings = get_settings()
+    return schemas.OIDCStatus(
+        enabled=settings.oidc_enabled,
+        display_name=settings.oidc_display_name,
+        local_login_enabled=not settings.oidc_disable_local_login,
+    )
+
+
+@router.post("/auth/logout", status_code=204)
+async def logout():
+    return await cookie_transport.get_logout_response()
+
+
+@router.get("/auth/oidc/start")
+async def oidc_start(next: str = "/"):
+    settings = get_settings()
+    try:
+        authorization_url, state_token = await asyncio.to_thread(oidc.create_authorization, settings, next)
+    except (oidc.OIDCError, OSError) as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    response = RedirectResponse(authorization_url, status_code=302)
+    response.set_cookie(
+        "tacho_oidc_state",
+        state_token,
+        max_age=oidc.STATE_TTL_MINUTES * 60,
+        httponly=True,
+        secure=settings.auth_cookie_secure,
+        samesite="lax",
+    )
+    return response
+
+
+@router.get("/auth/oidc/callback")
+async def oidc_callback(
+    request: Request,
+    code: str | None = None,
+    state: str | None = None,
+    error: str | None = None,
+    db: Session = Depends(get_db),
+    user_manager: UserManager = Depends(get_user_manager),
+    current_user: User | None = Depends(current_active_user_optional),
+):
+    settings = get_settings()
+
+    def failure(message: str) -> RedirectResponse:
+        response = RedirectResponse(_frontend_url(f"/login?oidc_error={quote(message)}"), status_code=302)
+        response.delete_cookie("tacho_oidc_state")
+        return response
+
+    if error:
+        return failure("O fornecedor cancelou ou recusou a autenticação.")
+    state_token = request.cookies.get("tacho_oidc_state")
+    if not code or not state or not state_token:
+        return failure("Resposta OIDC incompleta.")
+    try:
+        state_payload = oidc.decode_state(settings, state_token, state)
+        tokens = await asyncio.to_thread(oidc.exchange_code, settings, code, state_payload["verifier"])
+        claims = await asyncio.to_thread(oidc.validate_id_token, settings, tokens["id_token"], state_payload["nonce"])
+    except (oidc.OIDCError, OSError, KeyError) as exc:
+        return failure(str(exc))
+
+    issuer = settings.oidc_issuer.rstrip("/") if settings.oidc_issuer else ""
+    subject = str(claims["sub"])
+    identity = db.scalar(select(OIDCIdentity).where(OIDCIdentity.issuer == issuer, OIDCIdentity.subject == subject))
+    user: User | None = identity.user if identity else None
+
+    if user is None and current_user is not None:
+        already_linked = db.scalar(
+            select(OIDCIdentity).where(OIDCIdentity.user_id == current_user.id, OIDCIdentity.issuer == issuer)
+        )
+        if already_linked is not None:
+            return failure("Esta conta local já está associada a outra identidade deste fornecedor.")
+        identity = OIDCIdentity(
+            user_id=current_user.id,
+            issuer=issuer,
+            subject=subject,
+            email=claims.get("email"),
+        )
+        db.add(identity)
+        db.commit()
+        user = current_user
+
+    if user is None and settings.oidc_allow_provisioning:
+        email = claims.get("email")
+        if not email or claims.get("email_verified") is False:
+            return failure("O fornecedor não devolveu um email verificado.")
+        existing = db.scalar(select(User).where(func.lower(User.email) == str(email).lower()))
+        if existing is not None:
+            return failure("Já existe uma conta com este email. Entra localmente e associa o OIDC no menu da conta.")
+        try:
+            created = await user_manager.create(
+                fu_schemas.BaseUserCreate(email=email, password=secrets.token_urlsafe(48))
+            )
+        except fu_exceptions.UserAlreadyExists:
+            return failure("Já existe uma conta com este email.")
+        user = db.get(User, created.id)
+        if user is None:
+            return failure("Não foi possível concluir o provisionamento OIDC.")
+        user.name = claims.get("name") or claims.get("preferred_username")
+        db.add(WorkspaceMember(workspace_id=DEFAULT_WORKSPACE_ID, user_id=user.id))
+        db.add(OIDCIdentity(user_id=user.id, issuer=issuer, subject=subject, email=email))
+        db.commit()
+
+    if user is None:
+        return failure("Identidade não associada. Entra com password e associa o OIDC no menu da conta.")
+    if not user.is_active:
+        return failure("Esta conta está inativa.")
+    membership = db.scalar(
+        select(WorkspaceMember).where(
+            WorkspaceMember.workspace_id == DEFAULT_WORKSPACE_ID,
+            WorkspaceMember.user_id == user.id,
+        )
+    )
+    if membership is None:
+        return failure("Esta conta não tem acesso ao agregado.")
+
+    token = await get_jwt_strategy().write_token(user)
+    login_response = await cookie_transport.get_login_response(token)
+    response = RedirectResponse(_frontend_url(str(state_payload.get("next", "/"))), status_code=302)
+    for header in login_response.headers.getlist("set-cookie"):
+        response.headers.append("set-cookie", header)
+    response.delete_cookie("tacho_oidc_state")
+    return response
 
 
 @router.get("/setup/status", response_model=schemas.SetupStatus)
@@ -41,6 +185,10 @@ async def setup(
         user = await user_manager.create(fu_schemas.BaseUserCreate(email=payload.email, password=payload.password))
     except fu_exceptions.UserAlreadyExists:
         raise HTTPException(status_code=409, detail="Já existe uma conta com este email")
+    created_user = db.get(User, user.id)
+    if created_user is None:
+        raise HTTPException(status_code=500, detail="Não foi possível concluir a criação da conta")
+    created_user.name = payload.name.strip()
     db.add(WorkspaceMember(workspace_id=DEFAULT_WORKSPACE_ID, user_id=user.id))
     db.commit()
     return schemas.SetupStatus(needs_setup=False)

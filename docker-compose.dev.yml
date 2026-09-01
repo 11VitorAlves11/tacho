@@ -34,6 +34,7 @@ services:
       ENVIRONMENT: development
       DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-tacho}:${POSTGRES_PASSWORD:-tacho-dev}@db:5432/${POSTGRES_DB:-tacho}
       REDIS_URL: redis://redis:6379/0
+      CORS_ORIGINS: ${DEV_CORS_ORIGINS:-["http://localhost:5173"]}
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     volumes:
