@@ -29,14 +29,15 @@ only `ghcr.io/11vitoralves11/tacho`.
 
 ## Branch rename
 
-If `master` is renamed to `main`, existing clones update with:
+The repository uses `master` as its default branch. Existing clones that still
+track the old `main` branch update with:
 
 ```bash
 git fetch origin
-git branch -m master main
-git branch --set-upstream-to=origin/main main
+git branch -m main master
+git branch --set-upstream-to=origin/master master
 git remote set-head origin -a
 ```
 
-Do not delete the remote `master` branch until every workflow, ruleset and
-external automation has been verified against `main`.
+After the rename, keep `master` as the canonical branch and update any external
+automation that still refers to `main`.

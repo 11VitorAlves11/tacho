@@ -3,7 +3,7 @@
 Tacho uses Semantic Versioning and Conventional Commits. Normal commits never
 replace the stable image.
 
-1. Ensure CI is green on `main`.
+1. Ensure CI is green on `master`.
 2. Update both `backend/pyproject.toml` and `frontend/package.json` to the same
    version and regenerate their lockfiles.
 3. Merge the version PR.
@@ -17,6 +17,5 @@ does it create the GitHub Release with generated notes.
 Tags are immutable. A failed release is fixed with a new patch version, never by
 moving or deleting a published tag.
 
-Commits on `main` may publish `edge` and `sha-<commit>` after CI succeeds. Those
+Commits on `master` may publish `edge` and `sha-<commit>` after CI succeeds. Those
 tags are development artifacts and never aliases for a stable release.
-

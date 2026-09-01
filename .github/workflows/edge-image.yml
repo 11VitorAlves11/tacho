@@ -4,7 +4,7 @@ on:
   workflow_run:
     workflows: [CI]
     types: [completed]
-    branches: [main]
+    branches: [master]
 
 permissions:
   contents: read
@@ -33,4 +33,3 @@ jobs:
             ghcr.io/11vitoralves11/tacho:sha-${{ github.event.workflow_run.head_sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
