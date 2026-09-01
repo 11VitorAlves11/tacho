@@ -30,7 +30,9 @@ export function CookMode() {
   // não faz sentido voltar ao tamanho normal a cada receita nova.
   const [largeText, setLargeText] = useState(() => localStorage.getItem(LARGE_TEXT_KEY) === '1')
   const [timers, setTimers] = useState<CookingTimer[]>([])
+  const [speaking, setSpeaking] = useState(false)
   const wakeLockRef = useRef<WakeLockSentinel | null>(null)
+  const stepTextRef = useRef<HTMLParagraphElement | null>(null)
 
   useEffect(() => {
     const interval = window.setInterval(() => {
@@ -43,6 +45,30 @@ export function CookMode() {
     }, 1000)
     return () => window.clearInterval(interval)
   }, [])
+
+  useEffect(() => {
+    if (!recipe) return
+    const activeRecipe = recipe
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return
+      if (event.key === 'ArrowRight' || event.key === 'PageDown') {
+        event.preventDefault()
+        setStepIndex((current) => Math.min(activeRecipe.steps.length - 1, current + 1))
+      } else if (event.key === 'ArrowLeft' || event.key === 'PageUp') {
+        event.preventDefault()
+        setStepIndex((current) => Math.max(0, current - 1))
+      } else if (event.key === 'Escape') {
+        event.preventDefault()
+        navigate(`/receitas/${activeRecipe.id}`)
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [navigate, recipe])
+
+  useEffect(() => {
+    stepTextRef.current?.focus()
+  }, [stepIndex])
 
   function startTimer(id: string, duration: number, label: string) {
     setTimers((current) => current.some((timer) => timer.id === id)
@@ -64,6 +90,23 @@ export function CookMode() {
     if (!Number.isFinite(minutes) || minutes <= 0 || minutes > 24 * 60) return
     const label = window.prompt('Nome do temporizador (opcional):')?.trim() || 'Temporizador adicional'
     startTimer(`custom-${Date.now()}`, Math.round(minutes * 60), label)
+  }
+
+  function speakCurrentStep() {
+    if (!step) return
+    if (speaking) {
+      window.speechSynthesis.cancel()
+      setSpeaking(false)
+      return
+    }
+    if (!('speechSynthesis' in window)) return
+    const utterance = new SpeechSynthesisUtterance(step.instruction)
+    utterance.lang = 'pt-PT'
+    utterance.onend = () => setSpeaking(false)
+    utterance.onerror = () => setSpeaking(false)
+    window.speechSynthesis.cancel()
+    window.speechSynthesis.speak(utterance)
+    setSpeaking(true)
   }
 
   useEffect(() => {
@@ -193,13 +236,19 @@ export function CookMode() {
         {step ? (
           <div className="relative flex flex-col items-center gap-4">
             <p
+              ref={stepTextRef}
+              tabIndex={-1}
+              aria-live="polite"
               className={`max-w-2xl text-center font-semibold leading-snug ${
                 largeText ? 'text-4xl sm:text-6xl' : 'text-3xl sm:text-5xl'
               }`}
             >
               {step.instruction}
             </p>
-            {step.duration_minutes != null && <StepTimer minutes={step.duration_minutes} timer={timers.find((timer) => timer.id === `step-${step.id}`)} onStart={() => startTimer(`step-${step.id}`, step.duration_minutes! * 60, `Passo ${stepIndex + 1}`)} onToggle={() => toggleTimer(`step-${step.id}`)} onReset={() => resetTimer(`step-${step.id}`)} />}
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              {step.duration_minutes != null && <StepTimer minutes={step.duration_minutes} timer={timers.find((timer) => timer.id === `step-${step.id}`)} onStart={() => startTimer(`step-${step.id}`, step.duration_minutes! * 60, `Passo ${stepIndex + 1}`)} onToggle={() => toggleTimer(`step-${step.id}`)} onReset={() => resetTimer(`step-${step.id}`)} />}
+              {'speechSynthesis' in window && <button type="button" onClick={speakCurrentStep} aria-pressed={speaking} className="rounded-xl border border-border bg-surface px-4 py-3 text-sm font-semibold text-text-primary transition hover:bg-muted">{speaking ? 'Parar leitura' : 'Ouvir passo'}</button>}
+            </div>
           </div>
         ) : (
           <p className="relative text-lg text-text-secondary">Esta receita ainda não tem passos registados.</p>
@@ -233,6 +282,7 @@ export function CookMode() {
           </button>
         )}
       </footer>
+      <p className="mx-auto -mt-2 pb-2 text-center text-xs text-text-secondary" aria-label="Atalhos de teclado">←/→ avançar · Esc sair</p>
       {timers.length > 0 && <TimerDock timers={timers} onToggle={toggleTimer} onReset={resetTimer} />}
       <button type="button" onClick={addCustomTimer} className="fixed bottom-24 right-4 z-10 rounded-xl border border-border bg-surface px-3 py-2 text-xs font-semibold text-text-primary shadow-lg transition hover:bg-muted sm:bottom-28 sm:right-6">+ Temporizador</button>
     </div>
