@@ -7,9 +7,10 @@ included. The six recipe covers are AI-generated food illustrations, stored in
 any screenshot is taken. No external image host is needed during capture.
 
 Desktop captures use 1440 × 1000; mobile captures use 390 × 844 with touch and mobile
-emulation. The interface is European Portuguese, except for the English language-settings
-example. Images are saved without editing in
-`docs/images/`.
+emulation. All captures use the English interface and English demonstration recipes,
+categories, ingredients and cooking instructions. The language is selected through the
+account settings before capture and reused across browser contexts. Images are saved
+without editing in `docs/images/`.
 
 ## Use a disposable installation
 
