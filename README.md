@@ -43,7 +43,8 @@ Recipes, accounts and uploaded photographs live on your own server.
 
 These are real browser screenshots of a disposable installation, populated with fictional
 household data, original example recipe text and AI-generated food images uploaded to all
-six recipes before capture. Click an image to view it full size.
+six recipes before capture. All screenshots show the English interface with English
+demonstration content. Click an image to view it full size.
 
 ### On a phone
 
