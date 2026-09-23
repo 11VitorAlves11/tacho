@@ -36,11 +36,17 @@ def export_workspace_recipes(
     """Exporta o conteúdo de receitas num formato portátil e versionado."""
     summaries = crud.list_recipes(db, workspace_id, user.id)
     recipes = [crud.get_recipe(db, workspace_id, summary.id, user.id) for summary in summaries]
-    return JSONResponse(content=jsonable_encoder({
-        "format": "tacho.recipe-export",
-        "version": 1,
-        "recipes": [schemas.RecipeOut.model_validate(recipe).model_dump(mode="json") for recipe in recipes if recipe],
-    }))
+    return JSONResponse(
+        content=jsonable_encoder(
+            {
+                "format": "tacho.recipe-export",
+                "version": 1,
+                "recipes": [
+                    schemas.RecipeOut.model_validate(recipe).model_dump(mode="json") for recipe in recipes if recipe
+                ],
+            }
+        )
+    )
 
 
 @router.get("", response_model=list[schemas.RecipeSummary])
