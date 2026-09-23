@@ -1,3 +1,4 @@
+import { t } from '../i18n'
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { createRecipe, getImportStatus, importRecipeFromPhotos, startImport, uploadRecipeImage } from '../api/recipes'
@@ -44,13 +45,13 @@ export function AddRecipe() {
           setPhase('failed')
           setErrorMessage(
             (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
-              'Não foi possível importar esta receita.',
+              t('Não foi possível importar esta receita.'),
           )
         }
       }, 1500)
     } catch {
       setPhase('failed')
-      setErrorMessage('Não foi possível pedir a importação — confirma o backend.')
+      setErrorMessage(t('Não foi possível pedir a importação — confirma o backend.'))
     }
   }
 
@@ -76,7 +77,7 @@ export function AddRecipe() {
     } catch (err) {
       setPhotoError(
         (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
-          'Não foi possível reconhecer uma receita nestas fotos.',
+          t('Não foi possível reconhecer uma receita nestas fotos.'),
       )
     } finally {
       setPhotoRecognizing(false)
@@ -85,24 +86,24 @@ export function AddRecipe() {
 
   return (
     <PageShell>
-      <h1 className="text-2xl font-bold text-text-primary">Adicionar receita</h1>
+      <h1 className="text-2xl font-bold text-text-primary">{t('Adicionar receita')}</h1>
 
       <div className="mt-4 inline-flex rounded-full bg-surface p-1 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)]">
         <TabButton active={tab === 'link'} onClick={() => setTab('link')}>
-          Por link
+          {t('Por link')}
         </TabButton>
         <TabButton active={tab === 'manual'} onClick={() => setTab('manual')}>
-          À mão
+          {t('À mão')}
         </TabButton>
         <TabButton active={tab === 'photo'} onClick={() => setTab('photo')}>
-          Por foto
+          {t('Por foto')}
         </TabButton>
       </div>
 
       {tab === 'link' ? (
         <>
           <p className="mt-4 text-text-secondary">
-            Cola o link de uma receita e o Tacho tenta trazer os ingredientes e os passos sozinho.
+            {t('Cola o link de uma receita e o Tacho tenta trazer os ingredientes e os passos sozinho.')}
           </p>
 
           <form
@@ -126,41 +127,38 @@ export function AddRecipe() {
               disabled={phase === 'pending'}
               className="mt-4 w-full rounded-full bg-primary-forest py-3.5 font-semibold text-card-white transition-opacity disabled:opacity-60"
             >
-              {phase === 'pending' ? 'A importar…' : 'Importar receita'}
+              {phase === 'pending' ? t('A importar…') : t('Importar receita')}
             </button>
 
             {phase === 'failed' && <p className="mt-3 text-sm text-accent-orange">{errorMessage}</p>}
           </form>
 
           <p className="mt-4 text-xs text-text-secondary">
-            Nem todos os sites trazem tudo direito — confirma sempre os ingredientes e os passos
-            depois de importar.
+            {t('Nem todos os sites trazem tudo direito — confirma sempre os ingredientes e os passos depois de importar.')}
           </p>
         </>
       ) : tab === 'manual' ? (
         <div className="mt-6">
-          <RecipeForm onSubmit={handleManualSubmit} submitLabel="Guardar receita" />
+          <RecipeForm onSubmit={handleManualSubmit} submitLabel={t('Guardar receita')} />
         </div>
       ) : photoDraft ? (
         <div className="mt-6">
           <p className="mb-4 rounded-xl bg-bg-sage p-3 text-xs text-text-secondary">
-            Reconhecido a partir da foto — confirma tudo antes de guardar, sobretudo quantidades (pode ter
-            interpretado mal a letra ou a imagem).
+            {t('Reconhecido a partir da foto — confirma tudo antes de guardar, sobretudo quantidades (pode ter interpretado mal a letra ou a imagem).')}
           </p>
-          <RecipeForm initial={photoDraft} onSubmit={handleManualSubmit} submitLabel="Guardar receita" />
+          <RecipeForm initial={photoDraft} onSubmit={handleManualSubmit} submitLabel={t('Guardar receita')} />
         </div>
       ) : (
         <>
           <p className="mt-4 text-text-secondary">
-            Tira 1 a 3 fotos de uma página de livro ou receita manuscrita — o Tacho tenta reconhecer os
-            ingredientes e os passos.
+            {t('Tira 1 a 3 fotos de uma página de livro ou receita manuscrita — o Tacho tenta reconhecer os ingredientes e os passos.')}
           </p>
 
           <div className="mt-6 rounded-2xl bg-surface p-5 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)]">
             <label className="flex cursor-pointer flex-col items-center gap-1.5 rounded-xl bg-bg-sage py-8 text-text-secondary">
               <CameraIcon className="size-6" />
               <span className="text-sm font-medium">
-                {photoFiles.length > 0 ? `${photoFiles.length} foto(s) escolhida(s)` : 'Escolher fotos (máx. 3)'}
+                {photoFiles.length > 0 ? t('{count} foto(s) escolhida(s)', { count: photoFiles.length }) : t('Escolher fotos (máx. 3)')}
               </span>
               <input
                 type="file"
@@ -177,14 +175,14 @@ export function AddRecipe() {
               disabled={photoFiles.length === 0 || photoRecognizing}
               className="mt-4 w-full rounded-full bg-primary-forest py-3.5 font-semibold text-card-white transition-opacity disabled:opacity-60"
             >
-              {photoRecognizing ? 'A reconhecer…' : 'Reconhecer receita'}
+              {photoRecognizing ? t('A reconhecer…') : t('Reconhecer receita')}
             </button>
 
             {photoError && <p className="mt-3 text-sm text-accent-orange">{photoError}</p>}
           </div>
 
           <p className="mt-4 text-xs text-text-secondary">
-            Nunca guarda nada sozinho — o resultado abre sempre no formulário para reveres e confirmares.
+            {t('Nunca guarda nada sozinho — o resultado abre sempre no formulário para reveres e confirmares.')}
           </p>
         </>
       )}

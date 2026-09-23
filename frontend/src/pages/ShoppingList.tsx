@@ -1,3 +1,4 @@
+import { t } from '../i18n'
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import {
@@ -64,26 +65,26 @@ export function ShoppingList() {
   return (
     <PageShell wide>
       <div className="mb-1 flex items-center justify-between gap-3">
-        <div><h1 className="text-2xl font-bold tracking-tight text-text-primary sm:text-3xl">Lista de compras</h1>{items && items.length > 0 && <p className="mt-1 text-sm text-text-secondary">{checked.length} de {items.length} concluídos</p>}</div>
+        <div><h1 className="text-2xl font-bold tracking-tight text-text-primary sm:text-3xl">{t('Lista de compras')}</h1>{items && items.length > 0 && <p className="mt-1 text-sm text-text-secondary">{checked.length} {t('de')} {items.length} {t('concluídos')}</p>}</div>
         <button
           type="button"
           onClick={handleGenerate}
           disabled={generating}
           className="shrink-0 rounded-full bg-primary-forest px-4 py-2 text-sm font-medium text-card-white shadow-[0_10px_30px_-8px_rgba(28,43,31,0.35)] transition-opacity disabled:opacity-60"
         >
-          {generating ? 'A gerar…' : 'Gerar da semana'}
+          {generating ? t('A gerar…') : t('Gerar da semana')}
         </button>
       </div>
 
       <Link to="/despensa" className="mb-6 inline-block text-sm font-medium text-forest-text">
-        Despensa →
+        {t('Despensa →')}
       </Link>
 
-      {items && items.length > 0 && <div className="mb-6 h-2 overflow-hidden rounded-full bg-muted" aria-label={`${progress}% da lista concluída`} role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}><div className="h-full rounded-full bg-primary-forest transition-[width]" style={{ width: `${progress}%` }} /></div>}
+      {items && items.length > 0 && <div className="mb-6 h-2 overflow-hidden rounded-full bg-muted" aria-label={t('{progress}% da lista concluída', { progress: progress })} role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}><div className="h-full rounded-full bg-primary-forest transition-[width]" style={{ width: `${progress}%` }} /></div>}
 
       {error && (
         <p className="mb-4 rounded-xl bg-surface p-4 text-sm text-text-secondary">
-          Não foi possível ligar ao backend. Confirma se está a correr em {import.meta.env.VITE_API_URL}.
+          {t('Não foi possível ligar ao backend. Confirma se está a correr em')} {import.meta.env.VITE_API_URL}.
         </p>
       )}
 
@@ -91,31 +92,31 @@ export function ShoppingList() {
         <input
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
-          placeholder="Adicionar item…"
+          placeholder={t('Adicionar item…')}
           className="min-w-0 flex-1 rounded-lg bg-muted px-3 py-2 text-sm text-text-primary outline-none placeholder:text-text-secondary focus:ring-2 focus:ring-accent-leaf"
         />
         <input
           value={newQuantity}
           onChange={(e) => setNewQuantity(e.target.value)}
-          placeholder="Qtd."
+          placeholder={t('Qtd.')}
           className="w-20 rounded-lg bg-muted px-3 py-2 text-sm text-text-primary outline-none placeholder:text-text-secondary focus:ring-2 focus:ring-accent-leaf"
         />
         <button
           type="submit"
           className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary-forest text-card-white transition-opacity hover:opacity-90"
-          aria-label="Adicionar item"
+          aria-label={t('Adicionar item')}
         >
           <PlusIcon className="size-4" />
         </button>
       </form>
 
-      {!error && items === null && <p className="text-sm text-text-secondary">A carregar…</p>}
+      {!error && items === null && <p className="text-sm text-text-secondary">{t('A carregar…')}</p>}
 
       {items !== null && items.length === 0 && (
         <div className="rounded-2xl bg-surface p-8 text-center">
-          <p className="font-medium text-text-primary">A lista está vazia.</p>
+          <p className="font-medium text-text-primary">{t('A lista está vazia.')}</p>
           <p className="mt-1 text-sm text-text-secondary">
-            Usa "Gerar da semana" para juntar os ingredientes do plano, ou adiciona itens à mão.
+            {t('Usa "Gerar da semana" para juntar os ingredientes do plano, ou adiciona itens à mão.')}
           </p>
         </div>
       )}
@@ -146,7 +147,7 @@ function ShoppingListRow({
         type="button"
         onClick={onToggle}
         aria-pressed={item.is_checked}
-        aria-label={item.is_checked ? `Desmarcar ${item.name}` : `Marcar ${item.name} como comprado`}
+        aria-label={item.is_checked ? t('Desmarcar {name}', { name: item.name }) : t('Marcar {name} como comprado', { name: item.name })}
         className={`size-6 shrink-0 rounded-md border-2 transition-colors ${
           item.is_checked ? 'border-accent-leaf bg-accent-leaf' : 'border-text-secondary/40'
         }`}
@@ -161,7 +162,7 @@ function ShoppingListRow({
         type="button"
         onClick={onDelete}
         className="flex size-7 shrink-0 items-center justify-center rounded-full text-text-secondary transition-colors hover:bg-bg-sage hover:text-text-primary"
-        aria-label={`Remover ${item.name}`}
+        aria-label={t('Remover {name}', { name: item.name })}
       >
         <TrashIcon className="size-4" />
       </button>

@@ -35,14 +35,15 @@ recipes you want to cook, organise them into collections, plan the week and turn
 into a shared shopping list. When it is time to cook, open a recipe in step-by-step cooking mode.
 
 It works as a website on desktop and mobile, and as an **installable PWA on iPhone and
-Android**. The interface is in European Portuguese, with light, dark and system themes.
+Android**. Choose **European Portuguese or English** in the account settings, alongside
+light, dark and system themes. Your language preference is saved in the current browser.
 Recipes, accounts and uploaded photographs live on your own server.
 
 ## The interface
 
 These are real browser screenshots of a disposable installation, populated with fictional
-household data and original example recipe text. Recipes without photographs use Tacho's
-built-in placeholder. Click an image to view it full size.
+household data, original example recipe text and AI-generated food images uploaded to all
+six recipes before capture. Click an image to view it full size.
 
 ### On a phone
 
@@ -73,6 +74,26 @@ recurring meals, then generate the ingredients you need to buy.
   <a href="docs/images/desktop-meal-plan.png"><img src="docs/images/desktop-meal-plan.png" width="1100" alt="Tacho weekly meal planner with example recipes assigned to lunches and dinners" /></a>
 </p>
 
+### From recipe to cooking
+
+Keep the cover photo, ingredients, portions and preparation steps together. Add missing
+ingredients to your shopping list, or start cooking mode when you are ready.
+
+<p align="center">
+  <a href="docs/images/desktop-recipe.png"><img src="docs/images/desktop-recipe.png" width="1100" alt="Recipe detail with a tomato and basil pasta image, serving controls and recipe actions" /></a>
+</p>
+
+### Make it yours
+
+Open your avatar in the top corner to access **Settings → Language** (or **Definições →
+Idioma**). Switch between **Português (Portugal)** and **English** immediately, without
+leaving the page. Recipe text stays as you wrote it. Language and theme choices are local
+to each browser, so household members can use different preferences.
+
+<p align="center">
+  <a href="docs/images/mobile-settings.png"><img src="docs/images/mobile-settings.png" width="300" alt="Account settings on a phone, with English selected in the language control and system, light and dark theme options" /></a>
+</p>
+
 <details>
   <summary><strong>See the dark theme</strong></summary>
   <p align="center"><a href="docs/images/desktop-dark.png"><img src="docs/images/desktop-dark.png" width="1100" alt="Tacho home screen in the dark theme" /></a></p>
@@ -90,6 +111,7 @@ recurring meals, then generate the ingredients you need to buy.
 | **Pantry** | Track quantities, units, expiry dates and minimum stock. Find recipes you can make and see what ingredients are missing. |
 | **Household preferences** | Record dietary profiles, review ingredient warnings and keep substitution rules. |
 | **Sharing and printing** | Create temporary public recipe links and QR codes, or use print-friendly recipe views. |
+| **Language and appearance** | Switch between European Portuguese and English, with localised dates and light, dark or system themes. Preferences are remembered in each browser. |
 | **Accounts** | Add household members, sign in with a password, connect OIDC or configure trusted forward-auth. |
 
 Offline support focuses on the **active cooking recipe**, rather than a complete offline

@@ -1,3 +1,4 @@
+import { t } from '../i18n'
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { getPublicRecipe, publicRecipeImageUrl } from '../api/public'
@@ -28,10 +29,9 @@ export function PublicRecipe() {
     return (
       <div className="flex min-h-svh flex-col items-center justify-center bg-bg-sage px-4 text-center">
         <Brand compact className="size-12" />
-        <h1 className="mt-3 text-lg font-semibold text-text-primary">Link expirado</h1>
+        <h1 className="mt-3 text-lg font-semibold text-text-primary">{t('Link expirado')}</h1>
         <p className="mt-1 max-w-xs text-sm text-text-secondary">
-          Este link de partilha já não é válido — os links do Tacho duram 5 horas. Pede a quem partilhou contigo
-          para gerar um novo.
+          {t('Este link de partilha já não é válido — os links do Tacho duram 5 horas. Pede a quem partilhou contigo para gerar um novo.')}
         </p>
       </div>
     )
@@ -40,7 +40,7 @@ export function PublicRecipe() {
   if (!recipe) {
     return (
       <div className="flex min-h-svh items-center justify-center bg-bg-sage">
-        <p className="text-sm text-text-secondary">A carregar…</p>
+        <p className="text-sm text-text-secondary">{t('A carregar…')}</p>
       </div>
     )
   }
@@ -52,7 +52,7 @@ export function PublicRecipe() {
       <div className="mx-auto flex max-w-4xl items-center gap-1.5 px-4 py-4 text-sm font-semibold text-forest-text sm:px-6">
         <Brand compact className="size-7" />
         Tacho
-        <span className="font-normal text-text-secondary">· receita partilhada</span>
+        <span className="font-normal text-text-secondary">{t('· receita partilhada')}</span>
       </div>
 
       <main className="mx-auto max-w-4xl px-4 sm:px-6">
@@ -94,7 +94,7 @@ export function PublicRecipe() {
                     <div className="text-2xl font-bold leading-none text-text-primary sm:text-3xl">
                       {recipe.servings}
                     </div>
-                    <div className="text-xs text-text-secondary">porções</div>
+                    <div className="text-xs text-text-secondary">{t('porções')}</div>
                   </div>
                 </div>
               )}
@@ -114,7 +114,7 @@ export function PublicRecipe() {
 
           <div className="mt-8 grid gap-8 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
             <section>
-              <h2 className="text-lg font-semibold text-text-primary">Ingredientes</h2>
+              <h2 className="text-lg font-semibold text-text-primary">{t('Ingredientes')}</h2>
               <ul className="mt-3 space-y-2">
                 {recipe.ingredients.map((ing) =>
                   ing.is_header ? (
@@ -136,7 +136,7 @@ export function PublicRecipe() {
             </section>
 
             <section>
-              <h2 className="text-lg font-semibold text-text-primary">Preparação</h2>
+              <h2 className="text-lg font-semibold text-text-primary">{t('Preparação')}</h2>
               <ol className="mt-3 space-y-4">
                 {recipe.steps.map((step, i) => (
                   <li key={step.id} className="flex gap-3 text-sm">
@@ -152,7 +152,7 @@ export function PublicRecipe() {
         </article>
 
         <p className="mt-4 text-center text-xs text-text-secondary">
-          Partilhado a partir do Tacho — este link deixa de funcionar 5 horas depois de gerado.
+          {t('Partilhado a partir do Tacho — este link deixa de funcionar 5 horas depois de gerado.')}
         </p>
       </main>
     </div>

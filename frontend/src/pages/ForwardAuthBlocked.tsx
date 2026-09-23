@@ -1,3 +1,4 @@
+import { t } from '../i18n'
 import { AuthLayout } from '../auth/AuthLayout'
 import type { ForwardLoginBlockReason } from '../api/types'
 
@@ -10,11 +11,11 @@ const MESSAGES: Record<ForwardLoginBlockReason, string> = {
 
 export function ForwardAuthBlocked({ reason, email }: { reason: ForwardLoginBlockReason; email?: string }) {
   return (
-    <AuthLayout title="Tacho" subtitle="Sessão iniciada pelo proxy, mas ainda falta um passo.">
-      <p className="text-sm text-text-primary">{MESSAGES[reason]}</p>
+    <AuthLayout title="Tacho" subtitle={t('Sessão iniciada pelo proxy, mas ainda falta um passo.')}>
+      <p className="text-sm text-text-primary">{t(MESSAGES[reason])}</p>
       {email && (
         <p className="mt-3 text-xs text-text-secondary">
-          Autenticado como <span className="font-medium">{email}</span>.
+          {t('Autenticado como')} <span className="font-medium">{email}</span>.
         </p>
       )}
     </AuthLayout>

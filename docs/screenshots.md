@@ -2,10 +2,13 @@
 
 The README images are real Chromium captures of the application with synthetic household
 records and original demonstration recipe text. No personal recipes or photographs are
-included. Recipes use the application's built-in image placeholder.
+included. The six recipe covers are AI-generated food illustrations, stored in
+[`recipe-images/`](recipe-images/README.md) and uploaded through the real image API before
+any screenshot is taken. No external image host is needed during capture.
 
 Desktop captures use 1440 × 1000; mobile captures use 390 × 844 with touch and mobile
-emulation. The interface is European Portuguese. Images are saved without editing in
+emulation. The interface is European Portuguese, except for the English language-settings
+example. Images are saved without editing in
 `docs/images/`.
 
 ## Use a disposable installation
@@ -23,7 +26,9 @@ TACHO_PORT=18080 docker compose --env-file .env.example -p tacho-readme up -d --
 
 This uses separate named volumes and the published image selected by `TACHO_VERSION`.
 To capture unpublished interface changes, build the current checkout and use that image
-in the disposable stack instead. The README captures were made with the current frontend
+in the disposable stack instead. When building the frontend outside Docker, use
+`VITE_API_URL='' npm run build --prefix frontend` so API requests use the same origin.
+The README captures were made with the current frontend
 production build and backend source, against a fresh database.
 
 ## Capture
@@ -31,7 +36,7 @@ production build and backend source, against a fresh database.
 Install screenshot tooling outside the project so the app's dependencies stay unchanged:
 
 ```bash
-npm install --prefix /tmp/tacho-readme-tools @playwright/test@1.62.1
+npm install --prefix /tmp/tacho-readme-tools @playwright/test@1.63.0
 /tmp/tacho-readme-tools/node_modules/.bin/playwright install --with-deps chromium
 PLAYWRIGHT_MODULE=/tmp/tacho-readme-tools/node_modules/@playwright/test \
   SCREENSHOT_BASE_URL=http://localhost:18080 \
@@ -40,15 +45,17 @@ PLAYWRIGHT_MODULE=/tmp/tacho-readme-tools/node_modules/@playwright/test \
 
 The script uses the known credentials `demo@example.com` / `TachoDemo2026!` only in this
 disposable instance. It seeds the current week, captures the home screen and weekly plan,
-then the mobile recipe list, shopping list, cooking mode and dark home screen.
+the recipe detail, then the mobile recipe list, shopping list, cooking mode, dark home
+screen and language settings. It checks that displayed images have loaded and verifies
+that switching language updates the UI and survives reopening the page.
 
 If the host lacks browser libraries, run the script in
-`mcr.microsoft.com/playwright:v1.62.1-noble`. Mount the repository at `/work` and the tooling's
+`mcr.microsoft.com/playwright:v1.63.0-noble`. Mount the repository at `/work` and the tooling's
 `node_modules` at `/tooling/node_modules`, join the disposable stack's Docker network,
 and set `PLAYWRIGHT_MODULE=/tooling/node_modules/@playwright/test` and
 `SCREENSHOT_BASE_URL=http://web:8000`.
 
-Review all six images before committing: loaded data, readable text, correct themes and no
+Review all eight images before committing: loaded data, readable text, correct themes and no
 personal information. The script also reports browser exceptions and server errors.
 
 ## Clean up

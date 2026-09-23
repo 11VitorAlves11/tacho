@@ -1,3 +1,4 @@
+import { t } from '../i18n'
 import { Link } from 'react-router-dom'
 import { Brand } from './Brand'
 import { SunIcon } from './icons'
@@ -11,12 +12,12 @@ export function Header() {
   return (
     <header className="sticky top-0 z-40 hidden h-16 bg-primary-forest text-white lg:block print:hidden">
       <div className="flex h-full items-center justify-between gap-4 px-6 xl:px-8">
-        <Link to="/" className="flex h-12 shrink-0 items-center gap-2.5 text-white" aria-label="Tacho — início">
+        <Link to="/" className="flex h-12 shrink-0 items-center gap-2.5 text-white" aria-label={t('Tacho — início')}>
           <Brand compact className="size-[55px] brightness-0 invert" />
           <span className="text-[28px] font-bold tracking-tight">Tacho</span>
         </Link>
         <div className="flex items-center gap-2">
-          <button onClick={toggleTheme} className="flex size-11 items-center justify-center rounded-xl text-white transition-colors hover:bg-white/15" aria-label="Alternar tema">
+          <button onClick={toggleTheme} className="flex size-11 items-center justify-center rounded-xl text-white transition-colors hover:bg-white/15" aria-label={t('Alternar tema')}>
             <SunIcon className="size-5" />
           </button>
           <UserMenu />

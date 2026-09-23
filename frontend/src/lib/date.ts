@@ -1,3 +1,4 @@
+import { t, getLanguage } from '../i18n'
 // Formatação de datas em fuso horário local, nunca UTC — Portugal está em
 // UTC+1 (ou +0 no inverno), e `toISOString()` desloca a meia-noite local
 // para o dia anterior, o que faria o planeamento cair sempre no dia errado.
@@ -20,17 +21,17 @@ export function addDays(d: Date, n: number): Date {
 const WEEKDAY_LABELS = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado', 'Domingo']
 
 export function weekdayLabel(index: number): string {
-  return WEEKDAY_LABELS[index]
+  return t(WEEKDAY_LABELS[index])
 }
 
 export function formatDayShort(d: Date): string {
-  return d.toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' })
+  return d.toLocaleDateString(getLanguage(), { day: 'numeric', month: 'short' })
 }
 
 export function formatWeekRange(start: Date): string {
   const end = addDays(start, 6)
   const sameMonth = start.getMonth() === end.getMonth()
-  const startLabel = start.toLocaleDateString('pt-PT', { day: 'numeric', month: sameMonth ? undefined : 'short' })
-  const endLabel = end.toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' })
+  const startLabel = start.toLocaleDateString(getLanguage(), { day: 'numeric', month: sameMonth ? undefined : 'short' })
+  const endLabel = end.toLocaleDateString(getLanguage(), { day: 'numeric', month: 'short' })
   return `${startLabel} – ${endLabel}`
 }

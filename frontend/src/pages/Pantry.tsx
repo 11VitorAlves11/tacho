@@ -1,3 +1,4 @@
+import { t, getLanguage } from '../i18n'
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import {
@@ -52,7 +53,7 @@ export function Pantry() {
     } catch (err) {
       setScanError(
         (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
-          'Não foi possível ler esta fatura.',
+          t('Não foi possível ler esta fatura.'),
       )
     } finally {
       setScanning(false)
@@ -125,11 +126,11 @@ export function Pantry() {
   return (
     <PageShell>
       <Link to="/lista-compras" className="text-sm font-medium text-forest-text">
-        ← Lista de Compras
+        {t('← Lista de Compras')}
       </Link>
-      <h1 className="mt-1 text-2xl font-bold text-text-primary sm:text-3xl">Despensa</h1>
+      <h1 className="mt-1 text-2xl font-bold text-text-primary sm:text-3xl">{t('Despensa')}</h1>
       <p className="mt-1 text-sm text-text-secondary">
-        Marca o que tens em casa — usado no filtro "Dá para fazer" das receitas.
+        {t('Marca o que tens em casa — usado no filtro "Dá para fazer" das receitas.')}
       </p>
 
       <div className="mt-4">
@@ -140,7 +141,7 @@ export function Pantry() {
           className="flex items-center gap-1.5 rounded-full bg-surface px-4 py-2 text-sm font-medium text-forest-text shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)] transition-opacity disabled:opacity-60"
         >
           <CameraIcon className="size-4" />
-          {scanning ? 'A ler a fatura…' : 'Ler fatura do supermercado'}
+          {scanning ? t('A ler a fatura…') : t('Ler fatura do supermercado')}
         </button>
         <input
           ref={receiptInputRef}
@@ -156,13 +157,12 @@ export function Pantry() {
         <div className="mt-4 rounded-2xl bg-surface p-4 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)]">
           {draftNames.length === 0 ? (
             <p className="text-sm text-text-secondary">
-              Não foi possível reconhecer artigos nesta fatura. Tenta outra foto, com boa luz e a fatura inteira
-              enquadrada.
+              {t('Não foi possível reconhecer artigos nesta fatura. Tenta outra foto, com boa luz e a fatura inteira enquadrada.')}
             </p>
           ) : (
             <>
               <p className="text-sm font-medium text-text-primary">
-                Reconhecidos {draftNames.length} artigo(s) — confirma antes de adicionar à despensa.
+                {t('Reconhecidos')} {draftNames.length} {t('artigo(s) — confirma antes de adicionar à despensa.')}
               </p>
               <ul className="mt-3 flex flex-wrap gap-2">
                 {draftNames.map((name) => (
@@ -192,14 +192,14 @@ export function Pantry() {
                   disabled={checkedNames.size === 0 || confirming}
                   className="flex-1 rounded-full bg-primary-forest py-2.5 text-sm font-semibold text-card-white transition-opacity disabled:opacity-60"
                 >
-                  {confirming ? 'A adicionar…' : `Adicionar ${checkedNames.size} à despensa`}
+                  {confirming ? t('A adicionar…') : t('Adicionar {count} à despensa', { count: checkedNames.size })}
                 </button>
                 <button
                   type="button"
                   onClick={handleDismissDraft}
                   className="rounded-full bg-bg-sage px-4 py-2.5 text-sm font-medium text-text-secondary"
                 >
-                  Cancelar
+                  {t('Cancelar')}
                 </button>
               </div>
             </>
@@ -207,12 +207,12 @@ export function Pantry() {
         </div>
       )}
 
-      {error && <p className="mt-4 text-sm text-text-secondary">Não foi possível ligar ao backend.</p>}
+      {error && <p className="mt-4 text-sm text-text-secondary">{t('Não foi possível ligar ao backend.')}</p>}
 
       {items && items.length === 0 && (
         <div className="mt-4 rounded-2xl bg-surface p-8 text-center">
-          <p className="font-medium text-text-primary">A despensa está vazia.</p>
-          <p className="mt-1 text-sm text-text-secondary">Adiciona os ingredientes que costumas ter em casa.</p>
+          <p className="font-medium text-text-primary">{t('A despensa está vazia.')}</p>
+          <p className="mt-1 text-sm text-text-secondary">{t('Adiciona os ingredientes que costumas ter em casa.')}</p>
         </div>
       )}
 
@@ -232,12 +232,12 @@ export function Pantry() {
                 />
                 <span className="min-w-0"><span className={`block truncate text-sm ${item.has_it ? 'text-text-primary' : 'text-text-secondary line-through'}`}>{item.name}</span><PantryItemMeta item={item} today={today} /></span>
               </label>
-              <button type="button" onClick={() => setEditingItem(item)} className="min-h-9 rounded-lg px-2 text-xs font-semibold text-forest-text hover:bg-primary-soft">Editar</button>
+              <button type="button" onClick={() => setEditingItem(item)} className="min-h-9 rounded-lg px-2 text-xs font-semibold text-forest-text hover:bg-primary-soft">{t('Editar')}</button>
               <button
                 type="button"
                 onClick={() => handleDelete(item.id)}
                 className="shrink-0 rounded-full p-1.5 text-text-secondary hover:bg-bg-sage"
-                aria-label={`Remover ${item.name} da despensa`}
+                aria-label={t('Remover {name} da despensa', { name: item.name })}
               >
                 <XIcon className="size-4" />
               </button>
@@ -250,21 +250,21 @@ export function Pantry() {
         <input
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
-          placeholder="Adicionar ingrediente…"
+          placeholder={t('Adicionar ingrediente…')}
           className="min-h-11 min-w-0 rounded-xl border border-border bg-muted px-3 py-2 text-sm outline-none focus:border-accent-leaf"
         />
-        <div className="grid grid-cols-2 gap-2"><input type="number" min="0" step="0.01" value={newQuantity} onChange={(event) => setNewQuantity(event.target.value)} placeholder="Quantidade" className="min-h-11 min-w-0 rounded-xl border border-border bg-muted px-3 text-sm outline-none" /><input value={newUnit} onChange={(event) => setNewUnit(event.target.value)} placeholder="Unidade" className="min-h-11 min-w-0 rounded-xl border border-border bg-muted px-3 text-sm outline-none" /></div>
-        <input type="date" value={newExpiry} onChange={(event) => setNewExpiry(event.target.value)} aria-label="Data de validade" className="min-h-11 rounded-xl border border-border bg-muted px-3 text-sm text-text-primary outline-none" />
+        <div className="grid grid-cols-2 gap-2"><input type="number" min="0" step="0.01" value={newQuantity} onChange={(event) => setNewQuantity(event.target.value)} placeholder={t('Quantidade')} className="min-h-11 min-w-0 rounded-xl border border-border bg-muted px-3 text-sm outline-none" /><input value={newUnit} onChange={(event) => setNewUnit(event.target.value)} placeholder={t('Unidade')} className="min-h-11 min-w-0 rounded-xl border border-border bg-muted px-3 text-sm outline-none" /></div>
+        <input type="date" value={newExpiry} onChange={(event) => setNewExpiry(event.target.value)} aria-label={t('Data de validade')} className="min-h-11 rounded-xl border border-border bg-muted px-3 text-sm text-text-primary outline-none" />
         <button
           type="submit"
           disabled={!newName.trim() || creating}
           className="flex min-h-11 shrink-0 items-center justify-center gap-1 rounded-xl bg-primary-forest px-4 py-2 text-sm font-medium text-card-white disabled:opacity-50"
         >
           <PlusIcon className="size-4" />
-          Adicionar
+          {t('Adicionar')}
         </button>
       </form>
-      <Modal open={editingItem !== null} title="Editar produto" onClose={() => setEditingItem(null)}>{editingItem && <PantryEditor item={editingItem} onSaved={handleEdited} />}</Modal>
+      <Modal open={editingItem !== null} title={t('Editar produto')} onClose={() => setEditingItem(null)}>{editingItem && <PantryEditor item={editingItem} onSaved={handleEdited} />}</Modal>
     </PageShell>
   )
 }
@@ -272,7 +272,7 @@ export function Pantry() {
 function PantryItemMeta({ item, today }: { item: PantryItem; today: Date }) {
   const lowStock = item.quantity !== null && item.minimum_quantity !== null && item.quantity <= item.minimum_quantity
   const expiryDays = item.expires_on ? Math.ceil((new Date(`${item.expires_on}T00:00:00`).getTime() - today.getTime()) / 86_400_000) : null
-  return <span className="mt-0.5 flex flex-wrap gap-x-2 text-xs text-text-secondary">{item.quantity !== null && <span>{item.quantity.toLocaleString('pt-PT')}{item.unit ? ` ${item.unit}` : ''}</span>}{lowStock && <span className="font-semibold text-accent-orange">Stock baixo</span>}{expiryDays !== null && <span className={expiryDays <= 7 ? 'font-semibold text-accent-orange' : ''}>{expiryDays < 0 ? 'Expirado' : expiryDays === 0 ? 'Expira hoje' : `Validade: ${item.expires_on}`}</span>}</span>
+  return <span className="mt-0.5 flex flex-wrap gap-x-2 text-xs text-text-secondary">{item.quantity !== null && <span>{item.quantity.toLocaleString(getLanguage())}{item.unit ? ` ${item.unit}` : ''}</span>}{lowStock && <span className="font-semibold text-accent-orange">{t('Stock baixo')}</span>}{expiryDays !== null && <span className={expiryDays <= 7 ? 'font-semibold text-accent-orange' : ''}>{expiryDays < 0 ? t('Expirado') : expiryDays === 0 ? t('Expira hoje') : t('Validade: {date}', { date: item.expires_on ?? '' })}</span>}</span>
 }
 
 function PantryEditor({ item, onSaved }: { item: PantryItem; onSaved: (item: PantryItem) => void }) {
@@ -294,5 +294,5 @@ function PantryEditor({ item, onSaved }: { item: PantryItem; onSaved: (item: Pan
     }
   }
 
-  return <form onSubmit={save} className="space-y-3"><label className="block text-xs font-semibold text-text-secondary">Produto<input value={name} onChange={(event) => setName(event.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text-primary" /></label><div className="grid grid-cols-2 gap-2"><label className="text-xs font-semibold text-text-secondary">Quantidade<input type="number" min="0" step="0.01" value={quantity} onChange={(event) => setQuantity(event.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm" /></label><label className="text-xs font-semibold text-text-secondary">Unidade<input value={unit} onChange={(event) => setUnit(event.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm" /></label></div><label className="block text-xs font-semibold text-text-secondary">Validade<input type="date" value={expiry} onChange={(event) => setExpiry(event.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm" /></label><label className="block text-xs font-semibold text-text-secondary">Stock mínimo<input type="number" min="0" step="0.01" value={minimum} onChange={(event) => setMinimum(event.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm" /></label><button disabled={saving} className="min-h-11 w-full rounded-xl bg-primary-forest px-4 text-sm font-semibold text-white disabled:opacity-60">{saving ? 'A guardar…' : 'Guardar alterações'}</button></form>
+  return <form onSubmit={save} className="space-y-3"><label className="block text-xs font-semibold text-text-secondary">{t('Produto')}<input value={name} onChange={(event) => setName(event.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text-primary" /></label><div className="grid grid-cols-2 gap-2"><label className="text-xs font-semibold text-text-secondary">{t('Quantidade')}<input type="number" min="0" step="0.01" value={quantity} onChange={(event) => setQuantity(event.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm" /></label><label className="text-xs font-semibold text-text-secondary">{t('Unidade')}<input value={unit} onChange={(event) => setUnit(event.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm" /></label></div><label className="block text-xs font-semibold text-text-secondary">{t('Validade')}<input type="date" value={expiry} onChange={(event) => setExpiry(event.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm" /></label><label className="block text-xs font-semibold text-text-secondary">{t('Stock mínimo')}<input type="number" min="0" step="0.01" value={minimum} onChange={(event) => setMinimum(event.target.value)} className="mt-1 min-h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm" /></label><button disabled={saving} className="min-h-11 w-full rounded-xl bg-primary-forest px-4 text-sm font-semibold text-white disabled:opacity-60">{saving ? t('A guardar…') : t('Guardar alterações')}</button></form>
 }

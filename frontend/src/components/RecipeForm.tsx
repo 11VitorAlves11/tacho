@@ -1,3 +1,4 @@
+import { t } from '../i18n'
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import { estimateNutrition, OFF_UNAVAILABLE_REASON, type NutritionEstimate } from '../api/nutrition'
 import { createCategory, createTag, listCategories, listTags, recipeImageUrl, updateCategory } from '../api/recipes'
@@ -205,7 +206,7 @@ export function RecipeForm({
       // Falha ao chamar o próprio endpoint (rede local, 5xx) — distinto de
       // um 200 com matched_count:0, que já traz skipped_ingredients a
       // explicar cada ingrediente ignorado.
-      setEstimateError('Não foi possível pedir a estimativa agora. Tenta de novo daqui a pouco.')
+      setEstimateError(t('Não foi possível pedir a estimativa agora. Tenta de novo daqui a pouco.'))
     } finally {
       setEstimating(false)
     }
@@ -270,7 +271,7 @@ export function RecipeForm({
         imageFile,
       )
     } catch {
-      setError('Não foi possível guardar a receita.')
+      setError(t('Não foi possível guardar a receita.'))
       setSaving(false)
     }
   }
@@ -298,19 +299,19 @@ export function RecipeForm({
               <img src={imagePreview} alt="" className="size-full object-cover" />
               <span className="absolute bottom-2 right-2 flex items-center gap-1 rounded-full bg-primary-forest/90 px-3 py-1.5 text-xs font-medium text-card-white">
                 <CameraIcon className="size-3.5" />
-                Trocar foto
+                {t('Trocar foto')}
               </span>
             </>
           ) : (
             <span className="flex flex-col items-center gap-1.5">
               <CameraIcon className="size-6" />
-              <span className="text-sm font-medium">Adicionar foto</span>
+              <span className="text-sm font-medium">{t('Adicionar foto')}</span>
             </span>
           )}
         </button>
 
         <label className="mt-4 block text-sm font-medium text-text-secondary" htmlFor="title">
-          Título
+          {t('Título')}
         </label>
         <input
           id="title"
@@ -318,11 +319,11 @@ export function RecipeForm({
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           className={`${fieldClass} w-full mt-1`}
-          placeholder="Ex.: Bacalhau à Brás"
+          placeholder={t('Ex.: Bacalhau à Brás')}
         />
 
         <label className="mt-4 block text-sm font-medium text-text-secondary" htmlFor="description">
-          Descrição
+          {t('Descrição')}
         </label>
         <textarea
           id="description"
@@ -335,7 +336,7 @@ export function RecipeForm({
         <div className="mt-4 grid grid-cols-3 gap-3">
           <div>
             <label className="block min-h-10 text-sm font-medium text-text-secondary" htmlFor="servings">
-              Porções (und)
+              {t('Porções (und)')}
             </label>
             <input
               id="servings"
@@ -348,7 +349,7 @@ export function RecipeForm({
           </div>
           <div>
             <label className="block min-h-10 text-sm font-medium text-text-secondary" htmlFor="prep">
-              Preparação (min)
+              {t('Preparação (min)')}
             </label>
             <input
               id="prep"
@@ -361,7 +362,7 @@ export function RecipeForm({
           </div>
           <div>
             <label className="block min-h-10 text-sm font-medium text-text-secondary" htmlFor="cook">
-              Confeção (min)
+              {t('Confeção (min)')}
             </label>
             <input
               id="cook"
@@ -375,7 +376,7 @@ export function RecipeForm({
         </div>
 
         <label className="mt-4 block text-sm font-medium text-text-secondary" htmlFor="source">
-          Fonte (opcional)
+          {t('Fonte (opcional)')}
         </label>
         <input
           id="source"
@@ -387,7 +388,7 @@ export function RecipeForm({
         />
 
         <label className="mt-4 block text-sm font-medium text-text-secondary" htmlFor="cost">
-          Custo estimado da receita (€, opcional)
+          {t('Custo estimado da receita (€, opcional)')}
         </label>
         <input
           id="cost"
@@ -397,11 +398,11 @@ export function RecipeForm({
           value={estimatedCost}
           onChange={(e) => setEstimatedCost(e.target.value)}
           className={`${fieldClass} w-full mt-1`}
-          placeholder="Ex.: 8.50"
+          placeholder={t('Ex.: 8.50')}
         />
 
         <label className="mt-4 block text-sm font-medium text-text-secondary" htmlFor="notes">
-          Notas
+          {t('Notas')}
         </label>
         <textarea
           id="notes"
@@ -413,7 +414,7 @@ export function RecipeForm({
       </div>
 
       <div className="rounded-2xl bg-surface p-5 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)]">
-        <h2 className="text-lg font-semibold text-text-primary">Ingredientes</h2>
+        <h2 className="text-lg font-semibold text-text-primary">{t('Ingredientes')}</h2>
         <div className="mt-3 space-y-2">
           {ingredients.map((row, i) =>
             row.isHeader ? (
@@ -421,14 +422,14 @@ export function RecipeForm({
                 <input
                   value={row.name}
                   onChange={(e) => updateIngredient(i, { name: e.target.value })}
-                  placeholder="Nome da secção, ex.: Para o recheio"
+                  placeholder={t('Nome da secção, ex.: Para o recheio')}
                   className={`${fieldClass} w-full font-semibold`}
                 />
                 <button
                   type="button"
                   onClick={() => removeIngredient(i)}
                   className="shrink-0 rounded-full p-2 text-text-secondary hover:bg-bg-sage"
-                  aria-label="Remover secção"
+                  aria-label={t('Remover secção')}
                 >
                   <XIcon className="size-4" />
                 </button>
@@ -438,27 +439,27 @@ export function RecipeForm({
                 <input
                   value={row.quantity}
                   onChange={(e) => updateIngredient(i, { quantity: e.target.value })}
-                  placeholder="qtd"
+                  placeholder={t('qtd')}
                   inputMode="decimal"
                   className={`${fieldClass} w-16 shrink-0`}
                 />
                 <input
                   value={row.unit}
                   onChange={(e) => updateIngredient(i, { unit: e.target.value })}
-                  placeholder="unidade"
+                  placeholder={t('unidade')}
                   className={`${fieldClass} w-24 shrink-0`}
                 />
                 <input
                   value={row.name}
                   onChange={(e) => updateIngredient(i, { name: e.target.value })}
-                  placeholder="ingrediente"
+                  placeholder={t('ingrediente')}
                   className={`${fieldClass} min-w-0 flex-1`}
                 />
                 <button
                   type="button"
                   onClick={() => removeIngredient(i)}
                   className="shrink-0 rounded-full p-2 text-text-secondary hover:bg-bg-sage"
-                  aria-label="Remover ingrediente"
+                  aria-label={t('Remover ingrediente')}
                 >
                   <XIcon className="size-4" />
                 </button>
@@ -473,7 +474,7 @@ export function RecipeForm({
             className="flex items-center gap-1 text-sm font-medium text-forest-text"
           >
             <PlusIcon className="size-4" />
-            Adicionar ingrediente
+            {t('Adicionar ingrediente')}
           </button>
           <button
             type="button"
@@ -481,13 +482,13 @@ export function RecipeForm({
             className="flex items-center gap-1 text-sm font-medium text-text-secondary"
           >
             <PlusIcon className="size-4" />
-            Adicionar cabeçalho de secção
+            {t('Adicionar cabeçalho de secção')}
           </button>
         </div>
       </div>
 
       <div className="rounded-2xl bg-surface p-5 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)]">
-        <h2 className="text-lg font-semibold text-text-primary">Preparação</h2>
+        <h2 className="text-lg font-semibold text-text-primary">{t('Preparação')}</h2>
         <div className="mt-3 space-y-2">
           {steps.map((row, i) => (
             <div key={i} className="flex gap-2">
@@ -497,7 +498,7 @@ export function RecipeForm({
               <textarea
                 value={row.instruction}
                 onChange={(e) => updateStep(i, { instruction: e.target.value })}
-                placeholder={`Passo ${i + 1}`}
+                placeholder={t('Passo {number}', { number: i + 1 })}
                 rows={1}
                 className={`${fieldClass} min-w-0 flex-1`}
               />
@@ -507,14 +508,14 @@ export function RecipeForm({
                 type="number"
                 min={0}
                 placeholder="min"
-                aria-label={`Duração do passo ${i + 1} em minutos`}
+                aria-label={t('Duração do passo {number} em minutos', { number: i + 1 })}
                 className={`${fieldClass} w-16 shrink-0 text-center`}
               />
               <button
                 type="button"
                 onClick={() => removeStep(i)}
                 className="shrink-0 rounded-full p-2 text-text-secondary hover:bg-bg-sage"
-                aria-label="Remover passo"
+                aria-label={t('Remover passo')}
               >
                 <XIcon className="size-4" />
               </button>
@@ -527,37 +528,37 @@ export function RecipeForm({
           className="mt-3 flex items-center gap-1 text-sm font-medium text-forest-text"
         >
           <PlusIcon className="size-4" />
-          Adicionar passo
+          {t('Adicionar passo')}
         </button>
       </div>
 
       <div className="rounded-2xl bg-surface p-5 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)]">
-        <h2 className="text-lg font-semibold text-text-primary">Categorias e tags</h2>
+        <h2 className="text-lg font-semibold text-text-primary">{t('Categorias e tags')}</h2>
 
-        <p className="mt-3 text-sm font-medium text-text-secondary">Categorias</p>
+        <p className="mt-3 text-sm font-medium text-text-secondary">{t('Categorias')}</p>
         <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
           {categories.map((c) => (
             <span key={c.id} className="inline-flex items-center gap-1 rounded-xl border border-border bg-muted/50 p-1">
               <Chip label={`${categoryIconLabel(c.icon)}${c.name}`} active={categoryIds.includes(c.id)} onClick={() => toggleCategory(c.id)} tone="forest" />
-              <input type="color" value={c.color ?? '#2F6B45'} onChange={(event) => changeCategoryVisual(c, { color: event.target.value })} aria-label={`Cor de ${c.name}`} className="size-7 cursor-pointer rounded border-0 bg-transparent p-0" />
-              <select value={c.icon ?? ''} onChange={(event) => changeCategoryVisual(c, { icon: (event.target.value || null) as CategoryIcon | null })} aria-label={`Ícone de ${c.name}`} className="h-7 max-w-8 rounded bg-surface text-xs text-text-primary"><option value="">•</option>{CATEGORY_ICON_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.symbol}</option>)}</select>
+              <input type="color" value={c.color ?? '#2F6B45'} onChange={(event) => changeCategoryVisual(c, { color: event.target.value })} aria-label={t('Cor de {name}', { name: c.name })} className="size-7 cursor-pointer rounded border-0 bg-transparent p-0" />
+              <select value={c.icon ?? ''} onChange={(event) => changeCategoryVisual(c, { icon: (event.target.value || null) as CategoryIcon | null })} aria-label={t('Ícone de {name}', { name: c.name })} className="h-7 max-w-8 rounded bg-surface text-xs text-text-primary"><option value="">•</option>{CATEGORY_ICON_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.symbol}</option>)}</select>
             </span>
           ))}
-          <span className="inline-flex items-center gap-1"><input type="color" value={newCategoryColor} onChange={(event) => setNewCategoryColor(event.target.value)} aria-label="Cor da nova categoria" className="size-7 cursor-pointer rounded border-0 bg-transparent p-0" /><select value={newCategoryIcon} onChange={(event) => setNewCategoryIcon(event.target.value as CategoryIcon)} aria-label="Ícone da nova categoria" className="h-8 rounded-lg border border-border bg-surface px-1 text-xs text-text-primary">{CATEGORY_ICON_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.symbol}</option>)}</select><InlineAdd value={newCategoryName} onChange={setNewCategoryName} onAdd={addNewCategory} placeholder="nova categoria" /></span>
+          <span className="inline-flex items-center gap-1"><input type="color" value={newCategoryColor} onChange={(event) => setNewCategoryColor(event.target.value)} aria-label={t('Cor da nova categoria')} className="size-7 cursor-pointer rounded border-0 bg-transparent p-0" /><select value={newCategoryIcon} onChange={(event) => setNewCategoryIcon(event.target.value as CategoryIcon)} aria-label={t('Ícone da nova categoria')} className="h-8 rounded-lg border border-border bg-surface px-1 text-xs text-text-primary">{CATEGORY_ICON_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.symbol}</option>)}</select><InlineAdd value={newCategoryName} onChange={setNewCategoryName} onAdd={addNewCategory} placeholder={t('nova categoria')} /></span>
         </div>
 
-        <p className="mt-4 text-sm font-medium text-text-secondary">Tags</p>
+        <p className="mt-4 text-sm font-medium text-text-secondary">{t('Tags')}</p>
         <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
           {tags.map((t) => (
             <Chip key={t.id} label={t.name} active={tagIds.includes(t.id)} onClick={() => toggleTag(t.id)} tone="leaf" />
           ))}
-          <InlineAdd value={newTagName} onChange={setNewTagName} onAdd={addNewTag} placeholder="nova tag" />
+          <InlineAdd value={newTagName} onChange={setNewTagName} onAdd={addNewTag} placeholder={t('nova tag')} />
         </div>
       </div>
 
       <div className="rounded-2xl bg-surface p-5 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)]">
-        <h2 className="text-lg font-semibold text-text-primary">Informação nutricional</h2>
-        <p className="mt-1 text-xs text-text-secondary">Por porção, opcional e à mão.</p>
+        <h2 className="text-lg font-semibold text-text-primary">{t('Informação nutricional')}</h2>
+        <p className="mt-1 text-xs text-text-secondary">{t('Por porção, opcional e à mão.')}</p>
 
         <button
           type="button"
@@ -565,7 +566,7 @@ export function RecipeForm({
           disabled={estimating}
           className="mt-3 flex items-center gap-1 text-sm font-medium text-forest-text disabled:opacity-50"
         >
-          {estimating ? 'A estimar…' : 'Estimar a partir dos ingredientes (Open Food Facts)'}
+          {estimating ? t('A estimar…') : t('Estimar a partir dos ingredientes (Open Food Facts)')}
         </button>
 
         {estimateError && (
@@ -576,19 +577,17 @@ export function RecipeForm({
           <div className="mt-2 rounded-xl bg-bg-sage p-3 text-sm">
             {nutritionEstimate.matched_count === 0 ? (
               <p className="text-text-secondary">
-                Não foi possível estimar — nenhum ingrediente entrou na conta. Podes sempre preencher à mão.
+                {t('Não foi possível estimar — nenhum ingrediente entrou na conta. Podes sempre preencher à mão.')}
               </p>
             ) : (
               <>
                 <p className="text-text-primary">
-                  Estimativa ({nutritionEstimate.matched_count} de{' '}
-                  {nutritionEstimate.matched_count + nutritionEstimate.skipped_count} ingredientes): {nutritionEstimate.calories_kcal}{' '}
-                  kcal · {nutritionEstimate.protein_g}g proteína · {nutritionEstimate.carbs_g}g hidratos ·{' '}
-                  {nutritionEstimate.fat_g}g gordura
-                </p>
+                  {t('Estimativa (')}{nutritionEstimate.matched_count} {t('de')}{' '}
+                  {nutritionEstimate.matched_count + nutritionEstimate.skipped_count} {t('ingredientes):')} {nutritionEstimate.calories_kcal}{' '}
+                  {t('kcal ·')} {nutritionEstimate.protein_g}{t('g proteína ·')} {nutritionEstimate.carbs_g}{t('g hidratos ·')}{' '}
+                  {nutritionEstimate.fat_g}{t('g gordura')} </p>
                 <p className="mt-1 text-xs text-text-secondary">
-                  Aproximada — nem todos os ingredientes/unidades entram na conta, nunca substitui os campos abaixo
-                  sem confirmares.
+                  {t('Aproximada — nem todos os ingredientes/unidades entram na conta, nunca substitui os campos abaixo sem confirmares.')}
                 </p>
               </>
             )}
@@ -596,7 +595,7 @@ export function RecipeForm({
               <ul className="mt-2 space-y-0.5 text-xs text-text-secondary">
                 {nutritionEstimate.skipped_ingredients.map((s, i) => (
                   <li key={i}>
-                    {s.name}: {s.reason === OFF_UNAVAILABLE_REASON ? 'a Open Food Facts pode estar em baixo' : s.reason}
+                    {s.name}: {s.reason === OFF_UNAVAILABLE_REASON ? t('a Open Food Facts pode estar em baixo') : s.reason}
                   </li>
                 ))}
               </ul>
@@ -604,14 +603,14 @@ export function RecipeForm({
             {nutritionEstimate.matched_count > 0 && (
               <div className="mt-2 flex gap-3">
                 <button type="button" onClick={applyNutritionEstimate} className="text-sm font-medium text-forest-text">
-                  Aplicar
+                  {t('Aplicar')}
                 </button>
                 <button
                   type="button"
                   onClick={() => setNutritionEstimate(null)}
                   className="text-sm font-medium text-text-secondary"
                 >
-                  Descartar
+                  {t('Descartar')}
                 </button>
               </div>
             )}
@@ -620,15 +619,14 @@ export function RecipeForm({
 
         {nutritionStale && (
           <p className="mt-2 text-xs text-text-secondary">
-            Alteraste ingredientes ou porções desde a última estimativa aplicada — os valores abaixo podem estar
-            desactualizados.
+            {t('Alteraste ingredientes ou porções desde a última estimativa aplicada — os valores abaixo podem estar desactualizados.')}
           </p>
         )}
 
         <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div>
             <label className="block text-sm font-medium text-text-secondary" htmlFor="calories">
-              Calorias (kcal)
+              {t('Calorias (kcal)')}
             </label>
             <input
               id="calories"
@@ -641,7 +639,7 @@ export function RecipeForm({
           </div>
           <div>
             <label className="block text-sm font-medium text-text-secondary" htmlFor="protein">
-              Proteína (g)
+              {t('Proteína (g)')}
             </label>
             <input
               id="protein"
@@ -655,7 +653,7 @@ export function RecipeForm({
           </div>
           <div>
             <label className="block text-sm font-medium text-text-secondary" htmlFor="carbs">
-              Hidratos (g)
+              {t('Hidratos (g)')}
             </label>
             <input
               id="carbs"
@@ -669,7 +667,7 @@ export function RecipeForm({
           </div>
           <div>
             <label className="block text-sm font-medium text-text-secondary" htmlFor="fat">
-              Gordura (g)
+              {t('Gordura (g)')}
             </label>
             <input
               id="fat"
@@ -691,7 +689,7 @@ export function RecipeForm({
         disabled={saving}
         className="w-full rounded-full bg-primary-forest py-3.5 font-semibold text-card-white transition-opacity disabled:opacity-60"
       >
-        {saving ? 'A guardar…' : submitLabel}
+        {saving ? t('A guardar…') : submitLabel}
       </button>
     </form>
   )
@@ -754,7 +752,7 @@ function InlineAdd({
         type="button"
         onClick={onAdd}
         className="flex size-5 shrink-0 items-center justify-center rounded-full text-text-secondary hover:bg-bg-sage"
-        aria-label={`Adicionar ${placeholder}`}
+        aria-label={t('Adicionar {name}', { name: placeholder })}
       >
         <PlusIcon className="size-3.5" />
       </button>

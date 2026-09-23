@@ -1,3 +1,4 @@
+import { t, getLanguage } from '../i18n'
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { addCookNote, getRecipe, markRecipeMade, recipeImageUrl } from '../api/recipes'
@@ -85,10 +86,10 @@ export function CookMode() {
   }
 
   function addCustomTimer() {
-    const value = window.prompt('Duração do temporizador em minutos:')
+    const value = window.prompt(t('Duração do temporizador em minutos:'))
     const minutes = value ? Number(value.replace(',', '.')) : 0
     if (!Number.isFinite(minutes) || minutes <= 0 || minutes > 24 * 60) return
-    const label = window.prompt('Nome do temporizador (opcional):')?.trim() || 'Temporizador adicional'
+    const label = window.prompt(t('Nome do temporizador (opcional):'))?.trim() || t('Temporizador adicional')
     startTimer(`custom-${Date.now()}`, Math.round(minutes * 60), label)
   }
 
@@ -101,7 +102,7 @@ export function CookMode() {
     }
     if (!('speechSynthesis' in window)) return
     const utterance = new SpeechSynthesisUtterance(step.instruction)
-    utterance.lang = 'pt-PT'
+    utterance.lang = getLanguage()
     utterance.onend = () => setSpeaking(false)
     utterance.onerror = () => setSpeaking(false)
     window.speechSynthesis.cancel()
@@ -122,7 +123,7 @@ export function CookMode() {
       } catch {
         // segue na mesma para o Detalhe
       }
-      const note = window.prompt('Alguma nota para a próxima vez? (opcional)')
+      const note = window.prompt(t('Alguma nota para a próxima vez? (opcional)'))
       if (note && note.trim()) {
         try {
           await addCookNote(id, note.trim())
@@ -181,7 +182,7 @@ export function CookMode() {
   if (!recipe) {
     return (
       <div className="flex min-h-svh items-center justify-center bg-bg-sage text-text-primary" style={COOK_MODE_TOKENS}>
-        <p className="text-sm">A carregar…</p>
+        <p className="text-sm">{t('A carregar…')}</p>
       </div>
     )
   }
@@ -196,18 +197,18 @@ export function CookMode() {
         <Link
           to={`/receitas/${recipe.id}`}
           className="flex size-10 items-center justify-center rounded-xl border border-border bg-surface/70 text-text-primary transition hover:bg-muted"
-          aria-label="Sair do Modo Cozinha"
+          aria-label={t('Sair do Modo Cozinha')}
         >
           <ChevronLeftIcon className="size-5" />
         </Link>
         <span className="text-sm font-medium text-text-secondary">
-          Passo {stepIndex + 1} de {steps.length}
+          {t('Passo')} {stepIndex + 1} {t('de')} {steps.length}
         </span>
         <button
           type="button"
           onClick={() => setLargeText((v) => !v)}
           aria-pressed={largeText}
-          aria-label={largeText ? 'Diminuir tamanho de letra' : 'Aumentar tamanho de letra'}
+          aria-label={largeText ? t('Diminuir tamanho de letra') : t('Aumentar tamanho de letra')}
           className={`flex size-10 items-center justify-center rounded-full text-sm font-bold ${
             largeText ? 'bg-primary-forest text-white' : 'border border-border bg-surface/70 text-text-primary'
           }`}
@@ -246,12 +247,12 @@ export function CookMode() {
               {step.instruction}
             </p>
             <div className="flex flex-wrap items-center justify-center gap-2">
-              {step.duration_minutes != null && <StepTimer minutes={step.duration_minutes} timer={timers.find((timer) => timer.id === `step-${step.id}`)} onStart={() => startTimer(`step-${step.id}`, step.duration_minutes! * 60, `Passo ${stepIndex + 1}`)} onToggle={() => toggleTimer(`step-${step.id}`)} onReset={() => resetTimer(`step-${step.id}`)} />}
-              {'speechSynthesis' in window && <button type="button" onClick={speakCurrentStep} aria-pressed={speaking} className="rounded-xl border border-border bg-surface px-4 py-3 text-sm font-semibold text-text-primary transition hover:bg-muted">{speaking ? 'Parar leitura' : 'Ouvir passo'}</button>}
+              {step.duration_minutes != null && <StepTimer minutes={step.duration_minutes} timer={timers.find((timer) => timer.id === `step-${step.id}`)} onStart={() => startTimer(`step-${step.id}`, step.duration_minutes! * 60, t('Passo {number}', { number: stepIndex + 1 }))} onToggle={() => toggleTimer(`step-${step.id}`)} onReset={() => resetTimer(`step-${step.id}`)} />}
+              {'speechSynthesis' in window && <button type="button" onClick={speakCurrentStep} aria-pressed={speaking} className="rounded-xl border border-border bg-surface px-4 py-3 text-sm font-semibold text-text-primary transition hover:bg-muted">{speaking ? t('Parar leitura') : t('Ouvir passo')}</button>}
             </div>
           </div>
         ) : (
-          <p className="relative text-lg text-text-secondary">Esta receita ainda não tem passos registados.</p>
+          <p className="relative text-lg text-text-secondary">{t('Esta receita ainda não tem passos registados.')}</p>
         )}
       </main>
 
@@ -262,7 +263,7 @@ export function CookMode() {
           onClick={() => setStepIndex((i) => Math.max(0, i - 1))}
           className="flex-1 rounded-xl border border-border bg-surface/70 py-4 font-semibold text-text-primary transition hover:bg-muted disabled:opacity-30"
         >
-          Anterior
+          {t('Anterior')}
         </button>
         {isLast ? (
           <button
@@ -270,7 +271,7 @@ export function CookMode() {
             onClick={handleFinish}
             className="flex flex-1 items-center justify-center rounded-xl bg-primary-forest py-4 font-semibold text-white transition hover:brightness-95"
           >
-            Concluir
+            {t('Concluir')}
           </button>
         ) : (
           <button
@@ -278,13 +279,13 @@ export function CookMode() {
             onClick={() => setStepIndex((i) => Math.min(steps.length - 1, i + 1))}
             className="flex-1 rounded-xl bg-primary-forest py-4 font-semibold text-white transition hover:brightness-95"
           >
-            Seguinte
+            {t('Seguinte')}
           </button>
         )}
       </footer>
-      <p className="mx-auto -mt-2 pb-2 text-center text-xs text-text-secondary" aria-label="Atalhos de teclado">←/→ avançar · Esc sair</p>
+      <p className="mx-auto -mt-2 pb-2 text-center text-xs text-text-secondary" aria-label={t('Atalhos de teclado')}>{t('←/→ avançar · Esc sair')}</p>
       {timers.length > 0 && <TimerDock timers={timers} onToggle={toggleTimer} onReset={resetTimer} />}
-      <button type="button" onClick={addCustomTimer} className="fixed bottom-24 right-4 z-10 rounded-xl border border-border bg-surface px-3 py-2 text-xs font-semibold text-text-primary shadow-lg transition hover:bg-muted sm:bottom-28 sm:right-6">+ Temporizador</button>
+      <button type="button" onClick={addCustomTimer} className="fixed bottom-24 right-4 z-10 rounded-xl border border-border bg-surface px-3 py-2 text-xs font-semibold text-text-primary shadow-lg transition hover:bg-muted sm:bottom-28 sm:right-6">{t('+ Temporizador')}</button>
     </div>
   )
 }
@@ -300,7 +301,7 @@ function StepTimer({ minutes, timer, onStart, onToggle, onReset }: { minutes: nu
         className="flex items-center gap-2 rounded-xl border border-border bg-surface px-4 py-3 text-sm font-semibold text-text-primary transition hover:bg-muted"
       >
         <ClockIcon className="size-4 text-accent-orange" />
-        Iniciar temporizador · {minutes} min
+        {t('Iniciar temporizador ·')} {minutes} min
       </button>
     )
   }
@@ -316,13 +317,13 @@ function StepTimer({ minutes, timer, onStart, onToggle, onReset }: { minutes: nu
       }`}
     >
       <ClockIcon className={`size-4 ${done ? 'text-text-primary' : 'text-accent-orange'}`} />
-      <span className="font-semibold tabular-nums">{done ? 'Tempo!' : `${mm}:${ss.toString().padStart(2, '0')}`}</span>
-      {!done && <button type="button" onClick={onToggle} className="text-xs underline">{timer.running ? 'Pausar' : 'Continuar'}</button>}
-      <button type="button" onClick={onReset} className="text-xs underline">{done ? 'Repor' : 'Remover'}</button>
+      <span className="font-semibold tabular-nums">{done ? t('Tempo!') : `${mm}:${ss.toString().padStart(2, '0')}`}</span>
+      {!done && <button type="button" onClick={onToggle} className="text-xs underline">{timer.running ? t('Pausar') : t('Continuar')}</button>}
+      <button type="button" onClick={onReset} className="text-xs underline">{done ? t('Repor') : t('Remover')}</button>
     </div>
   )
 }
 
 function TimerDock({ timers, onToggle, onReset }: { timers: CookingTimer[]; onToggle: (id: string) => void; onReset: (id: string) => void }) {
-  return <aside className="fixed inset-x-4 bottom-[7.5rem] z-20 mx-auto flex max-w-4xl gap-2 overflow-x-auto pb-1" aria-label="Temporizadores ativos">{timers.map((timer) => { const done = timer.remaining === 0; const mm = Math.floor(timer.remaining / 60); const ss = timer.remaining % 60; return <div key={timer.id} className={`flex min-w-44 items-center gap-2 rounded-xl border px-3 py-2 text-xs shadow-lg backdrop-blur ${done ? 'border-accent-orange bg-accent-orange text-text-primary' : 'border-border bg-surface/95 text-text-primary'}`}><span className="min-w-0 flex-1 truncate font-semibold">{timer.label}</span><span className="font-bold tabular-nums">{done ? 'Tempo!' : `${mm}:${ss.toString().padStart(2, '0')}`}</span>{!done && <button type="button" onClick={() => onToggle(timer.id)} aria-label={timer.running ? `Pausar ${timer.label}` : `Continuar ${timer.label}`} className="underline">{timer.running ? 'Pausa' : 'Play'}</button>}<button type="button" onClick={() => onReset(timer.id)} aria-label={`Remover ${timer.label}`} className="underline">×</button></div> })}</aside>
+  return <aside className="fixed inset-x-4 bottom-[7.5rem] z-20 mx-auto flex max-w-4xl gap-2 overflow-x-auto pb-1" aria-label={t('Temporizadores ativos')}>{timers.map((timer) => { const done = timer.remaining === 0; const mm = Math.floor(timer.remaining / 60); const ss = timer.remaining % 60; return <div key={timer.id} className={`flex min-w-44 items-center gap-2 rounded-xl border px-3 py-2 text-xs shadow-lg backdrop-blur ${done ? 'border-accent-orange bg-accent-orange text-text-primary' : 'border-border bg-surface/95 text-text-primary'}`}><span className="min-w-0 flex-1 truncate font-semibold">{timer.label}</span><span className="font-bold tabular-nums">{done ? t('Tempo!') : `${mm}:${ss.toString().padStart(2, '0')}`}</span>{!done && <button type="button" onClick={() => onToggle(timer.id)} aria-label={timer.running ? t('Pausar {name}', { name: timer.label }) : t('Continuar {name}', { name: timer.label })} className="underline">{timer.running ? t('Pausa') : 'Play'}</button>}<button type="button" onClick={() => onReset(timer.id)} aria-label={t('Remover {name}', { name: timer.label })} className="underline">×</button></div> })}</aside>
 }

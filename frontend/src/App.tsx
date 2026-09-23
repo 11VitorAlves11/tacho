@@ -1,3 +1,4 @@
+import { useLanguage } from './i18n'
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { AuthProvider } from './auth/AuthContext'
 import { useAuth } from './auth/useAuth'
@@ -19,6 +20,7 @@ import { ShoppingList } from './pages/ShoppingList'
 import { Substitutions } from './pages/Substitutions'
 
 export default function App() {
+  useLanguage()
   return (
     <AuthProvider>
       <AppRoutes />

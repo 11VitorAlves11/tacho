@@ -1,3 +1,4 @@
+import { t } from '../i18n'
 import { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { deleteRecipe, getRecipe, updateRecipe, uploadRecipeImage } from '../api/recipes'
@@ -34,7 +35,7 @@ export function EditRecipe() {
   if (!recipe) {
     return (
       <PageShell>
-        <p className="text-sm text-text-secondary">A carregar…</p>
+        <p className="text-sm text-text-secondary">{t('A carregar…')}</p>
       </PageShell>
     )
   }
@@ -42,21 +43,21 @@ export function EditRecipe() {
   return (
     <PageShell>
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-text-primary">Editar receita</h1>
+        <h1 className="text-2xl font-bold text-text-primary">{t('Editar receita')}</h1>
         <button
           type="button"
           onClick={() => setConfirmDelete(true)}
           className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium text-accent-orange hover:bg-accent-orange/10"
         >
           <TrashIcon className="size-4" />
-          Apagar
+          {t('Apagar')}
         </button>
       </div>
 
       <div className="mt-6">
-        <RecipeForm initial={recipe} onSubmit={handleSubmit} submitLabel="Guardar alterações" />
+        <RecipeForm initial={recipe} onSubmit={handleSubmit} submitLabel={t('Guardar alterações')} />
       </div>
-      <ConfirmDialog open={confirmDelete} title="Apagar receita?" description="Esta ação é permanente e não pode ser desfeita." confirmLabel="Apagar receita" onCancel={() => setConfirmDelete(false)} onConfirm={handleDelete} />
+      <ConfirmDialog open={confirmDelete} title={t('Apagar receita?')} description={t('Esta ação é permanente e não pode ser desfeita.')} confirmLabel={t('Apagar receita')} onCancel={() => setConfirmDelete(false)} onConfirm={handleDelete} />
     </PageShell>
   )
 }

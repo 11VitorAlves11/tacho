@@ -1,3 +1,4 @@
+import { t } from '../i18n'
 import { NavLink } from 'react-router-dom'
 import { CalendarIcon, CartIcon, HomeIcon, PantryIcon, PlusIcon } from './icons'
 
@@ -8,7 +9,7 @@ export function BottomNav() {
   return (
     <nav
       className="fixed inset-x-4 bottom-[calc(0.75rem+env(safe-area-inset-bottom))] z-40 grid grid-cols-5 items-center rounded-[1.75rem] border border-border bg-surface/95 px-2 py-1.5 shadow-[0_10px_35px_rgba(20,30,24,0.14)] backdrop-blur lg:hidden print:hidden"
-      aria-label="Navegação principal"
+      aria-label={t('Navegação principal')}
     >
       <NavLink
         to="/"
@@ -16,29 +17,29 @@ export function BottomNav() {
         className={({ isActive }) => `${linkBase} ${isActive ? 'text-primary-forest' : 'text-text-secondary'}`}
       >
         <HomeIcon className="size-5" />
-        Início
+        {t('Início')}
       </NavLink>
       <NavLink
         to="/planeamento"
         className={({ isActive }) => `${linkBase} ${isActive ? 'text-primary-forest' : 'text-text-secondary'}`}
       >
         <CalendarIcon className="size-5" />
-        Refeições
+        {t('Refeições')}
       </NavLink>
       <NavLink
         to="/adicionar"
         className="relative -top-5 flex flex-col items-center gap-1 text-[11px] font-semibold text-primary-forest"
       >
         <span className="flex size-14 items-center justify-center rounded-full border-4 border-surface bg-primary-forest text-white shadow-lg"><PlusIcon className="size-7" /></span>
-        Adicionar
+        {t('Adicionar')}
       </NavLink>
       <NavLink to="/lista-compras" className={({ isActive }) => `${linkBase} ${isActive ? 'text-primary-forest' : 'text-text-secondary'}`}>
         <CartIcon className="size-5" />
-        Lista
+        {t('Lista')}
       </NavLink>
       <NavLink to="/despensa" className={({ isActive }) => `${linkBase} ${isActive ? 'text-primary-forest' : 'text-text-secondary'}`}>
         <PantryIcon className="size-5" />
-        Despensa
+        {t('Despensa')}
       </NavLink>
     </nav>
   )

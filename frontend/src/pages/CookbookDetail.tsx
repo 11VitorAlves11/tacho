@@ -1,3 +1,4 @@
+import { t } from '../i18n'
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { addRecipeToCookbook, getCookbook, removeRecipeFromCookbook } from '../api/cookbooks'
@@ -44,9 +45,9 @@ export function CookbookDetail() {
   if (notFound) {
     return (
       <PageShell>
-        <p className="text-text-secondary">Coleção não encontrada.</p>
+        <p className="text-text-secondary">{t('Coleção não encontrada.')}</p>
         <Link to="/colecoes" className="mt-2 inline-block font-medium text-forest-text">
-          Voltar às coleções
+          {t('Voltar às coleções')}
         </Link>
       </PageShell>
     )
@@ -55,7 +56,7 @@ export function CookbookDetail() {
   if (!cookbook) {
     return (
       <PageShell>
-        <p className="text-sm text-text-secondary">A carregar…</p>
+        <p className="text-sm text-text-secondary">{t('A carregar…')}</p>
       </PageShell>
     )
   }
@@ -66,7 +67,7 @@ export function CookbookDetail() {
   return (
     <PageShell>
       <Link to="/colecoes" className="text-sm font-medium text-forest-text">
-        ← Coleções
+        {t('← Coleções')}
       </Link>
       <h1 className="mt-1 text-2xl font-bold text-text-primary sm:text-3xl">{cookbook.name}</h1>
 
@@ -78,7 +79,7 @@ export function CookbookDetail() {
           className="w-full rounded-xl border border-black/10 bg-bg-sage px-3 py-2 text-sm text-text-secondary outline-none focus:ring-2 focus:ring-accent-leaf disabled:opacity-50 sm:w-auto"
         >
           <option value="" disabled>
-            + Adicionar receita a esta coleção
+            {t('+ Adicionar receita a esta coleção')}
           </option>
           {availableRecipes.map((r) => (
             <option key={r.id} value={r.id}>
@@ -90,8 +91,8 @@ export function CookbookDetail() {
 
       {cookbook.recipes.length === 0 ? (
         <div className="mt-4 rounded-2xl bg-surface p-8 text-center">
-          <p className="font-medium text-text-primary">Ainda não há receitas nesta coleção.</p>
-          <p className="mt-1 text-sm text-text-secondary">Usa o menu acima para adicionar a primeira.</p>
+          <p className="font-medium text-text-primary">{t('Ainda não há receitas nesta coleção.')}</p>
+          <p className="mt-1 text-sm text-text-secondary">{t('Usa o menu acima para adicionar a primeira.')}</p>
         </div>
       ) : (
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
@@ -103,7 +104,7 @@ export function CookbookDetail() {
                 onClick={() => handleRemove(r.id)}
                 className="mt-1.5 text-xs font-medium text-text-secondary hover:text-accent-orange"
               >
-                Remover da coleção
+                {t('Remover da coleção')}
               </button>
             </div>
           ))}

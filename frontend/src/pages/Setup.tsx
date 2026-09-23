@@ -1,3 +1,4 @@
+import { t } from '../i18n'
 import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getSetupStatus, setup } from '../api/auth'
@@ -32,7 +33,7 @@ export function Setup() {
     e.preventDefault()
     setError(null)
     if (password !== passwordConfirmation) {
-      setError('As passwords não coincidem.')
+      setError(t('As passwords não coincidem.'))
       return
     }
     setLoading(true)
@@ -45,7 +46,7 @@ export function Setup() {
       await refresh()
       navigate('/login', { replace: true, state: { justSetup: true } })
     } catch {
-      setError('Não foi possível criar a conta. Tenta outra vez.')
+      setError(t('Não foi possível criar a conta. Tenta outra vez.'))
     } finally {
       setLoading(false)
     }
@@ -54,10 +55,10 @@ export function Setup() {
   if (checking) return null
 
   return (
-    <AuthLayout title="Configuração inicial" subtitle="Cria a primeira conta do agregado para começar a usar o Tacho.">
+    <AuthLayout title={t('Configuração inicial')} subtitle={t('Cria a primeira conta do agregado para começar a usar o Tacho.')}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <label className="block">
-          <span className="mb-1.5 block text-xs font-medium text-text-secondary">Nome de utilizador</span>
+          <span className="mb-1.5 block text-xs font-medium text-text-secondary">{t('Nome de utilizador')}</span>
           <input
             type="text"
             required
@@ -66,12 +67,12 @@ export function Setup() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             autoComplete="name"
-            placeholder="Como queres ser tratado?"
+            placeholder={t('Como queres ser tratado?')}
             className="min-h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text-primary outline-none focus:border-primary-forest focus:ring-2 focus:ring-primary-forest/15"
           />
         </label>
         <label className="block">
-          <span className="mb-1.5 block text-xs font-medium text-text-secondary">Email</span>
+          <span className="mb-1.5 block text-xs font-medium text-text-secondary">{t('Email')}</span>
           <input
             type="email"
             required
@@ -82,7 +83,7 @@ export function Setup() {
           />
         </label>
         <label className="block">
-          <span className="mb-1.5 block text-xs font-medium text-text-secondary">Password</span>
+          <span className="mb-1.5 block text-xs font-medium text-text-secondary">{t('Password')}</span>
           <PasswordInput
             required
             minLength={8}
@@ -92,7 +93,7 @@ export function Setup() {
           />
         </label>
         <label className="block">
-          <span className="mb-1.5 block text-xs font-medium text-text-secondary">Confirmar password</span>
+          <span className="mb-1.5 block text-xs font-medium text-text-secondary">{t('Confirmar password')}</span>
           <PasswordInput
             required
             minLength={8}
@@ -107,7 +108,7 @@ export function Setup() {
           disabled={loading}
           className="w-full rounded-full bg-primary-forest px-4 py-2.5 text-sm font-medium text-card-white shadow-[0_10px_30px_-8px_rgba(28,43,31,0.35)] transition-opacity disabled:opacity-60"
         >
-          {loading ? 'A criar…' : 'Criar conta'}
+          {loading ? t('A criar…') : t('Criar conta')}
         </button>
       </form>
     </AuthLayout>

@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react'
+import { t, useLanguage, setLanguage, LANGUAGE_OPTIONS, type Language } from '../i18n'
+import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   addWorkspaceMember,
@@ -99,7 +100,7 @@ function InlineEditField({ label, type = 'text', minLength, placeholder, errorMe
               disabled={saving}
               className="flex-1 rounded-full bg-primary-forest px-3 py-1.5 text-xs font-medium text-card-white disabled:opacity-60"
             >
-              {saving ? 'A guardar…' : 'Guardar'}
+              {saving ? t('A guardar…') : t('Guardar')}
             </button>
             <button
               type="button"
@@ -109,7 +110,7 @@ function InlineEditField({ label, type = 'text', minLength, placeholder, errorMe
               }}
               className="rounded-full px-3 py-1.5 text-xs font-medium text-text-secondary hover:bg-bg-sage"
             >
-              Cancelar
+              {t('Cancelar')}
             </button>
           </div>
         </form>
@@ -120,6 +121,8 @@ function InlineEditField({ label, type = 'text', minLength, placeholder, errorMe
 }
 
 export function UserMenu({ variant = 'header' }: { variant?: 'header' | 'mobile' }) {
+  const language = useLanguage()
+  const languageId = useId()
   const [open, setOpen] = useState(false)
   const [theme, setTheme] = useState<Theme>(() => getStoredTheme())
   const [members, setMembers] = useState<WorkspaceMember[] | null>(null)
@@ -165,7 +168,7 @@ export function UserMenu({ variant = 'header' }: { variant?: 'header' | 'mobile'
       setNewPassword('')
       setShowAddForm(false)
     } catch {
-      setAddError('Não foi possível criar a conta (email já existe?).')
+      setAddError(t('Não foi possível criar a conta (email já existe?).'))
     } finally {
       setAdding(false)
     }
@@ -177,13 +180,13 @@ export function UserMenu({ variant = 'header' }: { variant?: 'header' | 'mobile'
   }
 
   async function handleRemoveMember(id: string, email: string) {
-    if (!window.confirm(`Remover ${email} do agregado? A conta é apagada por completo.`)) return
+    if (!window.confirm(t('Remover {name} do agregado? A conta é apagada por completo.', { name: email }))) return
     setRemovingId(id)
     try {
       await removeWorkspaceMember(id)
       setMembers((prev) => prev?.filter((m) => m.id !== id) ?? prev)
     } catch {
-      window.alert('Não foi possível remover esta pessoa.')
+      window.alert(t('Não foi possível remover esta pessoa.'))
     } finally {
       setRemovingId(null)
     }
@@ -196,6 +199,7 @@ export function UserMenu({ variant = 'header' }: { variant?: 'header' | 'mobile'
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
+        aria-label={t('Definições')}
         aria-expanded={open}
         aria-haspopup="true"
         className={`flex min-h-11 items-center gap-1.5 rounded-xl text-sm font-medium transition-colors ${
@@ -213,48 +217,48 @@ export function UserMenu({ variant = 'header' }: { variant?: 'header' | 'mobile'
 
       {open && (
         <div className="absolute right-0 top-full z-30 mt-2 max-h-[calc(100vh-5rem)] w-64 overflow-y-auto rounded-2xl bg-surface p-3 text-text-primary shadow-[0_10px_30px_-8px_rgba(28,43,31,0.35)]">
-          <p className="px-2 text-xs font-medium uppercase tracking-wide text-text-secondary">Sessão</p>
+          <p className="px-2 text-xs font-medium uppercase tracking-wide text-text-secondary">{t('Sessão')}</p>
           <p className="mt-1 px-2 text-sm font-semibold">{user.name ?? user.email}</p>
           {user.name && <p className="px-2 text-xs text-text-secondary">{user.email}</p>}
 
           <div className="mt-2 space-y-1">
-            {oidcStatus?.enabled && <a href={oidcStartUrl('/')} className="block px-2 text-xs text-text-secondary underline decoration-dotted underline-offset-2 hover:text-text-primary">Associar {oidcStatus.display_name}</a>}
+            {oidcStatus?.enabled && <a href={oidcStartUrl('/')} className="block px-2 text-xs text-text-secondary underline decoration-dotted underline-offset-2 hover:text-text-primary">{t('Associar')} {oidcStatus.display_name}</a>}
             <InlineEditField
-              label="Alterar nome"
-              placeholder="Nome"
-              errorMessage="Não foi possível alterar o nome."
-              successMessage="Nome alterado."
+              label={t('Alterar nome')}
+              placeholder={t('Nome')}
+              errorMessage={t('Não foi possível alterar o nome.')}
+              successMessage={t('Nome alterado.')}
               onSave={async (name) => {
                 await updateName(name)
                 await refresh()
               }}
             />
             <InlineEditField
-              label="Alterar email"
+              label={t('Alterar email')}
               type="email"
-              placeholder="Email"
-              errorMessage="Não foi possível alterar o email (já existe?)."
-              successMessage="Email alterado."
+              placeholder={t('Email')}
+              errorMessage={t('Não foi possível alterar o email (já existe?).')}
+              successMessage={t('Email alterado.')}
               onSave={async (email) => {
                 await updateEmail(email)
                 await refresh()
               }}
             />
             <InlineEditField
-              label="Alterar password"
+              label={t('Alterar password')}
               type="password"
               minLength={8}
-              placeholder="Nova password"
-              errorMessage="Não foi possível alterar a password."
-              successMessage="Password alterada."
+              placeholder={t('Nova password')}
+              errorMessage={t('Não foi possível alterar a password.')}
+              successMessage={t('Password alterada.')}
               onSave={updatePassword}
             />
           </div>
 
           <div className="mt-3 border-t border-black/5 pt-3">
-            <p className="px-2 text-xs font-medium uppercase tracking-wide text-text-secondary">Agregado</p>
-            <button type="button" onClick={() => { setOpen(false); navigate('/perfis-alimentares') }} className="mb-1 w-full rounded-lg px-2 py-1.5 text-left text-sm font-semibold text-forest-text hover:bg-primary-soft">Perfis alimentares</button>
-            <button type="button" onClick={() => { setOpen(false); navigate('/substituicoes') }} className="mb-1 w-full rounded-lg px-2 py-1.5 text-left text-sm font-semibold text-forest-text hover:bg-primary-soft">Substituições</button>
+            <p className="px-2 text-xs font-medium uppercase tracking-wide text-text-secondary">{t('Agregado')}</p>
+            <button type="button" onClick={() => { setOpen(false); navigate('/perfis-alimentares') }} className="mb-1 w-full rounded-lg px-2 py-1.5 text-left text-sm font-semibold text-forest-text hover:bg-primary-soft">{t('Perfis alimentares')}</button>
+            <button type="button" onClick={() => { setOpen(false); navigate('/substituicoes') }} className="mb-1 w-full rounded-lg px-2 py-1.5 text-left text-sm font-semibold text-forest-text hover:bg-primary-soft">{t('Substituições')}</button>
             <ul className="mt-1 space-y-0.5">
               {members?.map((m) => (
                 <li key={m.id} className="flex items-center justify-between gap-2 px-2 py-0.5 text-sm text-text-primary">
@@ -264,7 +268,7 @@ export function UserMenu({ variant = 'header' }: { variant?: 'header' | 'mobile'
                       type="button"
                       onClick={() => handleRemoveMember(m.id, m.email)}
                       disabled={removingId === m.id}
-                      aria-label={`Remover ${m.email}`}
+                      aria-label={t('Remover {name}', { name: m.email })}
                       className="rounded-full p-0.5 text-text-secondary transition-colors hover:text-accent-orange disabled:opacity-60"
                     >
                       <XIcon className="size-3.5" />
@@ -280,14 +284,14 @@ export function UserMenu({ variant = 'header' }: { variant?: 'header' | 'mobile'
                 className="mt-2 flex w-full items-center gap-1.5 rounded-lg px-2 py-1.5 text-sm text-text-secondary transition-colors hover:bg-bg-sage hover:text-text-primary"
               >
                 <PlusIcon className="size-3.5" />
-                Adicionar pessoa
+                {t('Adicionar pessoa')}
               </button>
             ) : (
               <form onSubmit={handleAddMember} className="mt-2 space-y-2 px-2">
                 <input
                   type="email"
                   required
-                  placeholder="Email"
+                  placeholder={t('Email')}
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}
                   className="w-full rounded-lg bg-bg-sage/60 px-2.5 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent-leaf"
@@ -296,7 +300,7 @@ export function UserMenu({ variant = 'header' }: { variant?: 'header' | 'mobile'
                   type="password"
                   required
                   minLength={8}
-                  placeholder="Password"
+                  placeholder={t('Password')}
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   className="w-full rounded-lg bg-bg-sage/60 px-2.5 py-1.5 text-sm outline-none focus:ring-2 focus:ring-accent-leaf"
@@ -308,22 +312,35 @@ export function UserMenu({ variant = 'header' }: { variant?: 'header' | 'mobile'
                     disabled={adding}
                     className="flex-1 rounded-full bg-primary-forest px-3 py-1.5 text-xs font-medium text-card-white disabled:opacity-60"
                   >
-                    {adding ? 'A criar…' : 'Criar conta'}
+                    {adding ? t('A criar…') : t('Criar conta')}
                   </button>
                   <button
                     type="button"
                     onClick={() => setShowAddForm(false)}
                     className="rounded-full px-3 py-1.5 text-xs font-medium text-text-secondary hover:bg-bg-sage"
                   >
-                    Cancelar
+                    {t('Cancelar')}
                   </button>
                 </div>
               </form>
             )}
           </div>
 
+          <div className="mt-3 border-t border-black/5 px-2 pt-3">
+            <label htmlFor={languageId} className="text-xs font-medium uppercase tracking-wide text-text-secondary">{t('Idioma')}</label>
+            <select
+              id={languageId}
+              value={language}
+              onChange={(event) => setLanguage(event.target.value as Language)}
+              className="mt-2 min-h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text-primary outline-none focus:ring-2 focus:ring-accent-leaf"
+            >
+              {LANGUAGE_OPTIONS.map((option) => <option key={option.value} value={option.value} lang={option.value}>{option.label}</option>)}
+            </select>
+            <p className="mt-1 text-xs text-text-secondary">{t('Guardado neste navegador.')}</p>
+          </div>
+
           <div className="mt-3 border-t border-black/5 pt-3">
-            <p className="px-2 text-xs font-medium uppercase tracking-wide text-text-secondary">Tema</p>
+            <p className="px-2 text-xs font-medium uppercase tracking-wide text-text-secondary">{t('Tema')}</p>
             <div className="mt-2 flex gap-1 rounded-full bg-bg-sage p-1">
               {THEME_OPTIONS.map((opt) => (
                 <button
@@ -335,7 +352,7 @@ export function UserMenu({ variant = 'header' }: { variant?: 'header' | 'mobile'
                     theme === opt.value ? 'bg-primary-forest text-card-white' : 'text-text-secondary'
                   }`}
                 >
-                  {opt.label}
+                  {t(opt.label)}
                 </button>
               ))}
             </div>
@@ -347,7 +364,7 @@ export function UserMenu({ variant = 'header' }: { variant?: 'header' | 'mobile'
               onClick={handleLogout}
               className="w-full rounded-lg px-2 py-1.5 text-left text-sm font-medium text-accent-orange transition-colors hover:bg-accent-orange/10"
             >
-              Sair
+              {t('Sair')}
             </button>
           </div>
         </div>

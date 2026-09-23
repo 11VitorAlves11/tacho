@@ -1,3 +1,4 @@
+import { t } from '../i18n'
 import { useEffect, useState, type FormEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { getOIDCStatus, login, oidcStartUrl } from '../api/auth'
@@ -31,21 +32,21 @@ export function Login() {
       await refresh()
       navigate('/', { replace: true })
     } catch {
-      setError('Email ou password incorretos.')
+      setError(t('Email ou password incorretos.'))
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <AuthLayout title="Tacho" subtitle="Inicia sessão para veres as receitas do agregado.">
-      {justSetup && <p className="mb-3 text-sm text-accent-leaf">Conta criada. Já podes iniciar sessão.</p>}
+    <AuthLayout title="Tacho" subtitle={t('Inicia sessão para veres as receitas do agregado.')}>
+      {justSetup && <p className="mb-3 text-sm text-accent-leaf">{t('Conta criada. Já podes iniciar sessão.')}</p>}
       {oidcError && <p role="alert" className="mb-3 rounded-xl bg-accent-orange/10 p-3 text-sm text-accent-orange">{oidcError}</p>}
-      {oidcStatus?.enabled && <a href={oidcStartUrl('/')} className="flex min-h-11 w-full items-center justify-center rounded-xl border border-primary-forest bg-primary-soft px-4 text-sm font-semibold text-forest-text">Entrar com {oidcStatus.display_name}</a>}
-      {oidcStatus?.enabled && oidcStatus.local_login_enabled && <div className="my-4 flex items-center gap-3 text-xs text-text-secondary"><span className="h-px flex-1 bg-border" /><span>ou</span><span className="h-px flex-1 bg-border" /></div>}
+      {oidcStatus?.enabled && <a href={oidcStartUrl('/')} className="flex min-h-11 w-full items-center justify-center rounded-xl border border-primary-forest bg-primary-soft px-4 text-sm font-semibold text-forest-text">{t('Entrar com')} {oidcStatus.display_name}</a>}
+      {oidcStatus?.enabled && oidcStatus.local_login_enabled && <div className="my-4 flex items-center gap-3 text-xs text-text-secondary"><span className="h-px flex-1 bg-border" /><span>{t('ou')}</span><span className="h-px flex-1 bg-border" /></div>}
       {(oidcStatus === null || oidcStatus.local_login_enabled) && <form onSubmit={handleSubmit} className="space-y-3">
         <label className="block">
-          <span className="mb-1 block text-xs font-medium text-text-secondary">Email</span>
+          <span className="mb-1 block text-xs font-medium text-text-secondary">{t('Email')}</span>
           <input
             type="email"
             required
@@ -56,7 +57,7 @@ export function Login() {
           />
         </label>
         <label className="block">
-          <span className="mb-1 block text-xs font-medium text-text-secondary">Password</span>
+          <span className="mb-1 block text-xs font-medium text-text-secondary">{t('Password')}</span>
           <PasswordInput
             required
             value={password}
@@ -70,7 +71,7 @@ export function Login() {
           disabled={loading}
           className="w-full rounded-full bg-primary-forest px-4 py-2.5 text-sm font-medium text-card-white shadow-[0_10px_30px_-8px_rgba(28,43,31,0.35)] transition-opacity disabled:opacity-60"
         >
-          {loading ? 'A entrar…' : 'Entrar'}
+          {loading ? t('A entrar…') : t('Entrar')}
         </button>
       </form>}
     </AuthLayout>

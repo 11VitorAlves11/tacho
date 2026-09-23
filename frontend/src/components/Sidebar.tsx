@@ -1,3 +1,4 @@
+import { t } from '../i18n'
 import { NavLink } from 'react-router-dom'
 import { CalendarIcon, CartIcon, FolderIcon, HomeIcon, PantryIcon, PlusIcon } from './icons'
 
@@ -15,7 +16,7 @@ const items = [
 export function Sidebar() {
   return (
     <aside className="sticky top-16 hidden h-[calc(100svh-4rem)] w-60 shrink-0 border-r border-border bg-surface px-4 py-6 lg:block print:hidden">
-      <nav aria-label="Navegação principal" className="space-y-1">
+      <nav aria-label={t('Navegação principal')} className="space-y-1">
         {items.map(({ to, label, icon: Icon, end }) => (
           <NavLink
             key={to}
@@ -26,14 +27,14 @@ export function Sidebar() {
             }`}
           >
             <Icon className="size-5" />
-            {label}
+            {t(label)}
           </NavLink>
         ))}
       </nav>
       <div className="absolute inset-x-4 bottom-6 rounded-2xl border border-border bg-muted/60 p-4">
         <img src="/tacho-symbol.svg" alt="" className="size-8" />
-        <p className="mt-2 text-sm font-semibold text-text-primary">O teu livro de receitas</p>
-        <p className="mt-0.5 text-xs leading-relaxed text-text-secondary">Planeia, compra e cozinha num só lugar.</p>
+        <p className="mt-2 text-sm font-semibold text-text-primary">{t('O teu livro de receitas')}</p>
+        <p className="mt-0.5 text-xs leading-relaxed text-text-secondary">{t('Planeia, compra e cozinha num só lugar.')}</p>
       </div>
     </aside>
   )

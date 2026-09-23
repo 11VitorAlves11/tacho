@@ -1,3 +1,4 @@
+import { t, getLanguage } from '../i18n'
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import QRCode from 'qrcode'
@@ -40,7 +41,7 @@ import { formatQuantity, scaleQuantity } from '../lib/quantity'
 import { CategoryBadge, TagBadge } from '../components/ui'
 
 function formatLastMade(iso: string): string {
-  return new Date(iso).toLocaleDateString('pt-PT', { day: 'numeric', month: 'long', year: 'numeric' })
+  return new Date(iso).toLocaleDateString(getLanguage(), { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
 export function RecipeDetail() {
@@ -101,11 +102,11 @@ export function RecipeDetail() {
       const added = await addMissingRecipeIngredientsToShoppingList(id)
       setShoppingListFeedback(
         added.length > 0
-          ? `${added.length} ingrediente${added.length > 1 ? 's' : ''} adicionados à lista de compras.`
-          : 'Já tens estes ingredientes na despensa ou na lista de compras.',
+          ? t('{count} ingredientes adicionados à lista de compras.', { count: added.length })
+          : t('Já tens estes ingredientes na despensa ou na lista de compras.'),
       )
     } catch {
-      setShoppingListFeedback('Não foi possível adicionar à lista de compras.')
+      setShoppingListFeedback(t('Não foi possível adicionar à lista de compras.'))
     } finally {
       setAddingToShoppingList(false)
     }
@@ -172,9 +173,9 @@ export function RecipeDetail() {
   if (notFound) {
     return (
       <PageShell>
-        <p className="text-text-secondary">Receita não encontrada.</p>
+        <p className="text-text-secondary">{t('Receita não encontrada.')}</p>
         <Link to="/" className="mt-2 inline-block font-medium text-forest-text">
-          Voltar às receitas
+          {t('Voltar às receitas')}
         </Link>
       </PageShell>
     )
@@ -183,7 +184,7 @@ export function RecipeDetail() {
   if (!recipe) {
     return (
       <PageShell>
-        <p className="text-sm text-text-secondary">A carregar…</p>
+        <p className="text-sm text-text-secondary">{t('A carregar…')}</p>
       </PageShell>
     )
   }
@@ -210,19 +211,19 @@ export function RecipeDetail() {
         )}
 
         <div className={`flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between ${recipe.image_path ? 'mt-5' : ''}`}>
-          <div className="min-w-0"><h1 className="text-2xl font-bold text-text-primary sm:text-3xl">{recipe.title}</h1>{recipe.source_recipe_id && <Link to={`/receitas/${recipe.source_recipe_id}`} className="mt-1 inline-flex text-sm font-medium text-forest-text">Variante de uma receita original →</Link>}</div>
+          <div className="min-w-0"><h1 className="text-2xl font-bold text-text-primary sm:text-3xl">{recipe.title}</h1>{recipe.source_recipe_id && <Link to={`/receitas/${recipe.source_recipe_id}`} className="mt-1 inline-flex text-sm font-medium text-forest-text">{t('Variante de uma receita original →')}</Link>}</div>
           <div className="flex max-w-full flex-wrap gap-2 print:hidden sm:shrink-0 sm:justify-end">
             <button
               type="button"
               onClick={handleToggleFavorite}
               aria-pressed={recipe.is_favorite}
-              aria-label={recipe.is_favorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+              aria-label={recipe.is_favorite ? t('Remover dos favoritos') : t('Adicionar aos favoritos')}
               className={`flex min-h-11 items-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-1.5 text-sm font-medium ${
                 recipe.is_favorite ? 'text-accent-leaf' : 'text-text-secondary hover:text-accent-leaf'
               }`}
             >
               <HeartIcon className="size-4" fill={recipe.is_favorite ? 'currentColor' : 'none'} />
-              <span className="hidden sm:inline">Favorito</span>
+              <span className="hidden sm:inline">{t('Favorito')}</span>
             </button>
             <button
               type="button"
@@ -231,7 +232,7 @@ export function RecipeDetail() {
               className="flex min-h-11 items-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-1.5 text-sm font-medium text-text-secondary hover:text-forest-text disabled:opacity-50"
             >
               <CopyIcon className="size-4" />
-              <span className="hidden sm:inline">Duplicar</span>
+              <span className="hidden sm:inline">{t('Duplicar')}</span>
             </button>
             <button
               type="button"
@@ -239,7 +240,7 @@ export function RecipeDetail() {
               className="flex min-h-11 items-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-1.5 text-sm font-medium text-text-secondary hover:text-forest-text"
             >
               <PrinterIcon className="size-4" />
-              <span className="hidden sm:inline">Imprimir</span>
+              <span className="hidden sm:inline">{t('Imprimir')}</span>
             </button>
             <button
               type="button"
@@ -248,21 +249,21 @@ export function RecipeDetail() {
               className="flex min-h-11 items-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-1.5 text-sm font-medium text-text-secondary hover:text-forest-text disabled:opacity-50"
             >
               <QrIcon className="size-4" />
-              <span className="hidden sm:inline">Partilhar</span>
+              <span className="hidden sm:inline">{t('Partilhar')}</span>
             </button>
             <Link
               to={`/receitas/${recipe.id}/editar`}
               className="flex min-h-11 items-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-1.5 text-sm font-medium text-text-secondary hover:text-forest-text"
             >
               <PencilIcon className="size-4" />
-              <span className="hidden sm:inline">Editar</span>
+              <span className="hidden sm:inline">{t('Editar')}</span>
             </Link>
           </div>
         </div>
         {recipe.description && <p className="mt-2 text-text-secondary">{recipe.description}</p>}
-        {recipe.dietary_warnings.length > 0 && <div role="alert" className="mt-4 rounded-xl border border-danger/20 bg-danger/10 p-4 text-sm text-danger"><p className="font-bold">Potencial risco alimentar</p><ul className="mt-1 list-disc pl-5">{recipe.dietary_warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul><p className="mt-2 text-xs">Confirma sempre os rótulos e possíveis contaminações cruzadas.</p></div>}
+        {recipe.dietary_warnings.length > 0 && <div role="alert" className="mt-4 rounded-xl border border-danger/20 bg-danger/10 p-4 text-sm text-danger"><p className="font-bold">{t('Potencial risco alimentar')}</p><ul className="mt-1 list-disc pl-5">{recipe.dietary_warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul><p className="mt-2 text-xs">{t('Confirma sempre os rótulos e possíveis contaminações cruzadas.')}</p></div>}
 
-        <div className="mt-2 flex items-center gap-0.5" role="radiogroup" aria-label="Avaliação por estrelas">
+        <div className="mt-2 flex items-center gap-0.5" role="radiogroup" aria-label={t('Avaliação por estrelas')}>
           {[1, 2, 3, 4, 5].map((value) => {
             const filled = recipe.rating != null && value <= recipe.rating
             return (
@@ -271,7 +272,7 @@ export function RecipeDetail() {
                 type="button"
                 onClick={() => handleSetRating(value)}
                 aria-pressed={filled}
-                aria-label={`${value} estrela${value > 1 ? 's' : ''}`}
+                aria-label={t('{count} estrela(s)', { count: value })}
                 className={`p-0.5 ${filled ? 'text-accent-leaf' : 'text-text-secondary hover:text-accent-leaf'}`}
               >
                 <StarIcon className="size-5" fill={filled ? 'currentColor' : 'none'} />
@@ -295,7 +296,7 @@ export function RecipeDetail() {
                     type="button"
                     onClick={() => setDesiredServings((s) => Math.max(1, (s ?? 1) - 1))}
                     className="flex size-6 shrink-0 items-center justify-center rounded-full bg-bg-sage text-forest-text print:hidden"
-                    aria-label="Menos uma porção"
+                    aria-label={t('Menos uma porção')}
                   >
                     <MinusIcon className="size-3.5" />
                   </button>
@@ -306,25 +307,25 @@ export function RecipeDetail() {
                     type="button"
                     onClick={() => setDesiredServings((s) => (s ?? 1) + 1)}
                     className="flex size-6 shrink-0 items-center justify-center rounded-full bg-bg-sage text-forest-text print:hidden"
-                    aria-label="Mais uma porção"
+                    aria-label={t('Mais uma porção')}
                   >
                     <PlusIcon className="size-3.5" />
                   </button>
                 </div>
                 <div className="text-xs text-text-secondary">
-                  porções{desiredServings !== recipe.servings ? ` (original: ${recipe.servings})` : ''}
+                  {t('porções')}{desiredServings !== recipe.servings ? ` (original: ${recipe.servings})` : ''}
                 </div>
               </div>
             </div>
           )}
           {recipe.calories_kcal != null && (
-            <HeroStat icon={<FlameIcon className="size-5" />} value={recipe.calories_kcal} label="kcal/porção" tone="forest" />
+            <HeroStat icon={<FlameIcon className="size-5" />} value={recipe.calories_kcal} label={t('kcal/porção')} tone="forest" />
           )}
           {recipe.estimated_cost != null && recipe.servings != null && recipe.servings > 0 && (
             <HeroStat
               icon={<EuroIcon className="size-5" />}
               value={Math.round((recipe.estimated_cost / recipe.servings) * 100) / 100}
-              label="€/porção"
+              label={t('€/porção')}
               tone="forest"
             />
           )}
@@ -335,14 +336,14 @@ export function RecipeDetail() {
             como legenda secundária, só quando ambos os tempos são conhecidos. */}
         {recipe.prep_minutes != null && recipe.cook_minutes != null && (
           <p className="mt-2 text-xs text-text-secondary">
-            Preparação: {recipe.prep_minutes} min · Confeção: {recipe.cook_minutes} min
+            {t('Preparação:')} {recipe.prep_minutes} {t('min · Confeção:')} {recipe.cook_minutes} min
           </p>
         )}
 
         {recipe.last_made_at && (
-          <p className="mt-2 text-xs text-text-secondary">Feita pela última vez em {formatLastMade(recipe.last_made_at)}.</p>
+          <p className="mt-2 text-xs text-text-secondary">{t('Feita pela última vez em')} {formatLastMade(recipe.last_made_at)}.</p>
         )}
-        {recipe.cook_history.length > 1 && <details className="mt-2 text-xs text-text-secondary"><summary className="cursor-pointer font-medium text-forest-text">Histórico de confeções ({recipe.cook_history.length})</summary><ul className="mt-2 space-y-1 pl-4">{recipe.cook_history.map((entry) => <li key={entry.id}>{formatLastMade(entry.made_at)}</li>)}</ul></details>}
+        {recipe.cook_history.length > 1 && <details className="mt-2 text-xs text-text-secondary"><summary className="cursor-pointer font-medium text-forest-text">{t('Histórico de confeções (')}{recipe.cook_history.length})</summary><ul className="mt-2 space-y-1 pl-4">{recipe.cook_history.map((entry) => <li key={entry.id}>{formatLastMade(entry.made_at)}</li>)}</ul></details>}
 
         {(recipe.categories.length > 0 || recipe.tags.length > 0) && (
           <div className="mt-4 flex flex-wrap gap-1.5">
@@ -356,13 +357,13 @@ export function RecipeDetail() {
           className="mt-5 flex items-center justify-center gap-2 rounded-full bg-primary-forest px-5 py-3.5 font-semibold text-card-white shadow-[0_8px_20px_-6px_rgba(45,95,63,0.6)] transition-transform active:scale-[0.98] print:hidden sm:inline-flex sm:w-auto sm:px-6"
         >
           <PlayIcon className="size-4" />
-          Iniciar Modo Cozinha
+          {t('Iniciar Modo Cozinha')}
         </Link>
 
         <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(280px,0.8fr)_minmax(0,1.5fr)] xl:gap-16">
           <section className="lg:sticky lg:top-24 lg:self-start">
             <div className="flex items-center justify-between gap-3">
-              <h2 className="text-lg font-semibold text-text-primary">Ingredientes</h2>
+              <h2 className="text-lg font-semibold text-text-primary">{t('Ingredientes')}</h2>
               <button
                 type="button"
                 onClick={handleAddToShoppingList}
@@ -370,7 +371,7 @@ export function RecipeDetail() {
                 className="flex shrink-0 items-center gap-1.5 text-sm font-medium text-forest-text disabled:opacity-50 print:hidden"
               >
                 <CartIcon className="size-4" />
-                <span className="hidden sm:inline">Adicionar o que falta</span>
+                <span className="hidden sm:inline">{t('Adicionar o que falta')}</span>
               </button>
             </div>
             {shoppingListFeedback && (
@@ -408,14 +409,14 @@ export function RecipeDetail() {
                 ),
               )}
               {recipe.ingredients.length === 0 && (
-                <li className="text-sm text-text-secondary">Sem ingredientes registados.</li>
+                <li className="text-sm text-text-secondary">{t('Sem ingredientes registados.')}</li>
               )}
             </ul>
-            {recipe.substitution_suggestions.length > 0 && <div className="mt-4 rounded-xl border border-border bg-muted/50 p-3"><h3 className="text-sm font-bold text-text-primary">Alternativas para o que falta</h3><ul className="mt-2 space-y-2 text-sm">{recipe.substitution_suggestions.map(({ ingredient_name, substitution }) => <li key={`${ingredient_name}-${substitution.id}`}><span className="font-semibold text-text-primary">{ingredient_name}</span>: usar {substitution.substitute_name}{substitution.quantity_ratio ? ` (${substitution.quantity_ratio}× a quantidade)` : ''}. <span className={substitution.is_verified ? 'text-forest-text' : 'text-accent-orange'}>{substitution.is_verified ? 'Verificada' : 'Por verificar'}</span>{substitution.note ? ` — ${substitution.note}` : ''}</li>)}</ul></div>}
+            {recipe.substitution_suggestions.length > 0 && <div className="mt-4 rounded-xl border border-border bg-muted/50 p-3"><h3 className="text-sm font-bold text-text-primary">{t('Alternativas para o que falta')}</h3><ul className="mt-2 space-y-2 text-sm">{recipe.substitution_suggestions.map(({ ingredient_name, substitution }) => <li key={`${ingredient_name}-${substitution.id}`}><span className="font-semibold text-text-primary">{ingredient_name}</span>{t(': usar')} {substitution.substitute_name}{substitution.quantity_ratio ? t(' ({ratio}× a quantidade)', { ratio: substitution.quantity_ratio }) : ''}. <span className={substitution.is_verified ? 'text-forest-text' : 'text-accent-orange'}>{substitution.is_verified ? t('Verificada') : t('Por verificar')}</span>{substitution.note ? ` — ${substitution.note}` : ''}</li>)}</ul></div>}
           </section>
 
           <section>
-            <h2 className="text-lg font-semibold text-text-primary">Preparação</h2>
+            <h2 className="text-lg font-semibold text-text-primary">{t('Preparação')}</h2>
             <ol className="mt-3 space-y-4">
               {recipe.steps.map((step, i) => (
                 <li key={step.id} className="flex gap-3 text-sm">
@@ -426,7 +427,7 @@ export function RecipeDetail() {
                 </li>
               ))}
               {recipe.steps.length === 0 && (
-                <li className="text-sm text-text-secondary">Sem passos registados.</li>
+                <li className="text-sm text-text-secondary">{t('Sem passos registados.')}</li>
               )}
             </ol>
           </section>
@@ -434,19 +435,19 @@ export function RecipeDetail() {
 
         {(recipe.protein_g != null || recipe.carbs_g != null || recipe.fat_g != null) && (
           <section className="mt-8 rounded-2xl bg-surface p-5 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)] print:break-inside-avoid print:border print:border-black/15 print:shadow-none">
-            <h2 className="text-lg font-semibold text-text-primary">Informação nutricional</h2>
-            <p className="mt-1 text-xs text-text-secondary">Por porção, entrada manual.</p>
+            <h2 className="text-lg font-semibold text-text-primary">{t('Informação nutricional')}</h2>
+            <p className="mt-1 text-xs text-text-secondary">{t('Por porção, entrada manual.')}</p>
             <div className="mt-3 grid grid-cols-3 gap-3 text-center">
-              <MacroStat value={recipe.protein_g} label="Proteína" />
-              <MacroStat value={recipe.carbs_g} label="Hidratos" />
-              <MacroStat value={recipe.fat_g} label="Gordura" />
+              <MacroStat value={recipe.protein_g} label={t('Proteína')} />
+              <MacroStat value={recipe.carbs_g} label={t('Hidratos')} />
+              <MacroStat value={recipe.fat_g} label={t('Gordura')} />
             </div>
           </section>
         )}
 
         {recipe.cook_notes.length > 0 && (
           <section className="mt-8">
-            <h2 className="text-lg font-semibold text-text-primary">Notas</h2>
+            <h2 className="text-lg font-semibold text-text-primary">{t('Notas')}</h2>
             <ul className="mt-3 space-y-3">
               {recipe.cook_notes.map((note) => (
                 <li
@@ -463,7 +464,7 @@ export function RecipeDetail() {
 
         <section className="mt-8 print:hidden">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-text-primary">Galeria</h2>
+            <h2 className="text-lg font-semibold text-text-primary">{t('Galeria')}</h2>
             <button
               type="button"
               onClick={() => galleryInputRef.current?.click()}
@@ -471,7 +472,7 @@ export function RecipeDetail() {
               className="flex items-center gap-1 text-sm font-medium text-forest-text disabled:opacity-50"
             >
               <CameraIcon className="size-4" />
-              {uploadingGalleryImage ? 'A enviar…' : 'Adicionar foto'}
+              {uploadingGalleryImage ? t('A enviar…') : t('Adicionar foto')}
             </button>
             <input
               ref={galleryInputRef}
@@ -483,7 +484,7 @@ export function RecipeDetail() {
           </div>
 
           {recipe.images.length === 0 ? (
-            <p className="mt-2 text-sm text-text-secondary">Ainda não há fotos extra desta receita.</p>
+            <p className="mt-2 text-sm text-text-secondary">{t('Ainda não há fotos extra desta receita.')}</p>
           ) : (
             <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
               {recipe.images.map((image) => (
@@ -491,7 +492,7 @@ export function RecipeDetail() {
                   <img src={recipeImageUrl(image.filename)} alt="" className="size-full object-cover" />
                   {image.is_cover && (
                     <span className="absolute left-1.5 top-1.5 rounded-full bg-card-white/90 px-2 py-0.5 text-[10px] font-medium text-forest-text">
-                      Capa
+                      {t('Capa')}
                     </span>
                   )}
                   <div className="absolute inset-x-0 bottom-0 flex justify-end gap-1 bg-gradient-to-t from-black/50 to-transparent p-1.5">
@@ -499,7 +500,7 @@ export function RecipeDetail() {
                       <button
                         type="button"
                         onClick={() => handleSetGalleryCover(image.id)}
-                        aria-label="Tornar capa da galeria"
+                        aria-label={t('Tornar capa da galeria')}
                         className="flex size-6 items-center justify-center rounded-full bg-card-white/90 text-forest-text"
                       >
                         <StarIcon className="size-3.5" />
@@ -508,7 +509,7 @@ export function RecipeDetail() {
                     <button
                       type="button"
                       onClick={() => handleDeleteGalleryImage(image.id)}
-                      aria-label="Apagar foto da galeria"
+                      aria-label={t('Apagar foto da galeria')}
                       className="flex size-6 items-center justify-center rounded-full bg-card-white/90 text-accent-orange"
                     >
                       <XIcon className="size-3.5" />
@@ -521,7 +522,7 @@ export function RecipeDetail() {
         </section>
 
         <section className="mt-8 print:hidden">
-          <h2 className="text-lg font-semibold text-text-primary">Comentários</h2>
+          <h2 className="text-lg font-semibold text-text-primary">{t('Comentários')}</h2>
           {recipe.comments.length > 0 && (
             <ul className="mt-3 space-y-3">
               {recipe.comments.map((comment) => (
@@ -539,7 +540,7 @@ export function RecipeDetail() {
                     type="button"
                     onClick={() => handleDeleteComment(comment.id)}
                     className="shrink-0 rounded-full p-1.5 text-text-secondary hover:bg-bg-sage"
-                    aria-label="Apagar comentário"
+                    aria-label={t('Apagar comentário')}
                   >
                     <XIcon className="size-4" />
                   </button>
@@ -551,7 +552,7 @@ export function RecipeDetail() {
             <input
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
-              placeholder="Escreve um comentário…"
+              placeholder={t('Escreve um comentário…')}
               className="min-w-0 flex-1 rounded-xl border border-black/10 bg-bg-sage px-3 py-2 text-sm outline-none ring-2 ring-transparent transition-shadow focus:border-accent-leaf focus:ring-accent-leaf/30"
             />
             <button
@@ -559,14 +560,14 @@ export function RecipeDetail() {
               disabled={!commentText.trim() || postingComment}
               className="shrink-0 rounded-xl bg-primary-forest px-4 py-2 text-sm font-medium text-card-white disabled:opacity-50"
             >
-              Enviar
+              {t('Enviar')}
             </button>
           </form>
         </section>
 
         {recipe.source_url && (
           <p className="mt-8 text-xs text-text-secondary">
-            Fonte:{' '}
+            {t('Fonte:')}{' '}
             <a href={recipe.source_url} target="_blank" rel="noreferrer" className="underline">
               {recipe.source_url}
             </a>
@@ -585,26 +586,26 @@ export function RecipeDetail() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-text-primary">Partilhar receita</h2>
+              <h2 className="text-sm font-semibold text-text-primary">{t('Partilhar receita')}</h2>
               <button
                 type="button"
                 onClick={() => setShareState(null)}
-                aria-label="Fechar"
+                aria-label={t('Fechar')}
                 className="rounded-full p-1 text-text-secondary hover:bg-bg-sage"
               >
                 <XIcon className="size-4" />
               </button>
             </div>
             {shareState.status === 'loading' ? (
-              <p className="mt-6 mb-2 text-sm text-text-secondary">A gerar o link…</p>
+              <p className="mt-6 mb-2 text-sm text-text-secondary">{t('A gerar o link…')}</p>
             ) : (
               <>
                 <img src={shareState.qrDataUrl} alt="" className="mx-auto mt-4 size-48" />
                 <p className="mt-3 text-xs text-text-secondary">
-                  Aponta a câmara de outro telemóvel para ver esta receita, sem precisar de conta.
+                  {t('Aponta a câmara de outro telemóvel para ver esta receita, sem precisar de conta.')}
                 </p>
                 <p className="mt-2 text-xs font-medium text-forest-text">
-                  Válido até {formatExpiry(shareState.expiresAt)}
+                  {t('Válido até')} {formatExpiry(shareState.expiresAt)}
                 </p>
               </>
             )}
@@ -617,9 +618,9 @@ export function RecipeDetail() {
 
 function formatExpiry(iso: string): string {
   const date = new Date(iso)
-  const day = date.toLocaleDateString('pt-PT', { day: 'numeric', month: 'long' })
-  const time = date.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })
-  return `${day} às ${time}`
+  const day = date.toLocaleDateString(getLanguage(), { day: 'numeric', month: 'long' })
+  const time = date.toLocaleTimeString(getLanguage(), { hour: '2-digit', minute: '2-digit' })
+  return t('{day} às {time}', { day: day, time: time })
 }
 
 function MacroStat({ value, label }: { value: number | null; label: string }) {
