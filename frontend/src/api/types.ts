@@ -153,6 +153,71 @@ export interface PantryItem {
   unit: string | null
   expires_on: string | null
   minimum_quantity: number | null
+  last_price: PantryPriceEntry | null
+}
+
+/** `price` is the total paid, in euros; `unit_price` is derived (price / quantity). */
+export interface PantryPriceEntry {
+  id: string
+  pantry_item_id: string
+  price: number
+  quantity: number | null
+  unit: string | null
+  store: string | null
+  purchased_on: string
+  source: 'manual' | 'receipt'
+  created_at: string
+  unit_price: number | null
+}
+
+export interface PantryPriceEntryInput {
+  price: number
+  quantity?: number | null
+  unit?: string | null
+  store?: string | null
+  purchased_on?: string | null
+}
+
+export interface PriceHistoryPoint {
+  purchased_on: string
+  price: number
+  quantity: number | null
+  unit: string | null
+  unit_price: number | null
+}
+
+export interface PantryPriceHistory {
+  items: { item_id: string; name: string; points: PriceHistoryPoint[] }[]
+  monthly_totals: MonthlySpend[]
+}
+
+export interface MonthlySpend {
+  month: string
+  total: number
+}
+
+export interface ReceiptLine {
+  name: string
+  quantity: number | null
+  unit: string | null
+  price: number | null
+}
+
+export interface ReceiptExtraction {
+  store: string | null
+  purchased_on: string | null
+  items: ReceiptLine[]
+}
+
+export interface ReceiptConfirmInput {
+  store: string | null
+  purchased_on: string | null
+  items: ReceiptLine[]
+}
+
+export interface ReceiptConfirmResult {
+  items: PantryItem[]
+  price_entries_created: number
 }
 
 export interface PantryItemInput {

@@ -5,15 +5,21 @@ import {
   bulkCreatePantryItems,
   createPantryItem,
   deletePantryItem,
+  getPriceHistory,
   importPantryFromReceipt,
   listPantryItems,
   setPantryItemHasIt,
   updatePantryItem,
 } from '../api/pantry'
-import type { PantryItem } from '../api/types'
+import type { PantryItem, PantryPriceHistory } from '../api/types'
 import { PageShell } from '../components/PageShell'
 import { CameraIcon, PlusIcon, XIcon } from '../components/icons'
 import { Modal } from '../components/ui'
+import { PantryPricePanel } from '../components/PantryPrices'
+import { MonthlySpendChart } from '../components/PriceCharts'
+import { fillMonths, lastPriceLabel } from '../lib/prices'
+
+const SPEND_MONTHS = 12
 
 export function Pantry() {
   const [today] = useState(() => new Date())
@@ -25,6 +31,8 @@ export function Pantry() {
   const [newExpiry, setNewExpiry] = useState('')
   const [creating, setCreating] = useState(false)
   const [editingItem, setEditingItem] = useState<PantryItem | null>(null)
+  const [pricingItem, setPricingItem] = useState<PantryItem | null>(null)
+  const [history, setHistory] = useState<PantryPriceHistory | null>(null)
 
   const receiptInputRef = useRef<HTMLInputElement>(null)
   const [scanning, setScanning] = useState(false)
@@ -37,7 +45,16 @@ export function Pantry() {
 
   useEffect(() => {
     listPantryItems().then(setItems).catch(() => setError(true))
+    getPriceHistory(SPEND_MONTHS).then(setHistory).catch(() => setHistory(null))
   }, [])
+
+  // Depois de registar/apagar preços: a última compra de cada linha e os
+  // gastos mensais vêm do backend, por isso recarrega-se em vez de fundir à mão.
+  async function refreshPrices() {
+    const [nextItems, nextHistory] = await Promise.all([listPantryItems(), getPriceHistory(SPEND_MONTHS)])
+    setItems(nextItems)
+    setHistory(nextHistory)
+  }
 
   async function handleReceiptFileChange(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -232,6 +249,7 @@ export function Pantry() {
                 />
                 <span className="min-w-0"><span className={`block truncate text-sm ${item.has_it ? 'text-text-primary' : 'text-text-secondary line-through'}`}>{item.name}</span><PantryItemMeta item={item} today={today} /></span>
               </label>
+              <button type="button" onClick={() => setPricingItem(item)} aria-label={t('Preços de {name}', { name: item.name })} className="min-h-9 rounded-lg px-2 text-xs font-semibold text-forest-text hover:bg-primary-soft">{t('Preços')}</button>
               <button type="button" onClick={() => setEditingItem(item)} className="min-h-9 rounded-lg px-2 text-xs font-semibold text-forest-text hover:bg-primary-soft">{t('Editar')}</button>
               <button
                 type="button"
@@ -244,6 +262,13 @@ export function Pantry() {
             </li>
           ))}
         </ul>
+      )}
+
+      {items && items.length > 0 && history && (
+        <section aria-labelledby="monthly-spend-title" className="mt-6 rounded-2xl border border-border bg-surface p-4">
+          <h2 id="monthly-spend-title" className="text-sm font-semibold text-text-primary">{t('Gastos por mês')}</h2>
+          <MonthlySpendChart totals={fillMonths(history.monthly_totals, SPEND_MONTHS, today)} />
+        </section>
       )}
 
       <form onSubmit={handleCreate} className="mt-6 grid gap-2 rounded-2xl border border-border bg-surface p-4 sm:grid-cols-2">
@@ -265,6 +290,7 @@ export function Pantry() {
         </button>
       </form>
       <Modal open={editingItem !== null} title={t('Editar produto')} onClose={() => setEditingItem(null)}>{editingItem && <PantryEditor item={editingItem} onSaved={handleEdited} />}</Modal>
+      <Modal open={pricingItem !== null} title={pricingItem ? t('Preços: {name}', { name: pricingItem.name }) : ''} onClose={() => setPricingItem(null)}>{pricingItem && <PantryPricePanel item={pricingItem} onChanged={refreshPrices} />}</Modal>
     </PageShell>
   )
 }
@@ -272,7 +298,7 @@ export function Pantry() {
 function PantryItemMeta({ item, today }: { item: PantryItem; today: Date }) {
   const lowStock = item.quantity !== null && item.minimum_quantity !== null && item.quantity <= item.minimum_quantity
   const expiryDays = item.expires_on ? Math.ceil((new Date(`${item.expires_on}T00:00:00`).getTime() - today.getTime()) / 86_400_000) : null
-  return <span className="mt-0.5 flex flex-wrap gap-x-2 text-xs text-text-secondary">{item.quantity !== null && <span>{item.quantity.toLocaleString(getLanguage())}{item.unit ? ` ${item.unit}` : ''}</span>}{lowStock && <span className="font-semibold text-accent-orange">{t('Stock baixo')}</span>}{expiryDays !== null && <span className={expiryDays <= 7 ? 'font-semibold text-accent-orange' : ''}>{expiryDays < 0 ? t('Expirado') : expiryDays === 0 ? t('Expira hoje') : t('Validade: {date}', { date: item.expires_on ?? '' })}</span>}</span>
+  return <span className="mt-0.5 flex flex-wrap gap-x-2 text-xs text-text-secondary">{item.quantity !== null && <span>{item.quantity.toLocaleString(getLanguage())}{item.unit ? ` ${item.unit}` : ''}</span>}{item.last_price && <span className="font-medium text-text-primary">{lastPriceLabel(item.last_price)}</span>}{lowStock && <span className="font-semibold text-accent-orange">{t('Stock baixo')}</span>}{expiryDays !== null && <span className={expiryDays <= 7 ? 'font-semibold text-accent-orange' : ''}>{expiryDays < 0 ? t('Expirado') : expiryDays === 0 ? t('Expira hoje') : t('Validade: {date}', { date: item.expires_on ?? '' })}</span>}</span>
 }
 
 function PantryEditor({ item, onSaved }: { item: PantryItem; onSaved: (item: PantryItem) => void }) {
