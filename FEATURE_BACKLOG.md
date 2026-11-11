@@ -195,7 +195,7 @@ Ajudar a decidir o que cozinhar com os ingredientes disponíveis.
 - Exportar uma receita individual num formato documentado.
 - Exportar todas as receitas e metadados do workspace num JSON versionado (`tacho.recipe-export`, v1).
 - Exportar todos os dados de um workspace.
-- Importar dados exportados sem criar duplicados inesperados.
+- Importar dados exportados sem criar duplicados inesperados (`POST /recipes/import-file`, botão "Importar" no início): duplicados saltados por omissão, `mode=duplicate` importa cópias; fotografias, favoritos, comentários e histórico ficam de fora (ver `docs/backup-restore.md`).
 - Distinguir exportação funcional de backup integral da instalação.
 
 ### 18. Visibilidade das receitas
