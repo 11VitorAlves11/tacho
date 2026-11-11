@@ -14,7 +14,7 @@ import {
 } from '../api/pantry'
 import type { PantryItem, PantryPriceHistory, ReceiptConfirmResult, ReceiptExtraction } from '../api/types'
 import { PageShell } from '../components/PageShell'
-import { CameraIcon, PlusIcon, XIcon } from '../components/icons'
+import { CameraIcon, EuroIcon, PencilIcon, PlusIcon, TrashIcon } from '../components/icons'
 import { Modal } from '../components/ui'
 import { PantryPricePanel } from '../components/PantryPrices'
 import { MonthlySpendChart } from '../components/PriceCharts'
@@ -271,29 +271,19 @@ export function Pantry() {
       {items && items.length > 0 && (
         <ul className="mt-4 space-y-2">
           {items.map((item) => (
-            <li
-              key={item.id}
-              className="flex items-center justify-between gap-2 rounded-xl bg-surface p-3 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)]"
-            >
-              <label className="flex min-w-0 flex-1 items-center gap-3">
-                <input
-                  type="checkbox"
-                  checked={item.has_it}
-                  onChange={() => handleToggle(item)}
-                  className="size-5 shrink-0 accent-accent-leaf"
-                />
-                <span className="min-w-0"><span className={`block truncate text-sm ${item.has_it ? 'text-text-primary' : 'text-text-secondary line-through'}`}>{item.name}</span><PantryItemMeta item={item} today={today} /></span>
+            <li key={item.id} className="flex items-center gap-2 rounded-xl bg-surface p-3 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)]">
+              <label className="flex min-w-0 flex-1 items-start gap-3">
+                <input type="checkbox" checked={item.has_it} onChange={() => handleToggle(item)} className="mt-0.5 size-5 shrink-0 accent-accent-leaf" />
+                <span className="min-w-0 flex-1">
+                  <span className="flex flex-wrap items-center gap-x-2 gap-y-1"><span className={`max-w-full truncate text-sm font-medium ${item.has_it ? 'text-text-primary' : 'text-text-secondary line-through'}`}>{item.name}</span><PantryItemBadges item={item} today={today} /></span>
+                  <PantryItemMeta item={item} />
+                </span>
               </label>
-              <button type="button" onClick={() => setPricingItem(item)} aria-label={t('Preços de {name}', { name: item.name })} className="min-h-9 rounded-lg px-2 text-xs font-semibold text-forest-text hover:bg-primary-soft">{t('Preços')}</button>
-              <button type="button" onClick={() => setEditingItem(item)} className="min-h-9 rounded-lg px-2 text-xs font-semibold text-forest-text hover:bg-primary-soft">{t('Editar')}</button>
-              <button
-                type="button"
-                onClick={() => handleDelete(item.id)}
-                className="shrink-0 rounded-full p-1.5 text-text-secondary hover:bg-bg-sage"
-                aria-label={t('Remover {name} da despensa', { name: item.name })}
-              >
-                <XIcon className="size-4" />
-              </button>
+              <div className="flex shrink-0 items-center">
+                <button type="button" onClick={() => setPricingItem(item)} aria-label={t('Preços de {name}', { name: item.name })} className={ROW_ACTION_CLASS}><EuroIcon className="size-4" /><span className="hidden sm:inline">{t('Preços')}</span></button>
+                <button type="button" onClick={() => setEditingItem(item)} aria-label={t('Editar {name}', { name: item.name })} className={ROW_ACTION_CLASS}><PencilIcon className="size-4" /><span className="hidden sm:inline">{t('Editar')}</span></button>
+                <button type="button" onClick={() => handleDelete(item.id)} aria-label={t('Remover {name} da despensa', { name: item.name })} className={`${ROW_ACTION_CLASS} text-text-secondary`}><TrashIcon className="size-4" /><span className="hidden sm:inline">{t('Remover')}</span></button>
+              </div>
             </li>
           ))}
         </ul>
@@ -331,16 +321,23 @@ export function Pantry() {
   )
 }
 
-const EXPIRY_CLASS: Record<ExpiryTone, string> = {
-  expired: 'font-semibold text-danger-text',
-  soon: 'font-semibold text-warning-text',
-  later: '',
+const ROW_ACTION_CLASS = 'flex min-h-9 min-w-9 items-center justify-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-forest-text hover:bg-primary-soft'
+const BADGE_CLASS = 'rounded-full px-2 py-0.5 text-[11px] font-semibold leading-4'
+const EXPIRY_BADGE_CLASS: Record<ExpiryTone, string> = {
+  expired: 'bg-danger/12 text-danger-text',
+  soon: 'bg-accent-orange/12 text-warning-text',
+  later: 'bg-muted font-medium text-text-secondary',
 }
 
-function PantryItemMeta({ item, today }: { item: PantryItem; today: Date }) {
+function PantryItemBadges({ item, today }: { item: PantryItem; today: Date }) {
   const lowStock = item.quantity !== null && item.minimum_quantity !== null && item.quantity <= item.minimum_quantity
   const expiry = item.expires_on ? expiryStatus(item.expires_on, today) : null
-  return <span className="mt-0.5 flex flex-wrap gap-x-2 text-xs text-text-secondary">{item.quantity !== null && <span>{item.quantity.toLocaleString(getLanguage())}{item.unit ? ` ${item.unit}` : ''}</span>}{item.last_price && <span className="font-medium text-text-primary">{lastPriceLabel(item.last_price)}</span>}{lowStock && <span className="font-semibold text-accent-orange">{t('Stock baixo')}</span>}{expiry && <span className={EXPIRY_CLASS[expiry.tone]}>{expiry.label}</span>}</span>
+  return <>{lowStock && <span className={`${BADGE_CLASS} bg-accent-orange/12 text-warning-text`}>{t('Stock baixo')}</span>}{expiry && <span className={`${BADGE_CLASS} ${EXPIRY_BADGE_CLASS[expiry.tone]}`}>{expiry.label}</span>}</>
+}
+
+function PantryItemMeta({ item }: { item: PantryItem }) {
+  const parts = [item.quantity !== null ? `${item.quantity.toLocaleString(getLanguage())}${item.unit ? ` ${item.unit}` : ''}` : null, item.last_price ? lastPriceLabel(item.last_price) : null].filter(Boolean)
+  return parts.length > 0 ? <span className="mt-0.5 block text-xs text-text-secondary">{parts.join(' · ')}</span> : null
 }
 
 function PantryEditor({ item, onSaved }: { item: PantryItem; onSaved: (item: PantryItem) => void }) {

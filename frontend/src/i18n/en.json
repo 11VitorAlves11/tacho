@@ -292,6 +292,7 @@
   "Unidade": "Unit",
   "Data de validade": "Expiry date",
   "Editar produto": "Edit item",
+  "Editar {name}": "Edit {name}",
   "Stock baixo": "Low stock",
   "Expirou há {count} dias": "Expired {count} days ago",
   "Expirou ontem": "Expired yesterday",
