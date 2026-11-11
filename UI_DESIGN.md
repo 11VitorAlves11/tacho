@@ -42,6 +42,8 @@ Os tokens visuais estão definidos em `frontend/src/index.css`:
 | `primary-forest` | `#43bf50` | Ações principais e estados ativos |
 | `accent-leaf` | `#43bf50` | Favoritos, foco, sucesso e tags |
 | `accent-orange` | `#e27732` | Tempo e alertas |
+| `warning-text` | `#a84e14` | Texto de aviso (validade próxima, stock baixo) |
+| `danger-text` | `#b93a3a` | Texto de perigo (produto expirado) |
 | `text-primary` | `#171a18` | Texto principal |
 | `text-secondary` | `#69706c` | Texto auxiliar e elementos inativos |
 
@@ -54,8 +56,9 @@ Existem três opções: tema claro, escuro ou igual ao sistema operativo. A
 preferência é guardada em `localStorage` com a chave `tacho:theme`.
 
 No tema escuro mudam os fundos, superfícies e cores de texto. As cores de marca
-mantêm-se, exceto o verde usado como texto, que recebe uma variante mais clara
-para assegurar contraste. O tema do sistema é aplicado através de
+mantêm-se, exceto o verde, o laranja e o vermelho usados como texto
+(`forest-text`, `warning-text`, `danger-text`), que recebem variantes mais
+claras para assegurar contraste. O tema do sistema é aplicado através de
 `prefers-color-scheme`.
 
 ### Formas e profundidade

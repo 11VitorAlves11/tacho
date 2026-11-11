@@ -19,6 +19,7 @@ import { Modal } from '../components/ui'
 import { PantryPricePanel } from '../components/PantryPrices'
 import { MonthlySpendChart } from '../components/PriceCharts'
 import { ReceiptReview } from '../components/ReceiptReview'
+import { expiryStatus, type ExpiryTone } from '../lib/date'
 import { fillMonths, lastPriceLabel } from '../lib/prices'
 
 const SPEND_MONTHS = 12
@@ -330,10 +331,16 @@ export function Pantry() {
   )
 }
 
+const EXPIRY_CLASS: Record<ExpiryTone, string> = {
+  expired: 'font-semibold text-danger-text',
+  soon: 'font-semibold text-warning-text',
+  later: '',
+}
+
 function PantryItemMeta({ item, today }: { item: PantryItem; today: Date }) {
   const lowStock = item.quantity !== null && item.minimum_quantity !== null && item.quantity <= item.minimum_quantity
-  const expiryDays = item.expires_on ? Math.ceil((new Date(`${item.expires_on}T00:00:00`).getTime() - today.getTime()) / 86_400_000) : null
-  return <span className="mt-0.5 flex flex-wrap gap-x-2 text-xs text-text-secondary">{item.quantity !== null && <span>{item.quantity.toLocaleString(getLanguage())}{item.unit ? ` ${item.unit}` : ''}</span>}{item.last_price && <span className="font-medium text-text-primary">{lastPriceLabel(item.last_price)}</span>}{lowStock && <span className="font-semibold text-accent-orange">{t('Stock baixo')}</span>}{expiryDays !== null && <span className={expiryDays <= 7 ? 'font-semibold text-accent-orange' : ''}>{expiryDays < 0 ? t('Expirado') : expiryDays === 0 ? t('Expira hoje') : t('Validade: {date}', { date: item.expires_on ?? '' })}</span>}</span>
+  const expiry = item.expires_on ? expiryStatus(item.expires_on, today) : null
+  return <span className="mt-0.5 flex flex-wrap gap-x-2 text-xs text-text-secondary">{item.quantity !== null && <span>{item.quantity.toLocaleString(getLanguage())}{item.unit ? ` ${item.unit}` : ''}</span>}{item.last_price && <span className="font-medium text-text-primary">{lastPriceLabel(item.last_price)}</span>}{lowStock && <span className="font-semibold text-accent-orange">{t('Stock baixo')}</span>}{expiry && <span className={EXPIRY_CLASS[expiry.tone]}>{expiry.label}</span>}</span>
 }
 
 function PantryEditor({ item, onSaved }: { item: PantryItem; onSaved: (item: PantryItem) => void }) {
