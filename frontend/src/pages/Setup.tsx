@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { getSetupStatus, isRateLimited, setup } from '../api/auth'
 import { AuthLayout } from '../auth/AuthLayout'
 import { useAuth } from '../auth/useAuth'
-import { PasswordInput } from '../components/ui'
+import { PasswordInput, TextInput } from '../components/ui'
 
 export function Setup() {
   const [checking, setChecking] = useState(true)
@@ -59,7 +59,7 @@ export function Setup() {
       <form onSubmit={handleSubmit} className="space-y-4">
         <label className="block">
           <span className="mb-1.5 block text-xs font-medium text-text-secondary">{t('Nome de utilizador')}</span>
-          <input
+          <TextInput
             type="text"
             required
             minLength={2}
@@ -68,18 +68,16 @@ export function Setup() {
             onChange={(e) => setName(e.target.value)}
             autoComplete="name"
             placeholder={t('Como queres ser tratado?')}
-            className="min-h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text-primary outline-none focus:border-primary-forest focus:ring-2 focus:ring-primary-forest/15"
           />
         </label>
         <label className="block">
           <span className="mb-1.5 block text-xs font-medium text-text-secondary">{t('Email')}</span>
-          <input
+          <TextInput
             type="email"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             autoComplete="username"
-            className="min-h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text-primary outline-none focus:border-primary-forest focus:ring-2 focus:ring-primary-forest/15"
           />
         </label>
         <label className="block">

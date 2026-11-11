@@ -100,6 +100,10 @@ export function SearchInput({ className = '', ...props }: InputHTMLAttributes<HT
   )
 }
 
+export function TextInput({ className = '', ...props }: InputHTMLAttributes<HTMLInputElement>) {
+  return <input className={`min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm text-text-primary outline-none transition focus:border-primary-forest focus:ring-2 focus:ring-primary-forest/15 ${className}`} {...props} />
+}
+
 export function PasswordInput({ className = '', ...props }: Omit<InputHTMLAttributes<HTMLInputElement>, 'type'>) {
   const [visible, setVisible] = useState(false)
   return <div className={`relative ${className}`}><input type={visible ? 'text' : 'password'} className="min-h-11 w-full rounded-xl border border-border bg-surface py-2 pl-3 pr-12 text-sm text-text-primary outline-none transition focus:border-primary-forest focus:ring-2 focus:ring-primary-forest/15" {...props} /><button type="button" onClick={() => setVisible((value) => !value)} aria-label={visible ? t('Ocultar password') : t('Mostrar password')} aria-pressed={visible} className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-xl text-text-secondary transition-colors hover:text-text-primary"><span className="flex size-5 items-center justify-center">{visible ? <EyeOffIcon className="block size-5" /> : <EyeIcon className="block size-5" />}</span></button></div>
