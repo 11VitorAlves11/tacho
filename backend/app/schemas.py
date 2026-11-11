@@ -1,9 +1,9 @@
 import uuid
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Annotated
 
 from fastapi_users import schemas as fu_schemas
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, HttpUrl, StringConstraints
+from pydantic import AfterValidator, BaseModel, ConfigDict, EmailStr, Field, HttpUrl, StringConstraints, computed_field
 
 
 class IngredientIn(BaseModel):
@@ -361,6 +361,55 @@ class PantryItemUpdate(BaseModel):
     minimum_quantity: float | None = Field(default=None, ge=0)
 
 
+def _not_in_future(value: date | None) -> date | None:
+    # Um dia de folga: o browser envia a data local (Portugal, UTC+0/+1) e
+    # o servidor pode estar em UTC — perto da meia-noite "hoje" no cliente
+    # já é "amanhã" para o servidor.
+    if value is not None and value > date.today() + timedelta(days=1):
+        raise ValueError("A data de compra não pode estar no futuro.")
+    return value
+
+
+PurchaseDate = Annotated[date | None, AfterValidator(_not_in_future)]
+
+# Numeric(10, 2) — acima disto o Postgres rebentaria com um 500.
+_MAX_AMOUNT = 99_999_999
+
+
+class PantryPriceEntryIn(BaseModel):
+    price: float = Field(ge=0, le=_MAX_AMOUNT)
+    quantity: float | None = Field(default=None, gt=0, le=_MAX_AMOUNT)
+    unit: str | None = Field(default=None, max_length=40)
+    store: str | None = Field(default=None, max_length=120)
+    purchased_on: PurchaseDate = None
+
+
+class PantryPriceEntryOut(BaseModel):
+    """`price` é o total pago, em euros (moeda única). `unit_price` é
+    derivado (price/quantity), nunca guardado."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    pantry_item_id: uuid.UUID
+    price: float
+    quantity: float | None
+    unit: str | None
+    store: str | None
+    purchased_on: date
+    source: str
+    created_at: datetime
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def unit_price(self) -> float | None:
+        return compute_unit_price(self.price, self.quantity)
+
+
+def compute_unit_price(price: float, quantity: float | None) -> float | None:
+    return round(price / quantity, 4) if quantity else None
+
+
 class PantryItemOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -371,6 +420,50 @@ class PantryItemOut(BaseModel):
     unit: str | None
     expires_on: date | None
     minimum_quantity: float | None
+    # Preenchido por crud._attach_last_prices (uma só query para a lista).
+    last_price: PantryPriceEntryOut | None = None
+
+
+class PriceHistoryPoint(BaseModel):
+    purchased_on: date
+    price: float
+    quantity: float | None
+    unit: str | None
+    unit_price: float | None
+
+
+class PriceHistorySeries(BaseModel):
+    item_id: uuid.UUID
+    name: str
+    points: list[PriceHistoryPoint]
+
+
+class MonthlySpend(BaseModel):
+    month: str  # "YYYY-MM"
+    total: float
+
+
+class PantryPriceHistory(BaseModel):
+    items: list[PriceHistorySeries]
+    monthly_totals: list[MonthlySpend]
+
+
+class ReceiptConfirmLine(BaseModel):
+    name: str = Field(min_length=1, max_length=160)
+    quantity: float | None = Field(default=None, gt=0, le=_MAX_AMOUNT)
+    unit: str | None = Field(default=None, max_length=40)
+    price: float | None = Field(default=None, ge=0, le=_MAX_AMOUNT)
+
+
+class ReceiptConfirmIn(BaseModel):
+    store: str | None = Field(default=None, max_length=120)
+    purchased_on: PurchaseDate = None
+    items: list[ReceiptConfirmLine] = Field(min_length=1, max_length=200)
+
+
+class ReceiptConfirmOut(BaseModel):
+    items: list[PantryItemOut]
+    price_entries_created: int
 
 
 class PantryExtraction(BaseModel):

@@ -1142,11 +1142,38 @@ def delete_shopping_list_item(db: Session, workspace_id: uuid.UUID, item_id: uui
     return True
 
 
+def _attach_last_prices(
+    db: Session, workspace_id: uuid.UUID, items: list[models.PantryItem]
+) -> list[models.PantryItem]:
+    """Preenche `item.last_price` (schemas.PantryItemOut) com a compra mais
+    recente de cada item numa só query (`DISTINCT ON`), sem N+1."""
+    ids = [item.id for item in items]
+    latest: dict[uuid.UUID, models.PantryPriceEntry] = {}
+    if ids:
+        query = (
+            select(models.PantryPriceEntry)
+            .where(
+                models.PantryPriceEntry.workspace_id == workspace_id,
+                models.PantryPriceEntry.pantry_item_id.in_(ids),
+            )
+            .distinct(models.PantryPriceEntry.pantry_item_id)
+            .order_by(
+                models.PantryPriceEntry.pantry_item_id,
+                models.PantryPriceEntry.purchased_on.desc(),
+                models.PantryPriceEntry.created_at.desc(),
+            )
+        )
+        latest = {entry.pantry_item_id: entry for entry in db.scalars(query)}
+    for item in items:
+        item.last_price = latest.get(item.id)
+    return items
+
+
 def list_pantry_items(db: Session, workspace_id: uuid.UUID) -> list[models.PantryItem]:
     query = (
         select(models.PantryItem).where(models.PantryItem.workspace_id == workspace_id).order_by(models.PantryItem.name)
     )
-    return list(db.scalars(query))
+    return _attach_last_prices(db, workspace_id, list(db.scalars(query)))
 
 
 def bulk_upsert_pantry_items(db: Session, workspace_id: uuid.UUID, names: list[str]) -> list[models.PantryItem]:
@@ -1171,22 +1198,34 @@ def bulk_upsert_pantry_items(db: Session, workspace_id: uuid.UUID, names: list[s
     if not cleaned:
         return []
 
+    result = list(_upsert_pantry_items_by_name(db, workspace_id, cleaned).values())
+    db.commit()
+    for item in result:
+        db.refresh(item)
+    return _attach_last_prices(db, workspace_id, result)
+
+
+def _upsert_pantry_items_by_name(
+    db: Session, workspace_id: uuid.UUID, names: list[str]
+) -> dict[str, models.PantryItem]:
+    """Núcleo partilhado por `bulk_upsert_pantry_items` e `confirm_receipt`:
+    um item por nome normalizado (pela ordem de `names`), criando os que
+    faltam e marcando `has_it=True` nos existentes. Não faz commit."""
     existing = list(db.scalars(select(models.PantryItem).where(models.PantryItem.workspace_id == workspace_id)))
     existing_by_key = {_normalize(item.name): item for item in existing}
 
-    result: list[models.PantryItem] = []
-    for name in cleaned:
-        item = existing_by_key.get(_normalize(name))
+    result: dict[str, models.PantryItem] = {}
+    for name in names:
+        key = _normalize(name)
+        if key in result:
+            continue
+        item = existing_by_key.get(key)
         if item is not None:
             item.has_it = True
         else:
             item = models.PantryItem(workspace_id=workspace_id, name=name)
             db.add(item)
-        result.append(item)
-
-    db.commit()
-    for item in result:
-        db.refresh(item)
+        result[key] = item
     return result
 
 
@@ -1211,7 +1250,7 @@ def update_pantry_item(
         setattr(item, key, value)
     db.commit()
     db.refresh(item)
-    return item
+    return _attach_last_prices(db, workspace_id, [item])[0]
 
 
 def delete_pantry_item(db: Session, workspace_id: uuid.UUID, item_id: uuid.UUID) -> bool:
@@ -1224,6 +1263,163 @@ def delete_pantry_item(db: Session, workspace_id: uuid.UUID, item_id: uuid.UUID)
     db.delete(item)
     db.commit()
     return True
+
+
+def _get_pantry_item(db: Session, workspace_id: uuid.UUID, item_id: uuid.UUID) -> models.PantryItem | None:
+    query = select(models.PantryItem).where(
+        models.PantryItem.workspace_id == workspace_id, models.PantryItem.id == item_id
+    )
+    return db.scalars(query).first()
+
+
+def _clean_text(value: str | None) -> str | None:
+    return (value.strip() or None) if value else None
+
+
+def list_price_entries(
+    db: Session, workspace_id: uuid.UUID, item_id: uuid.UUID
+) -> list[models.PantryPriceEntry] | None:
+    if _get_pantry_item(db, workspace_id, item_id) is None:
+        return None
+    entry = models.PantryPriceEntry
+    query = (
+        select(entry)
+        .where(entry.workspace_id == workspace_id, entry.pantry_item_id == item_id)
+        .order_by(entry.purchased_on.desc(), entry.created_at.desc())
+    )
+    return list(db.scalars(query))
+
+
+def create_price_entry(
+    db: Session, workspace_id: uuid.UUID, item_id: uuid.UUID, payload: schemas.PantryPriceEntryIn
+) -> models.PantryPriceEntry | None:
+    if _get_pantry_item(db, workspace_id, item_id) is None:
+        return None
+    entry = models.PantryPriceEntry(
+        workspace_id=workspace_id,
+        pantry_item_id=item_id,
+        price=payload.price,
+        quantity=payload.quantity,
+        unit=_clean_text(payload.unit),
+        store=_clean_text(payload.store),
+        purchased_on=payload.purchased_on or date.today(),
+        source="manual",
+    )
+    db.add(entry)
+    db.commit()
+    db.refresh(entry)
+    return entry
+
+
+def delete_price_entry(db: Session, workspace_id: uuid.UUID, item_id: uuid.UUID, entry_id: uuid.UUID) -> bool:
+    query = select(models.PantryPriceEntry).where(
+        models.PantryPriceEntry.workspace_id == workspace_id,
+        models.PantryPriceEntry.pantry_item_id == item_id,
+        models.PantryPriceEntry.id == entry_id,
+    )
+    entry = db.scalars(query).first()
+    if entry is None:
+        return False
+    db.delete(entry)
+    db.commit()
+    return True
+
+
+def first_day_of_window(today: date, months: int) -> date:
+    """Primeiro dia do mês que abre uma janela de `months` meses a terminar
+    no mês de `today` (inclusive) — `months=1` é só o mês corrente."""
+    month_index = today.year * 12 + today.month - 1 - (months - 1)
+    return date(month_index // 12, month_index % 12 + 1, 1)
+
+
+def get_price_history(
+    db: Session, workspace_id: uuid.UUID, months: int, today: date | None = None
+) -> schemas.PantryPriceHistory:
+    """Séries por item (pontos por data, ascendente) e totais mensais do
+    workspace nos últimos `months` meses. Só devolve meses com compras —
+    o frontend preenche os meses vazios ao desenhar o gráfico."""
+    start = first_day_of_window(today or date.today(), months)
+    entry = models.PantryPriceEntry
+    rows = db.execute(
+        select(entry, models.PantryItem.name)
+        .join(models.PantryItem, models.PantryItem.id == entry.pantry_item_id)
+        .where(entry.workspace_id == workspace_id, entry.purchased_on >= start)
+        .order_by(models.PantryItem.name, entry.purchased_on, entry.created_at)
+    ).all()
+
+    series: dict[uuid.UUID, schemas.PriceHistorySeries] = {}
+    for price_entry, name in rows:
+        current = series.setdefault(
+            price_entry.pantry_item_id,
+            schemas.PriceHistorySeries(item_id=price_entry.pantry_item_id, name=name, points=[]),
+        )
+        price = float(price_entry.price)
+        quantity = float(price_entry.quantity) if price_entry.quantity is not None else None
+        current.points.append(
+            schemas.PriceHistoryPoint(
+                purchased_on=price_entry.purchased_on,
+                price=price,
+                quantity=quantity,
+                unit=price_entry.unit,
+                unit_price=schemas.compute_unit_price(price, quantity),
+            )
+        )
+
+    month = func.to_char(entry.purchased_on, "YYYY-MM")
+    totals = db.execute(
+        select(month, func.sum(entry.price))
+        .where(entry.workspace_id == workspace_id, entry.purchased_on >= start)
+        .group_by(month)
+        .order_by(month)
+    ).all()
+    return schemas.PantryPriceHistory(
+        items=list(series.values()),
+        monthly_totals=[schemas.MonthlySpend(month=label, total=float(total)) for label, total in totals],
+    )
+
+
+def confirm_receipt(
+    db: Session, workspace_id: uuid.UUID, payload: schemas.ReceiptConfirmIn
+) -> tuple[list[models.PantryItem], int]:
+    """Grava uma fatura revista pelo utilizador, numa só transação: upsert
+    dos itens por nome (mesma regra de `bulk_upsert_pantry_items`),
+    quantidade/unidade atualizadas quando a linha as traz, e uma entrada de
+    preço `source="receipt"` por cada linha com preço. Devolve os itens e o
+    número de entradas de preço criadas."""
+    lines = [(line.name.strip(), line) for line in payload.items if line.name.strip()]
+    items_by_key = _upsert_pantry_items_by_name(db, workspace_id, [name for name, _ in lines])
+    db.flush()
+
+    purchased_on = payload.purchased_on or date.today()
+    store = _clean_text(payload.store)
+    created = 0
+    for name, line in lines:
+        item = items_by_key[_normalize(name)]
+        unit = _clean_text(line.unit)
+        if line.quantity is not None:
+            item.quantity = line.quantity
+        if unit is not None:
+            item.unit = unit
+        if line.price is None:
+            continue
+        db.add(
+            models.PantryPriceEntry(
+                workspace_id=workspace_id,
+                pantry_item_id=item.id,
+                price=line.price,
+                quantity=line.quantity,
+                unit=unit,
+                store=store,
+                purchased_on=purchased_on,
+                source="receipt",
+            )
+        )
+        created += 1
+    db.commit()
+    items = list(items_by_key.values())
+    for item in items:
+        db.refresh(item)
+    return _attach_last_prices(db, workspace_id, items), created
 
 
 def _format_quantity(quantity, unit: str | None) -> str | None:

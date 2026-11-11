@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile
 from sqlalchemy.orm import Session
 
 from app import crud, gemini, schemas
@@ -54,6 +54,27 @@ async def import_pantry_from_receipt(
     return extraction
 
 
+# Grava uma fatura já revista pelo utilizador (ver crud.confirm_receipt).
+@router.post("/receipt/confirm", response_model=schemas.ReceiptConfirmOut, status_code=201)
+def confirm_receipt(
+    payload: schemas.ReceiptConfirmIn,
+    db: Session = Depends(get_db),
+    workspace_id: uuid.UUID = Depends(get_workspace_id),
+):
+    items, created = crud.confirm_receipt(db, workspace_id, payload)
+    return {"items": items, "price_entries_created": created}
+
+
+# Registado antes de "/{item_id}/prices" — "prices" não é um item_id.
+@router.get("/prices/history", response_model=schemas.PantryPriceHistory)
+def price_history(
+    months: int = Query(default=12, ge=1, le=60),
+    db: Session = Depends(get_db),
+    workspace_id: uuid.UUID = Depends(get_workspace_id),
+):
+    return crud.get_price_history(db, workspace_id, months)
+
+
 @router.post("/bulk", response_model=list[schemas.PantryItemOut], status_code=201)
 def bulk_create_pantry_items(
     payload: schemas.PantryBulkIn,
@@ -84,3 +105,39 @@ def delete_pantry_item(
 ):
     if not crud.delete_pantry_item(db, workspace_id, item_id):
         raise HTTPException(status_code=404, detail="Item não encontrado")
+
+
+@router.get("/{item_id}/prices", response_model=list[schemas.PantryPriceEntryOut])
+def list_price_entries(
+    item_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    workspace_id: uuid.UUID = Depends(get_workspace_id),
+):
+    entries = crud.list_price_entries(db, workspace_id, item_id)
+    if entries is None:
+        raise HTTPException(status_code=404, detail="Item não encontrado")
+    return entries
+
+
+@router.post("/{item_id}/prices", response_model=schemas.PantryPriceEntryOut, status_code=201)
+def create_price_entry(
+    item_id: uuid.UUID,
+    payload: schemas.PantryPriceEntryIn,
+    db: Session = Depends(get_db),
+    workspace_id: uuid.UUID = Depends(get_workspace_id),
+):
+    entry = crud.create_price_entry(db, workspace_id, item_id, payload)
+    if entry is None:
+        raise HTTPException(status_code=404, detail="Item não encontrado")
+    return entry
+
+
+@router.delete("/{item_id}/prices/{entry_id}", status_code=204)
+def delete_price_entry(
+    item_id: uuid.UUID,
+    entry_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    workspace_id: uuid.UUID = Depends(get_workspace_id),
+):
+    if not crud.delete_price_entry(db, workspace_id, item_id, entry_id):
+        raise HTTPException(status_code=404, detail="Preço não encontrado")
