@@ -150,6 +150,23 @@ def ensure_variant(image_path: str, size: ImageSize, settings: Settings) -> Path
     return target
 
 
+def image_file_to_serve(image_path: str, size: ImageSize | None, settings: Settings) -> Path:
+    """Ficheiro a servir para um original já autorizado pelo chamador: a
+    variante pedida, ou o próprio original se não houver `size` ou se a
+    variante não puder ser gerada — melhor uma imagem pesada do que
+    nenhuma. 404 se o original não existir."""
+    original = resolve_image_path(image_path, settings)
+    if not original.is_file():
+        raise HTTPException(status_code=404, detail="Imagem não encontrada")
+    if size is None:
+        return original
+    try:
+        return ensure_variant(image_path, size, settings)
+    except Exception:
+        logger.warning("Variante %s indisponível para %s", size, image_path, exc_info=True)
+        return original
+
+
 def _store_recipe_image(data: bytes, content_type: str, settings: Settings, recipe_id: uuid.UUID | str) -> str:
     """Valida os bytes, grava o original tal como veio e gera as variantes."""
     image = _load_image(data, PIL_FORMATS[content_type])
