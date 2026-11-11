@@ -1,10 +1,10 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile
 from sqlalchemy.orm import Session
 
 from app import crud, gemini, schemas
-from app.config import get_settings
+from app.config import Settings, get_settings
 from app.database import get_db
 from app.deps import get_workspace_id
 from app.images import ALLOWED_CONTENT_TYPES
@@ -37,6 +37,14 @@ async def import_pantry_from_receipt(
     workspace_id: uuid.UUID = Depends(get_workspace_id),
 ):
     settings = get_settings()
+    image = await _read_receipt_image(file, settings)
+    extraction = gemini.extract_pantry_items_from_image(settings, image)
+    if extraction is None:
+        raise HTTPException(status_code=422, detail="Não foi possível reconhecer artigos nesta fatura.")
+    return extraction
+
+
+async def _read_receipt_image(file: UploadFile, settings: Settings) -> tuple[bytes, str]:
     if not gemini.is_available(settings):
         raise HTTPException(status_code=422, detail="Leitura de fatura não está configurada (sem GEMINI_API_KEY).")
 
@@ -47,11 +55,44 @@ async def import_pantry_from_receipt(
     if len(contents) > settings.max_image_bytes:
         max_mb = settings.max_image_bytes // (1024 * 1024)
         raise HTTPException(status_code=422, detail=f"Imagem demasiado grande (máx. {max_mb}MB).")
+    return contents, content_type
 
-    extraction = gemini.extract_pantry_items_from_image(settings, (contents, content_type))
+
+# Fatura com preços: mesmo fluxo de rascunho de "/import/receipt", mas o
+# Gemini devolve também loja, data e preço por linha. Só grava em
+# "/receipt/confirm", depois de o utilizador rever as linhas.
+# ⚠️ Não testado contra a API Gemini real — ver app/gemini.py.
+@router.post("/receipt", response_model=schemas.ReceiptExtraction)
+async def read_receipt(
+    file: UploadFile,
+    workspace_id: uuid.UUID = Depends(get_workspace_id),
+):
+    settings = get_settings()
+    image = await _read_receipt_image(file, settings)
+    extraction = gemini.extract_receipt(settings, image)
     if extraction is None:
         raise HTTPException(status_code=422, detail="Não foi possível reconhecer artigos nesta fatura.")
     return extraction
+
+
+@router.post("/receipt/confirm", response_model=schemas.ReceiptConfirmOut, status_code=201)
+def confirm_receipt(
+    payload: schemas.ReceiptConfirmIn,
+    db: Session = Depends(get_db),
+    workspace_id: uuid.UUID = Depends(get_workspace_id),
+):
+    items, created = crud.confirm_receipt(db, workspace_id, payload)
+    return {"items": items, "price_entries_created": created}
+
+
+# Registado antes de "/{item_id}/prices" — "prices" não é um item_id.
+@router.get("/prices/history", response_model=schemas.PantryPriceHistory)
+def price_history(
+    months: int = Query(default=12, ge=1, le=60),
+    db: Session = Depends(get_db),
+    workspace_id: uuid.UUID = Depends(get_workspace_id),
+):
+    return crud.get_price_history(db, workspace_id, months)
 
 
 @router.post("/bulk", response_model=list[schemas.PantryItemOut], status_code=201)
@@ -84,3 +125,39 @@ def delete_pantry_item(
 ):
     if not crud.delete_pantry_item(db, workspace_id, item_id):
         raise HTTPException(status_code=404, detail="Item não encontrado")
+
+
+@router.get("/{item_id}/prices", response_model=list[schemas.PantryPriceEntryOut])
+def list_price_entries(
+    item_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    workspace_id: uuid.UUID = Depends(get_workspace_id),
+):
+    entries = crud.list_price_entries(db, workspace_id, item_id)
+    if entries is None:
+        raise HTTPException(status_code=404, detail="Item não encontrado")
+    return entries
+
+
+@router.post("/{item_id}/prices", response_model=schemas.PantryPriceEntryOut, status_code=201)
+def create_price_entry(
+    item_id: uuid.UUID,
+    payload: schemas.PantryPriceEntryIn,
+    db: Session = Depends(get_db),
+    workspace_id: uuid.UUID = Depends(get_workspace_id),
+):
+    entry = crud.create_price_entry(db, workspace_id, item_id, payload)
+    if entry is None:
+        raise HTTPException(status_code=404, detail="Item não encontrado")
+    return entry
+
+
+@router.delete("/{item_id}/prices/{entry_id}", status_code=204)
+def delete_price_entry(
+    item_id: uuid.UUID,
+    entry_id: uuid.UUID,
+    db: Session = Depends(get_db),
+    workspace_id: uuid.UUID = Depends(get_workspace_id),
+):
+    if not crud.delete_price_entry(db, workspace_id, item_id, entry_id):
+        raise HTTPException(status_code=404, detail="Preço não encontrado")

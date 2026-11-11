@@ -27,6 +27,13 @@ Copy `.env.example` to `.env`. Empty optional values disable their feature.
 | `LOGIN_MAX_FAILURES_PER_EMAIL` | Failed attempts allowed per (client IP, email) pair per window (`0` disables) | `5` |
 | `FORWARDED_ALLOW_IPS` | Proxy IPs whose `X-Forwarded-For`/`-Proto` uvicorn trusts | `127.0.0.1` |
 
+## Pantry prices
+
+Pantry prices are stored as plain amounts and always displayed in euros (EUR).
+There is no currency setting: a household that records prices in another
+currency will see them labelled as euros. Reading prices from a receipt photo
+requires `GEMINI_API_KEY` and sends the photograph to Google.
+
 ## Secrets
 
 The generic Compose generates the database password and `AUTH_SECRET` inside

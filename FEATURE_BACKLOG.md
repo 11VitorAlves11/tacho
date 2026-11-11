@@ -36,6 +36,24 @@ dependências técnicas.
   duplicar os dados.
 - Guardadas as imagens em `backend/test-data/recipe-images/`.
 
+### Preços da despensa
+
+- Nova tabela `pantry_price_entries` (migração `a436639380b8`): cada compra
+  guarda o total pago, quantidade/unidade opcionais, loja, data e origem
+  (`manual` ou `receipt`). O preço unitário é calculado, não guardado.
+- API por produto (`GET/POST /pantry/{id}/prices`,
+  `DELETE /pantry/{id}/prices/{entry_id}`), último preço em cada item da
+  despensa e `GET /pantry/prices/history` com séries por produto e totais
+  mensais.
+- Leitura de fatura com preços (`POST /pantry/receipt`, Gemini opcional):
+  devolve um rascunho editável; só `POST /pantry/receipt/confirm` grava,
+  atualizando os produtos por nome e registando os preços.
+- Na Despensa: último preço por linha, painel de preços com gráfico de linha,
+  gráfico de barras "Gastos por mês" e revisão da fatura antes de guardar.
+  Gráficos em SVG próprio, sem dependências novas, com resumo acessível e
+  tabela para leitores de ecrã.
+- Limitação conhecida: moeda única (euro), sem conversão nem coluna de moeda.
+
 ### Limpeza de assets
 
 - Removida a pasta antiga e não referenciada `frontend/public/new icon/`.

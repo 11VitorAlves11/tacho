@@ -61,3 +61,12 @@ and run `docker compose up -d --wait`.
 If a migration ran, do not assume the old application supports the new schema
 and do not use `alembic downgrade` on valuable data. Stop the stack, restore the
 pre-upgrade backup, set the previous version and start again.
+
+## Migration notes
+
+- **`a436639380b8` — pantry price entries.** Adds the `pantry_price_entries`
+  table (one row per recorded purchase of a pantry item, cascading when the item
+  or workspace is deleted). Additive only: existing data is untouched and no
+  configuration change is needed. Rolling back drops the table and every
+  recorded price, so restore the pre-upgrade backup instead of downgrading if the
+  prices matter.

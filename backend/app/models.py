@@ -528,3 +528,31 @@ class PantryItem(Base):
     minimum_quantity: Mapped[float | None] = mapped_column(Numeric(10, 2))
 
     workspace: Mapped["Workspace"] = relationship(back_populates="pantry_items")
+
+
+class PantryPriceEntry(Base):
+    """Uma compra de um produto da despensa: o total pago (`price`, em
+    euros — moeda única, sem coluna de moeda) e, opcionalmente, a
+    quantidade comprada. O preço unitário é derivado (price/quantity) na
+    API, nunca guardado. `source` distingue registos manuais dos que vieram
+    de uma fatura lida pelo Gemini e confirmada pelo utilizador."""
+
+    __tablename__ = "pantry_price_entries"
+    __table_args__ = (
+        CheckConstraint("source IN ('manual', 'receipt')", name="ck_pantry_price_entries_source"),
+        Index("ix_pantry_price_entries_item_purchased_on", "pantry_item_id", "purchased_on"),
+        Index("ix_pantry_price_entries_workspace_purchased_on", "workspace_id", "purchased_on"),
+    )
+
+    id: Mapped[uuid.UUID] = _uuid_pk()
+    workspace_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("workspaces.id", ondelete="CASCADE"))
+    pantry_item_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("pantry_items.id", ondelete="CASCADE")
+    )
+    price: Mapped[float] = mapped_column(Numeric(10, 2))
+    quantity: Mapped[float | None] = mapped_column(Numeric(10, 2))
+    unit: Mapped[str | None] = mapped_column(Text)
+    store: Mapped[str | None] = mapped_column(Text)
+    purchased_on: Mapped[date] = mapped_column(Date, server_default=func.current_date())
+    source: Mapped[str] = mapped_column(Text, default="manual", server_default="manual")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
