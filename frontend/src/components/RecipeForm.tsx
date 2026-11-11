@@ -1,9 +1,10 @@
 import { t } from '../i18n'
-import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type InputHTMLAttributes } from 'react'
 import { estimateNutrition, OFF_UNAVAILABLE_REASON, type NutritionEstimate } from '../api/nutrition'
 import { createCategory, createTag, listCategories, listTags, recipeImageUrl, updateCategory } from '../api/recipes'
 import type { Category, CategoryIcon, RecipeInput, Tag } from '../api/types'
 import { CameraIcon, PlusIcon, XIcon } from './icons'
+import { CategoryBadge, Chip, Modal } from './ui'
 
 interface IngredientRow {
   name: string
@@ -17,18 +18,21 @@ interface StepRow {
   durationMinutes: string
 }
 
-const CATEGORY_ICON_OPTIONS: { value: CategoryIcon; symbol: string }[] = [
-  { value: 'breakfast', symbol: '☀' },
-  { value: 'main', symbol: '🍲' },
-  { value: 'dessert', symbol: '♨' },
-  { value: 'drink', symbol: '◒' },
-  { value: 'snack', symbol: '◇' },
-  { value: 'other', symbol: '●' },
+const CATEGORY_ICON_OPTIONS: { value: CategoryIcon; symbol: string; label: string }[] = [
+  { value: 'breakfast', symbol: '☀', label: 'Pequeno-almoço' },
+  { value: 'main', symbol: '🍲', label: 'Prato principal' },
+  { value: 'dessert', symbol: '♨', label: 'Sobremesa' },
+  { value: 'drink', symbol: '◒', label: 'Bebida' },
+  { value: 'snack', symbol: '◇', label: 'Lanche' },
+  { value: 'other', symbol: '●', label: 'Outro' },
 ]
 
-function categoryIconLabel(icon: CategoryIcon | null) {
-  return icon ? `${CATEGORY_ICON_OPTIONS.find((option) => option.value === icon)?.symbol ?? ''} ` : ''
-}
+const DEFAULT_CATEGORY_COLOR = '#2F6B45'
+
+// Moldura comum a todos os campos do formulário (altura, raio, borda, fundo),
+// para os números do topo, ingredientes e passos lerem como um só sistema.
+const FIELD_FRAME =
+  'min-h-11 rounded-xl border border-black/10 bg-bg-sage text-sm ring-2 ring-transparent transition-shadow'
 
 // Mais fraco do que `Recipe` de propósito — permite pré-preencher o
 // formulário a partir de um rascunho que não é (ainda) uma receita
@@ -120,9 +124,9 @@ export function RecipeForm({
   const [categoryIds, setCategoryIds] = useState<string[]>(initial?.categories?.map((c) => c.id) ?? [])
   const [tagIds, setTagIds] = useState<string[]>(initial?.tags?.map((t) => t.id) ?? [])
   const [newCategoryName, setNewCategoryName] = useState('')
-  const [newCategoryColor, setNewCategoryColor] = useState('#2F6B45')
-  const [newCategoryIcon, setNewCategoryIcon] = useState<CategoryIcon>('main')
   const [newTagName, setNewTagName] = useState('')
+  const [managingCategories, setManagingCategories] = useState(false)
+  const [categoryError, setCategoryError] = useState('')
 
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -163,7 +167,7 @@ export function RecipeForm({
     if (existing) {
       if (!categoryIds.includes(existing.id)) setCategoryIds((ids) => [...ids, existing.id])
     } else {
-      const created = await createCategory(name, newCategoryColor, newCategoryIcon)
+      const created = await createCategory(name, DEFAULT_CATEGORY_COLOR, 'main')
       setCategories((cats) => [...cats, created])
       setCategoryIds((ids) => [...ids, created.id])
     }
@@ -171,8 +175,13 @@ export function RecipeForm({
   }
 
   async function changeCategoryVisual(category: Category, patch: { color?: string | null; icon?: CategoryIcon | null }) {
-    const updated = await updateCategory(category.id, patch)
-    setCategories((current) => current.map((item) => item.id === updated.id ? updated : item))
+    setCategoryError('')
+    try {
+      const updated = await updateCategory(category.id, patch)
+      setCategories((current) => current.map((item) => item.id === updated.id ? updated : item))
+    } catch {
+      setCategoryError(t('Não foi possível guardar a categoria.'))
+    }
   }
 
   async function addNewTag() {
@@ -276,10 +285,13 @@ export function RecipeForm({
     }
   }
 
-  const fieldClass =
-    'rounded-xl border border-black/10 bg-bg-sage px-3 py-2 text-sm outline-none ring-2 ring-transparent transition-shadow focus:border-accent-leaf focus:ring-accent-leaf/30'
+  const fieldFocus = 'outline-none focus:border-accent-leaf focus:ring-accent-leaf/30'
+  const fieldClass = `${FIELD_FRAME} px-3 py-2 ${fieldFocus}`
+  const compactFieldClass = `${FIELD_FRAME} px-2.5 py-2 ${fieldFocus}`
+  const removeRowClass = 'flex w-9 shrink-0 items-center justify-center rounded-xl text-text-secondary hover:bg-bg-sage'
 
   return (
+    <>
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="rounded-2xl bg-surface p-5 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)]">
         <input
@@ -333,10 +345,10 @@ export function RecipeForm({
           rows={2}
         />
 
-        <div className="mt-4 grid grid-cols-3 gap-3">
+        <div className="mt-4 grid grid-cols-3 gap-2 sm:gap-3">
           <div>
-            <label className="block min-h-10 text-sm font-medium text-text-secondary" htmlFor="servings">
-              {t('Porções (und)')}
+            <label className="block text-sm font-medium text-text-secondary" htmlFor="servings">
+              {t('Porções')}
             </label>
             <input
               id="servings"
@@ -344,33 +356,35 @@ export function RecipeForm({
               min={0}
               value={servings}
               onChange={(e) => setServings(e.target.value)}
-              className={`${fieldClass} w-full mt-1`}
+              className={`${fieldClass} mt-1 w-full`}
             />
           </div>
           <div>
-            <label className="block min-h-10 text-sm font-medium text-text-secondary" htmlFor="prep">
-              {t('Preparação (min)')}
+            <label className="block text-sm font-medium text-text-secondary" htmlFor="prep">
+              {t('Preparação')}<span className="sr-only"> (min)</span>
             </label>
-            <input
+            <UnitInput
               id="prep"
               type="number"
               min={0}
               value={prepMinutes}
               onChange={(e) => setPrepMinutes(e.target.value)}
-              className={`${fieldClass} w-full mt-1`}
+              unit="min"
+              className="mt-1 w-full"
             />
           </div>
           <div>
-            <label className="block min-h-10 text-sm font-medium text-text-secondary" htmlFor="cook">
-              {t('Confeção (min)')}
+            <label className="block text-sm font-medium text-text-secondary" htmlFor="cook">
+              {t('Confeção')}<span className="sr-only"> (min)</span>
             </label>
-            <input
+            <UnitInput
               id="cook"
               type="number"
               min={0}
               value={cookMinutes}
               onChange={(e) => setCookMinutes(e.target.value)}
-              className={`${fieldClass} w-full mt-1`}
+              unit="min"
+              className="mt-1 w-full"
             />
           </div>
         </div>
@@ -428,7 +442,7 @@ export function RecipeForm({
                 <button
                   type="button"
                   onClick={() => removeIngredient(i)}
-                  className="shrink-0 rounded-full p-2 text-text-secondary hover:bg-bg-sage"
+                  className={removeRowClass}
                   aria-label={t('Remover secção')}
                 >
                   <XIcon className="size-4" />
@@ -441,24 +455,27 @@ export function RecipeForm({
                   onChange={(e) => updateIngredient(i, { quantity: e.target.value })}
                   placeholder={t('qtd')}
                   inputMode="decimal"
-                  className={`${fieldClass} w-16 shrink-0`}
+                  aria-label={t('Quantidade do ingrediente {number}', { number: i + 1 })}
+                  className={`${compactFieldClass} w-14 shrink-0 sm:w-16`}
                 />
                 <input
                   value={row.unit}
                   onChange={(e) => updateIngredient(i, { unit: e.target.value })}
                   placeholder={t('unidade')}
-                  className={`${fieldClass} w-24 shrink-0`}
+                  aria-label={t('Unidade do ingrediente {number}', { number: i + 1 })}
+                  className={`${compactFieldClass} w-[4.75rem] shrink-0 sm:w-24`}
                 />
                 <input
                   value={row.name}
                   onChange={(e) => updateIngredient(i, { name: e.target.value })}
                   placeholder={t('ingrediente')}
+                  aria-label={t('Nome do ingrediente {number}', { number: i + 1 })}
                   className={`${fieldClass} min-w-0 flex-1`}
                 />
                 <button
                   type="button"
                   onClick={() => removeIngredient(i)}
-                  className="shrink-0 rounded-full p-2 text-text-secondary hover:bg-bg-sage"
+                  className={removeRowClass}
                   aria-label={t('Remover ingrediente')}
                 >
                   <XIcon className="size-4" />
@@ -492,29 +509,30 @@ export function RecipeForm({
         <div className="mt-3 space-y-2">
           {steps.map((row, i) => (
             <div key={i} className="flex gap-2">
-              <span className="mt-2 flex size-6 shrink-0 items-center justify-center rounded-full bg-bg-sage text-xs font-semibold text-forest-text">
+              <span className="mt-2.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-bg-sage text-xs font-semibold text-forest-text">
                 {i + 1}
               </span>
               <textarea
                 value={row.instruction}
                 onChange={(e) => updateStep(i, { instruction: e.target.value })}
                 placeholder={t('Passo {number}', { number: i + 1 })}
+                aria-label={t('Passo {number}', { number: i + 1 })}
                 rows={1}
-                className={`${fieldClass} min-w-0 flex-1`}
+                className={`${fieldClass} min-w-0 flex-1 field-sizing-content`}
               />
-              <input
+              <UnitInput
                 value={row.durationMinutes}
                 onChange={(e) => updateStep(i, { durationMinutes: e.target.value })}
                 type="number"
                 min={0}
-                placeholder="min"
+                unit="min"
                 aria-label={t('Duração do passo {number} em minutos', { number: i + 1 })}
-                className={`${fieldClass} w-16 shrink-0 text-center`}
+                className="w-[4.5rem] shrink-0 self-start sm:w-24"
               />
               <button
                 type="button"
                 onClick={() => removeStep(i)}
-                className="shrink-0 rounded-full p-2 text-text-secondary hover:bg-bg-sage"
+                className={`${removeRowClass} h-11`}
                 aria-label={t('Remover passo')}
               >
                 <XIcon className="size-4" />
@@ -535,22 +553,30 @@ export function RecipeForm({
       <div className="rounded-2xl bg-surface p-5 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)]">
         <h2 className="text-lg font-semibold text-text-primary">{t('Categorias e tags')}</h2>
 
-        <p className="mt-3 text-sm font-medium text-text-secondary">{t('Categorias')}</p>
-        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+        <div className="mt-3 flex items-center justify-between gap-3">
+          <p className="text-sm font-medium text-text-secondary">{t('Categorias')}</p>
+          {categories.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setManagingCategories(true)}
+              aria-haspopup="dialog"
+              className="-my-2 min-h-11 px-1 text-sm font-medium text-forest-text"
+            >
+              {t('Gerir categorias')}
+            </button>
+          )}
+        </div>
+        <div className="mt-1.5 flex flex-wrap items-center gap-2">
           {categories.map((c) => (
-            <span key={c.id} className="inline-flex items-center gap-1 rounded-xl border border-border bg-muted/50 p-1">
-              <Chip label={`${categoryIconLabel(c.icon)}${c.name}`} active={categoryIds.includes(c.id)} onClick={() => toggleCategory(c.id)} tone="forest" />
-              <input type="color" value={c.color ?? '#2F6B45'} onChange={(event) => changeCategoryVisual(c, { color: event.target.value })} aria-label={t('Cor de {name}', { name: c.name })} className="size-7 cursor-pointer rounded border-0 bg-transparent p-0" />
-              <select value={c.icon ?? ''} onChange={(event) => changeCategoryVisual(c, { icon: (event.target.value || null) as CategoryIcon | null })} aria-label={t('Ícone de {name}', { name: c.name })} className="h-7 max-w-8 rounded bg-surface text-xs text-text-primary"><option value="">•</option>{CATEGORY_ICON_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.symbol}</option>)}</select>
-            </span>
+            <Chip key={c.id} kind="category" accentColor={c.color} icon={c.icon} active={categoryIds.includes(c.id)} onClick={() => toggleCategory(c.id)}>{c.name}</Chip>
           ))}
-          <span className="inline-flex items-center gap-1"><input type="color" value={newCategoryColor} onChange={(event) => setNewCategoryColor(event.target.value)} aria-label={t('Cor da nova categoria')} className="size-7 cursor-pointer rounded border-0 bg-transparent p-0" /><select value={newCategoryIcon} onChange={(event) => setNewCategoryIcon(event.target.value as CategoryIcon)} aria-label={t('Ícone da nova categoria')} className="h-8 rounded-lg border border-border bg-surface px-1 text-xs text-text-primary">{CATEGORY_ICON_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.symbol}</option>)}</select><InlineAdd value={newCategoryName} onChange={setNewCategoryName} onAdd={addNewCategory} placeholder={t('nova categoria')} /></span>
+          <InlineAdd value={newCategoryName} onChange={setNewCategoryName} onAdd={addNewCategory} placeholder={t('nova categoria')} />
         </div>
 
-        <p className="mt-4 text-sm font-medium text-text-secondary">{t('Tags')}</p>
-        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-          {tags.map((t) => (
-            <Chip key={t.id} label={t.name} active={tagIds.includes(t.id)} onClick={() => toggleTag(t.id)} tone="leaf" />
+        <p className="mt-5 text-sm font-medium text-text-secondary">{t('Tags')}</p>
+        <div className="mt-1.5 flex flex-wrap items-center gap-2">
+          {tags.map((tag) => (
+            <Chip key={tag.id} kind="tag" active={tagIds.includes(tag.id)} onClick={() => toggleTag(tag.id)}>#{tag.name}</Chip>
           ))}
           <InlineAdd value={newTagName} onChange={setNewTagName} onAdd={addNewTag} placeholder={t('nova tag')} />
         </div>
@@ -692,34 +718,45 @@ export function RecipeForm({
         {saving ? t('A guardar…') : submitLabel}
       </button>
     </form>
+
+    {/* Fora do <form>: os botões do Modal não têm type e submeteriam a receita. */}
+    <Modal open={managingCategories} title={t('Gerir categorias')} onClose={() => setManagingCategories(false)}>
+      <p className="text-sm text-text-secondary">{t('A cor e o ícone aplicam-se à categoria em todas as receitas.')}</p>
+      <ul className="mt-3 max-h-[55svh] space-y-2 overflow-y-auto">
+        {categories.map((c) => (
+          <li key={c.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-border p-2">
+            <span className="w-full min-w-0 sm:w-auto sm:flex-1"><CategoryBadge color={c.color} icon={c.icon} className="max-w-full">{c.name}</CategoryBadge></span>
+            <input
+              type="color"
+              value={c.color ?? DEFAULT_CATEGORY_COLOR}
+              onChange={(event) => changeCategoryVisual(c, { color: event.target.value })}
+              aria-label={t('Cor de {name}', { name: c.name })}
+              className="h-11 w-11 shrink-0 cursor-pointer rounded-xl border border-border bg-surface p-1"
+            />
+            <select
+              value={c.icon ?? ''}
+              onChange={(event) => changeCategoryVisual(c, { icon: (event.target.value || null) as CategoryIcon | null })}
+              aria-label={t('Ícone de {name}', { name: c.name })}
+              className="h-11 min-w-0 flex-1 rounded-xl border border-border bg-surface px-2 text-sm text-text-primary sm:w-40 sm:flex-none"
+            >
+              <option value="">{t('Sem ícone')}</option>
+              {CATEGORY_ICON_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.symbol} {t(option.label)}</option>)}
+            </select>
+          </li>
+        ))}
+      </ul>
+      {categoryError && <p role="alert" className="mt-2 text-sm text-accent-orange">{categoryError}</p>}
+    </Modal>
+    </>
   )
 }
 
-function Chip({
-  label,
-  active,
-  onClick,
-  tone,
-}: {
-  label: string
-  active: boolean
-  onClick: () => void
-  tone: 'forest' | 'leaf'
-}) {
-  const activeClass = tone === 'forest' ? 'bg-primary-forest text-card-white' : 'bg-accent-leaf text-card-white'
-  const inactiveClass = tone === 'forest'
-    ? 'border border-primary-forest/30 bg-primary-soft text-forest-text hover:border-primary-forest/60'
-    : 'border border-dashed border-accent-orange/40 bg-accent-orange/10 text-accent-orange hover:border-accent-orange/70'
+function UnitInput({ unit, className = '', ...props }: InputHTMLAttributes<HTMLInputElement> & { unit: string }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-        active ? activeClass : inactiveClass
-      }`}
-    >
-      {label}
-    </button>
+    <span className={`${FIELD_FRAME} flex items-center pr-3 focus-within:border-accent-leaf focus-within:ring-accent-leaf/30 ${className}`}>
+      <input className="min-w-0 flex-1 bg-transparent py-2 pl-3 pr-1 outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none" {...props} />
+      <span aria-hidden="true" className="shrink-0 text-text-secondary">{unit}</span>
+    </span>
   )
 }
 
@@ -735,7 +772,7 @@ function InlineAdd({
   placeholder: string
 }) {
   return (
-    <span className="flex items-center gap-1 rounded-full border border-dashed border-black/15 pl-2.5 pr-1 py-0.5">
+    <span className="inline-flex min-h-10 items-center rounded-xl border border-dashed border-border bg-surface ring-2 ring-transparent transition-shadow focus-within:border-accent-leaf focus-within:ring-accent-leaf/30">
       <input
         value={value}
         onChange={(e) => onChange(e.target.value)}
@@ -746,15 +783,17 @@ function InlineAdd({
           }
         }}
         placeholder={placeholder}
-        className="w-24 bg-transparent text-xs outline-none placeholder:text-text-secondary"
+        aria-label={placeholder}
+        className="w-32 bg-transparent py-2 pl-3 text-sm text-text-primary outline-none placeholder:text-text-secondary"
       />
       <button
         type="button"
         onClick={onAdd}
-        className="flex size-5 shrink-0 items-center justify-center rounded-full text-text-secondary hover:bg-bg-sage"
+        disabled={!value.trim()}
+        className="flex size-10 shrink-0 items-center justify-center rounded-r-xl text-forest-text hover:bg-bg-sage disabled:text-text-secondary disabled:opacity-60"
         aria-label={t('Adicionar {name}', { name: placeholder })}
       >
-        <PlusIcon className="size-3.5" />
+        <PlusIcon className="size-4" />
       </button>
     </span>
   )
