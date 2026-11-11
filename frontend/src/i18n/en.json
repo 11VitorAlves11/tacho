@@ -151,6 +151,7 @@
   "Ainda não há receitas nesta coleção.": "There are no recipes in this collection yet.",
   "Usa o menu acima para adicionar a primeira.": "Use the menu above to add the first one.",
   "Remover da coleção": "Remove from collection",
+  "Remover {name} da coleção": "Remove {name} from the collection",
   "Não foi possível ligar ao backend.": "Could not connect to the server.",
   "Ainda não há coleções.": "There are no collections yet.",
   "Cria a primeira em baixo — ex. \"Sobremesas de Natal\".": "Create the first one below — e.g. \"Christmas desserts\".",

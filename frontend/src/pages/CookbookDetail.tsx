@@ -6,6 +6,8 @@ import { listRecipes, toggleFavorite } from '../api/recipes'
 import type { CookbookDetail as CookbookDetailType, RecipeSummary } from '../api/types'
 import { PageShell } from '../components/PageShell'
 import { RecipeCard } from '../components/RecipeCard'
+import { XIcon } from '../components/icons'
+import { EmptyState } from '../components/ui'
 
 export function CookbookDetail() {
   const { id } = useParams<{ id: string }>()
@@ -76,7 +78,8 @@ export function CookbookDetail() {
           value=""
           onChange={(e) => handleAdd(e.target.value)}
           disabled={availableRecipes.length === 0}
-          className="w-full rounded-xl border border-black/10 bg-bg-sage px-3 py-2 text-sm text-text-secondary outline-none focus:ring-2 focus:ring-accent-leaf disabled:opacity-50 sm:w-auto"
+          aria-label={t('+ Adicionar receita a esta coleção')}
+          className="w-full min-h-11 rounded-xl border border-border bg-surface px-3 text-sm text-text-primary outline-none focus:border-primary-forest focus:ring-2 focus:ring-primary-forest/15 disabled:opacity-50 sm:w-auto"
         >
           <option value="" disabled>
             {t('+ Adicionar receita a esta coleção')}
@@ -90,21 +93,22 @@ export function CookbookDetail() {
       </div>
 
       {cookbook.recipes.length === 0 ? (
-        <div className="mt-4 rounded-2xl bg-surface p-8 text-center">
-          <p className="font-medium text-text-primary">{t('Ainda não há receitas nesta coleção.')}</p>
-          <p className="mt-1 text-sm text-text-secondary">{t('Usa o menu acima para adicionar a primeira.')}</p>
+        <div className="mt-4">
+          <EmptyState title={t('Ainda não há receitas nesta coleção.')} description={t('Usa o menu acima para adicionar a primeira.')} />
         </div>
       ) : (
-        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
           {cookbook.recipes.map((r) => (
-            <div key={r.id}>
+            <div key={r.id} className="relative">
               <RecipeCard recipe={r} onToggleFavorite={handleToggleFavorite} />
               <button
                 type="button"
                 onClick={() => handleRemove(r.id)}
-                className="mt-1.5 text-xs font-medium text-text-secondary hover:text-accent-orange"
+                title={t('Remover da coleção')}
+                aria-label={t('Remover {name} da coleção', { name: r.title })}
+                className="absolute bottom-2.5 left-2.5 flex size-10 items-center justify-center rounded-full border border-white/60 bg-white/90 text-neutral-600 shadow-sm transition hover:scale-105 hover:text-accent-orange sm:bottom-auto sm:left-2.5 sm:top-2.5 sm:size-9"
               >
-                {t('Remover da coleção')}
+                <XIcon className="size-5" />
               </button>
             </div>
           ))}
