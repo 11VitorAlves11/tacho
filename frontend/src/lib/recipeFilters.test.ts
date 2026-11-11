@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { DEFAULT_RECIPE_FILTERS, clearRecipeFilters, hasActiveFilter, parseRecipeFilters, serializeRecipeFilters, type RecipeFilters } from './recipeFilters'
+import { DEFAULT_RECIPE_FILTERS, clearRecipeFilters, hasActiveFilter, parseRecipeFilters, serializeRecipeFilters, visibleFilterTags, type RecipeFilters } from './recipeFilters'
 
 const CATEGORY = '0b6c8a4e-1f2d-4c3b-9a8e-7d6f5e4c3b2a'
 const TAG_A = '11111111-2222-4333-8444-555555555555'
@@ -44,5 +44,18 @@ describe('recipe filters in the URL', () => {
     expect(cleared).toEqual({ ...DEFAULT_RECIPE_FILTERS, q: 'sopa' })
     expect(hasActiveFilter(cleared)).toBe(false)
     expect(serializeRecipeFilters(cleared).toString()).toBe('q=sopa')
+  })
+})
+
+describe('tag filter disclosure', () => {
+  const tags = [{ id: TAG_A, name: 'Frango' }, { id: TAG_B, name: 'Peixe' }]
+
+  it('shows every tag when expanded', () => {
+    expect(visibleFilterTags(tags, [], true)).toEqual(tags)
+  })
+
+  it('hides unselected tags when collapsed but keeps active ones visible', () => {
+    expect(visibleFilterTags(tags, [], false)).toEqual([])
+    expect(visibleFilterTags(tags, [TAG_B], false)).toEqual([tags[1]])
   })
 })

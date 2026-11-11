@@ -136,11 +136,13 @@ export function BottomSheet({
   title,
   onClose,
   children,
+  footer,
 }: {
   open: boolean
   title: string
   onClose: () => void
   children: ReactNode
+  footer?: ReactNode
 }) {
   if (!open) return null
   return (
@@ -153,6 +155,7 @@ export function BottomSheet({
           <button onClick={onClose} className="min-h-11 px-2 text-sm font-semibold text-forest-text">{t('Fechar')}</button>
         </div>
         <div className="mt-4">{children}</div>
+        {footer && <div className="sticky bottom-[calc(-1.25rem-env(safe-area-inset-bottom))] -mx-5 mb-[calc(-1.25rem-env(safe-area-inset-bottom))] mt-5 flex gap-2 border-t border-border bg-surface px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-3">{footer}</div>}
       </section>
     </div>
   )
