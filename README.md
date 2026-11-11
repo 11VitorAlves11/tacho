@@ -113,7 +113,7 @@ to each browser, so household members can use different preferences.
 | **Household preferences** | Record dietary profiles, review ingredient warnings and keep substitution rules. |
 | **Sharing and printing** | Create temporary public recipe links and QR codes, or use print-friendly recipe views. |
 | **Language and appearance** | Switch between European Portuguese and English, with localised dates and light, dark or system themes. Preferences are remembered in each browser. |
-| **Accounts** | Add household members, sign in with a password, connect OIDC or configure trusted forward-auth. |
+| **Accounts** | Add household members, sign in with a password, connect OIDC or configure trusted forward-auth. Operators can reset a forgotten password from the command line. |
 
 Offline support focuses on the **active cooking recipe**, rather than a complete offline
 copy of the household. AI extraction and dietary matching need review before you rely on

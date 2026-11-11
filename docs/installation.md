@@ -66,3 +66,37 @@ docker compose exec web alembic current
 Before storing important recipes, create and restore a test backup by following
 [backup and restore](backup-restore.md).
 
+## Recovering access
+
+Tacho sends no email, so there is no "forgot password" link. Anyone with shell
+access to the host can reset a local account from the `web` container:
+
+```bash
+# List accounts: email, name, active, member of the household workspace
+docker compose exec web python -m scripts.reset_password --list
+
+# Set a new password (prompted twice, never echoed)
+docker compose exec web python -m scripts.reset_password --email ana@example.com
+
+# Non-interactive: read the password from the first line of stdin
+printf '%s\n' "$NEW_PASSWORD" | docker compose exec -T web python -m scripts.reset_password --email ana@example.com --password-stdin
+
+# Re-activate a deactivated account without changing its password
+docker compose exec web python -m scripts.reset_password --email ana@example.com --activate
+```
+
+Passwords must have at least 8 characters, as in the initial setup. The command
+exits with `0` on success, `1` when no account has that email, `2` for invalid
+arguments or passwords and `130` when cancelled.
+
+Resetting a password does not end sessions that are already signed in:
+session cookies are self-contained tokens that stay valid until they expire
+(30 days) or until the generated `auth_secret` in `tacho_secrets` is replaced,
+which signs everybody out.
+
+If an address is temporarily blocked after too many failed sign-ins, wait for
+the window to expire (15 minutes by default) or clear the counters:
+
+```bash
+docker compose exec redis sh -c "redis-cli --scan --pattern 'tacho:ratelimit:*' | xargs -r redis-cli del"
+```
