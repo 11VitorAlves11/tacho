@@ -8,15 +8,17 @@ import {
   getPriceHistory,
   importPantryFromReceipt,
   listPantryItems,
+  readReceipt,
   setPantryItemHasIt,
   updatePantryItem,
 } from '../api/pantry'
-import type { PantryItem, PantryPriceHistory } from '../api/types'
+import type { PantryItem, PantryPriceHistory, ReceiptConfirmResult, ReceiptExtraction } from '../api/types'
 import { PageShell } from '../components/PageShell'
 import { CameraIcon, PlusIcon, XIcon } from '../components/icons'
 import { Modal } from '../components/ui'
 import { PantryPricePanel } from '../components/PantryPrices'
 import { MonthlySpendChart } from '../components/PriceCharts'
+import { ReceiptReview } from '../components/ReceiptReview'
 import { fillMonths, lastPriceLabel } from '../lib/prices'
 
 const SPEND_MONTHS = 12
@@ -33,6 +35,10 @@ export function Pantry() {
   const [editingItem, setEditingItem] = useState<PantryItem | null>(null)
   const [pricingItem, setPricingItem] = useState<PantryItem | null>(null)
   const [history, setHistory] = useState<PantryPriceHistory | null>(null)
+  const pricedReceiptInputRef = useRef<HTMLInputElement>(null)
+  const [readingPrices, setReadingPrices] = useState(false)
+  const [receiptDraft, setReceiptDraft] = useState<ReceiptExtraction | null>(null)
+  const [receiptSummary, setReceiptSummary] = useState('')
 
   const receiptInputRef = useRef<HTMLInputElement>(null)
   const [scanning, setScanning] = useState(false)
@@ -75,6 +81,31 @@ export function Pantry() {
     } finally {
       setScanning(false)
     }
+  }
+
+  async function handlePricedReceiptChange(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setReadingPrices(true)
+    setScanError('')
+    setReceiptSummary('')
+    try {
+      setReceiptDraft(await readReceipt(file))
+    } catch (err) {
+      setScanError(
+        (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail ??
+          t('Não foi possível ler esta fatura.'),
+      )
+    } finally {
+      setReadingPrices(false)
+    }
+  }
+
+  async function handleReceiptConfirmed(result: ReceiptConfirmResult) {
+    setReceiptDraft(null)
+    setReceiptSummary(t('{items} produto(s) atualizados na despensa e {prices} preço(s) registados.', { items: result.items.length, prices: result.price_entries_created }))
+    await refreshPrices()
   }
 
   function toggleDraftName(name: string) {
@@ -150,7 +181,7 @@ export function Pantry() {
         {t('Marca o que tens em casa — usado no filtro "Dá para fazer" das receitas.')}
       </p>
 
-      <div className="mt-4">
+      <div className="mt-4 flex flex-wrap gap-2">
         <button
           type="button"
           onClick={() => receiptInputRef.current?.click()}
@@ -167,8 +198,11 @@ export function Pantry() {
           onChange={handleReceiptFileChange}
           className="hidden"
         />
-        {scanError && <p className="mt-2 text-sm text-accent-orange">{scanError}</p>}
+        <button type="button" onClick={() => pricedReceiptInputRef.current?.click()} disabled={readingPrices} className="flex items-center gap-1.5 rounded-full bg-surface px-4 py-2 text-sm font-medium text-forest-text shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)] transition-opacity disabled:opacity-60"><CameraIcon className="size-4" />{readingPrices ? t('A ler a fatura…') : t('Ler fatura com preços')}</button>
+        <input ref={pricedReceiptInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={handlePricedReceiptChange} className="hidden" aria-label={t('Ler fatura com preços')} />
       </div>
+      {scanError && <p role="alert" className="mt-2 text-sm text-accent-orange">{scanError}</p>}
+      {receiptSummary && <p role="status" className="mt-2 text-sm font-medium text-forest-text">{receiptSummary}</p>}
 
       {draftNames && (
         <div className="mt-4 rounded-2xl bg-surface p-4 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)]">
@@ -290,6 +324,7 @@ export function Pantry() {
         </button>
       </form>
       <Modal open={editingItem !== null} title={t('Editar produto')} onClose={() => setEditingItem(null)}>{editingItem && <PantryEditor item={editingItem} onSaved={handleEdited} />}</Modal>
+      <Modal open={receiptDraft !== null} title={t('Rever fatura')} onClose={() => setReceiptDraft(null)}>{receiptDraft && <ReceiptReview draft={receiptDraft} onCancel={() => setReceiptDraft(null)} onConfirmed={handleReceiptConfirmed} />}</Modal>
       <Modal open={pricingItem !== null} title={pricingItem ? t('Preços: {name}', { name: pricingItem.name }) : ''} onClose={() => setPricingItem(null)}>{pricingItem && <PantryPricePanel item={pricingItem} onChanged={refreshPrices} />}</Modal>
     </PageShell>
   )

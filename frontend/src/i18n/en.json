@@ -456,5 +456,15 @@
   "Apagar preço de {date}": "Delete price from {date}",
   "Preços de {name}": "Prices for {name}",
   "Preços": "Prices",
-  "Preços: {name}": "Prices: {name}"
+  "Preços: {name}": "Prices: {name}",
+  "Não foi possível guardar a fatura.": "Could not save the receipt.",
+  "Revê as linhas antes de guardar — corrige nomes, quantidades e preços ou remove o que não interessa.": "Review the lines before saving — fix names, quantities and prices, or remove what you don't need.",
+  "Produto da linha {n}": "Item on line {n}",
+  "linha {n}": "line {n}",
+  "Preço (€)": "Price (€)",
+  "Total: {total}": "Total: {total}",
+  "Guardar {count} artigo(s)": "Save {count} item(s)",
+  "Ler fatura com preços": "Read receipt with prices",
+  "{items} produto(s) atualizados na despensa e {prices} preço(s) registados.": "{items} pantry item(s) updated and {prices} price(s) recorded.",
+  "Rever fatura": "Review receipt"
 }
