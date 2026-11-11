@@ -124,8 +124,28 @@ export async function uploadRecipeImage(id: string, file: File) {
   return data
 }
 
-export function recipeImageUrl(imagePath: string) {
-  return `${api.defaults.baseURL}/media/${imagePath}`
+// Variantes WebP geradas pelo backend (ver backend/app/images.py): `thumb`
+// até 480px de largura, `medium` até 1200px. Sem `size` vem o original.
+export type ImageSize = 'thumb' | 'medium'
+
+export function recipeImageUrl(imagePath: string, size?: ImageSize) {
+  const url = `${api.defaults.baseURL}/media/${imagePath}`
+  return size ? `${url}?size=${size}` : url
+}
+
+// Largura nominal do original no `srcSet` — o frontend não sabe a real;
+// só serve para o browser preferir `medium` até ~1200px reais de ecrã.
+export const ORIGINAL_IMAGE_WIDTH = 2400
+
+// Para imagens pequenas em grelha (cartões, galeria, plano): `thumb`
+// chega para a maioria dos ecrãs, `medium` para cartões largos em ecrãs
+// de alta densidade.
+export function recipeThumbSrcSet(imagePath: string) {
+  return `${recipeImageUrl(imagePath, 'thumb')} 480w, ${recipeImageUrl(imagePath, 'medium')} 1200w`
+}
+
+export function recipeHeroSrcSet(mediumUrl: string, originalUrl: string) {
+  return `${mediumUrl} 1200w, ${originalUrl} ${ORIGINAL_IMAGE_WIDTH}w`
 }
 
 export async function addRecipeGalleryImage(id: string, file: File) {

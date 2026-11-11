@@ -1,6 +1,6 @@
 import { t } from '../i18n'
 import { Link } from 'react-router-dom'
-import { recipeImageUrl } from '../api/recipes'
+import { recipeImageUrl, recipeThumbSrcSet } from '../api/recipes'
 import type { RecipeSummary } from '../api/types'
 import { BrandFallback } from './Brand'
 import { ClockIcon, HeartIcon, ServingsIcon } from './icons'
@@ -18,7 +18,7 @@ export function RecipeCard({ recipe, onToggleFavorite }: { recipe: RecipeSummary
   return (
     <Link to={`/receitas/${recipe.id}`} className="group relative grid min-h-[112px] grid-cols-[112px_minmax(0,1fr)] overflow-hidden rounded-2xl border border-border bg-surface transition duration-200 hover:-translate-y-0.5 hover:border-primary-forest/25 hover:shadow-[0_8px_25px_rgba(20,30,24,0.08)] sm:flex sm:min-h-0 sm:flex-col">
       <div className="relative h-full min-h-[112px] overflow-hidden bg-muted sm:aspect-[4/3] sm:min-h-0 sm:w-full">
-        {recipe.image_path ? <img src={recipeImageUrl(recipe.image_path)} alt="" className="size-full object-cover transition-transform duration-300 group-hover:scale-[1.025]" /> : <div className="flex size-full items-center justify-center bg-primary-soft"><BrandFallback className="size-14 opacity-70 sm:size-20" /></div>}
+        {recipe.image_path ? <img src={recipeImageUrl(recipe.image_path, 'thumb')} srcSet={recipeThumbSrcSet(recipe.image_path)} sizes="(min-width: 1536px) 25vw, (min-width: 1024px) 33vw, (min-width: 640px) 50vw, 112px" loading="lazy" decoding="async" alt="" className="size-full object-cover transition-transform duration-300 group-hover:scale-[1.025]" /> : <div className="flex size-full items-center justify-center bg-primary-soft"><BrandFallback className="size-14 opacity-70 sm:size-20" /></div>}
         <button type="button" onClick={(event) => { event.preventDefault(); event.stopPropagation(); onToggleFavorite(recipe.id) }} aria-label={recipe.is_favorite ? t('Remover dos favoritos') : t('Adicionar aos favoritos')} aria-pressed={recipe.is_favorite} className="absolute right-2.5 top-2.5 flex size-10 items-center justify-center rounded-full border border-white/60 bg-white/90 text-neutral-600 shadow-sm transition hover:scale-105 hover:text-primary-forest sm:size-9">
           <HeartIcon className={`size-5 ${recipe.is_favorite ? 'text-primary-forest' : ''}`} fill={recipe.is_favorite ? 'currentColor' : 'none'} />
         </button>

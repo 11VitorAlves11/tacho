@@ -10,6 +10,7 @@ import {
   deleteRecipeGalleryImage,
   duplicateRecipe,
   getRecipe,
+  recipeHeroSrcSet,
   recipeImageUrl,
   setRecipeGalleryCover,
   setRecipeRating,
@@ -204,7 +205,9 @@ export function RecipeDetail() {
 
         {recipe.image_path && (
           <img
-            src={recipeImageUrl(recipe.image_path)}
+            src={recipeImageUrl(recipe.image_path, 'medium')}
+            srcSet={recipeHeroSrcSet(recipeImageUrl(recipe.image_path, 'medium'), recipeImageUrl(recipe.image_path))}
+            sizes="(min-width: 1500px) 1500px, 100vw"
             alt=""
             className="max-h-[560px] aspect-video w-full rounded-2xl border border-border object-cover"
           />
@@ -489,7 +492,7 @@ export function RecipeDetail() {
             <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-4">
               {recipe.images.map((image) => (
                 <div key={image.id} className="group relative aspect-square overflow-hidden rounded-xl bg-bg-sage">
-                  <img src={recipeImageUrl(image.filename)} alt="" className="size-full object-cover" />
+                  <img src={recipeImageUrl(image.filename, 'thumb')} loading="lazy" decoding="async" alt="" className="size-full object-cover" />
                   {image.is_cover && (
                     <span className="absolute left-1.5 top-1.5 rounded-full bg-card-white/90 px-2 py-0.5 text-[10px] font-medium text-forest-text">
                       {t('Capa')}
