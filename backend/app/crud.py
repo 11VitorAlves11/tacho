@@ -883,7 +883,18 @@ def list_cookbooks(db: Session, workspace_id: uuid.UUID) -> list[models.Cookbook
     cookbooks = list(db.scalars(query))
     for cookbook in cookbooks:
         cookbook.recipe_count = len(cookbook.recipes)  # não é coluna, ver schemas.CookbookSummary
+        cookbook.cover_image_paths = _cookbook_cover_paths(cookbook.recipes)
     return cookbooks
+
+
+_COOKBOOK_COVER_LIMIT = 4
+
+
+def _cookbook_cover_paths(recipes: list[models.Recipe]) -> list[str]:
+    """Até 4 fotos para a colagem da capa, por ordem de título — as receitas
+    já vêm do selectinload de list_cookbooks, sem consultas extra."""
+    ordered = sorted(recipes, key=lambda recipe: (recipe.title.casefold(), str(recipe.id)))
+    return [recipe.image_path for recipe in ordered if recipe.image_path][:_COOKBOOK_COVER_LIMIT]
 
 
 def create_cookbook(db: Session, workspace_id: uuid.UUID, payload: schemas.CookbookCreate) -> models.Cookbook:
@@ -892,6 +903,7 @@ def create_cookbook(db: Session, workspace_id: uuid.UUID, payload: schemas.Cookb
     db.commit()
     db.refresh(cookbook)
     cookbook.recipe_count = 0
+    cookbook.cover_image_paths = []
     return cookbook
 
 
