@@ -31,6 +31,7 @@ export function Pantry() {
   const [newUnit, setNewUnit] = useState('')
   const [newExpiry, setNewExpiry] = useState('')
   const [creating, setCreating] = useState(false)
+  const [showAddForm, setShowAddForm] = useState(false)
   const [editingItem, setEditingItem] = useState<PantryItem | null>(null)
   const [pricingItem, setPricingItem] = useState<PantryItem | null>(null)
   const [history, setHistory] = useState<PantryPriceHistory | null>(null)
@@ -78,6 +79,8 @@ export function Pantry() {
     await refreshPrices()
   }
 
+  const addFormOpen = showAddForm || items?.length === 0
+
   async function handleCreate(e: FormEvent) {
     e.preventDefault()
     const name = newName.trim()
@@ -121,9 +124,32 @@ export function Pantry() {
       </p>
 
       <div className="mt-4 flex flex-wrap gap-2">
+        <button type="button" onClick={() => setShowAddForm((open) => !open)} aria-expanded={addFormOpen} aria-controls="pantry-add-form" className="flex items-center gap-1.5 rounded-full bg-primary-forest px-4 py-2 text-sm font-semibold text-card-white"><PlusIcon className="size-4" />{t('Adicionar produto')}</button>
         <button type="button" onClick={() => receiptInputRef.current?.click()} disabled={readingReceipt} className="flex items-center gap-1.5 rounded-full bg-surface px-4 py-2 text-sm font-medium text-forest-text shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)] transition-opacity disabled:opacity-60"><CameraIcon className="size-4" />{readingReceipt ? t('A ler a fatura…') : t('Ler fatura')}</button>
         <input ref={receiptInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={handleReceiptChange} className="hidden" aria-label={t('Ler fatura')} />
       </div>
+      {addFormOpen && (
+        <form id="pantry-add-form" onSubmit={handleCreate} className="mt-3 grid gap-2 rounded-2xl border border-border bg-surface p-4 sm:grid-cols-2">
+          <input
+            autoFocus={showAddForm}
+            value={newName}
+            onChange={(e) => setNewName(e.target.value)}
+            placeholder={t('Adicionar ingrediente…')}
+            aria-label={t('Produto')}
+            className="min-h-11 min-w-0 rounded-xl border border-border bg-muted px-3 py-2 text-sm outline-none focus:border-accent-leaf"
+          />
+          <div className="grid grid-cols-2 gap-2"><input type="number" min="0" step="0.01" value={newQuantity} onChange={(event) => setNewQuantity(event.target.value)} placeholder={t('Quantidade')} className="min-h-11 min-w-0 rounded-xl border border-border bg-muted px-3 text-sm outline-none" /><input value={newUnit} onChange={(event) => setNewUnit(event.target.value)} placeholder={t('Unidade')} className="min-h-11 min-w-0 rounded-xl border border-border bg-muted px-3 text-sm outline-none" /></div>
+          <label className="flex min-h-11 min-w-0 items-center gap-2 rounded-xl border border-border bg-muted pl-3 text-sm text-text-secondary">{t('Validade')}<input type="date" value={newExpiry} onChange={(event) => setNewExpiry(event.target.value)} aria-label={t('Data de validade')} className="min-h-11 min-w-0 flex-1 bg-transparent pr-3 text-text-primary outline-none" /></label>
+          <button
+            type="submit"
+            disabled={!newName.trim() || creating}
+            className="flex min-h-11 shrink-0 items-center justify-center gap-1 rounded-xl bg-primary-forest px-4 py-2 text-sm font-medium text-card-white disabled:opacity-50"
+          >
+            <PlusIcon className="size-4" />
+            {t('Adicionar')}
+          </button>
+        </form>
+      )}
       {scanError && <p role="alert" className="mt-2 text-sm text-accent-orange">{scanError}</p>}
       {receiptSummary && <p role="status" className="mt-2 text-sm font-medium text-forest-text">{receiptSummary}</p>}
 
@@ -164,24 +190,6 @@ export function Pantry() {
         </section>
       )}
 
-      <form onSubmit={handleCreate} className="mt-6 grid gap-2 rounded-2xl border border-border bg-surface p-4 sm:grid-cols-2">
-        <input
-          value={newName}
-          onChange={(e) => setNewName(e.target.value)}
-          placeholder={t('Adicionar ingrediente…')}
-          className="min-h-11 min-w-0 rounded-xl border border-border bg-muted px-3 py-2 text-sm outline-none focus:border-accent-leaf"
-        />
-        <div className="grid grid-cols-2 gap-2"><input type="number" min="0" step="0.01" value={newQuantity} onChange={(event) => setNewQuantity(event.target.value)} placeholder={t('Quantidade')} className="min-h-11 min-w-0 rounded-xl border border-border bg-muted px-3 text-sm outline-none" /><input value={newUnit} onChange={(event) => setNewUnit(event.target.value)} placeholder={t('Unidade')} className="min-h-11 min-w-0 rounded-xl border border-border bg-muted px-3 text-sm outline-none" /></div>
-        <input type="date" value={newExpiry} onChange={(event) => setNewExpiry(event.target.value)} aria-label={t('Data de validade')} className="min-h-11 rounded-xl border border-border bg-muted px-3 text-sm text-text-primary outline-none" />
-        <button
-          type="submit"
-          disabled={!newName.trim() || creating}
-          className="flex min-h-11 shrink-0 items-center justify-center gap-1 rounded-xl bg-primary-forest px-4 py-2 text-sm font-medium text-card-white disabled:opacity-50"
-        >
-          <PlusIcon className="size-4" />
-          {t('Adicionar')}
-        </button>
-      </form>
       <Modal open={editingItem !== null} title={t('Editar produto')} onClose={() => setEditingItem(null)}>{editingItem && <PantryEditor item={editingItem} onSaved={handleEdited} />}</Modal>
       <Modal open={receiptDraft !== null} title={t('Rever fatura')} onClose={() => setReceiptDraft(null)}>{receiptDraft && <ReceiptReview draft={receiptDraft} onCancel={() => setReceiptDraft(null)} onConfirmed={handleReceiptConfirmed} />}</Modal>
       <Modal open={pricingItem !== null} title={pricingItem ? t('Preços: {name}', { name: pricingItem.name }) : ''} onClose={() => setPricingItem(null)}>{pricingItem && <PantryPricePanel item={pricingItem} onChanged={refreshPrices} />}</Modal>
