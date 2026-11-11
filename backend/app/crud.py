@@ -3,7 +3,9 @@ import secrets
 import unicodedata
 import uuid
 from datetime import UTC, date, datetime, timedelta
+from typing import Any
 
+from pydantic import ValidationError
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
@@ -568,6 +570,166 @@ def duplicate_recipe(
     db.refresh(copy)
     copy.is_favorite = False  # cópia nova, não herda favoritos da original
     return copy
+
+
+def _import_key(text: str) -> str:
+    return " ".join(_normalize(text).split())
+
+
+def _duplicate_keys(title: str, source_url: str | None, ingredient_names: list[str]) -> set[tuple]:
+    """Chaves de duplicado de uma receita: mesmo título normalizado E (mesma
+    `source_url` OU mesmo conjunto de nomes de ingredientes normalizados).
+    Duas receitas são duplicadas quando partilham pelo menos uma chave."""
+    title_key = _import_key(title)
+    names = frozenset(key for key in (_import_key(name) for name in ingredient_names) if key)
+    keys: set[tuple] = {(title_key, "ingredients", names)}
+    url = (source_url or "").strip().rstrip("/").lower()
+    if url:
+        keys.add((title_key, "url", url))
+    return keys
+
+
+def _workspace_duplicate_keys(db: Session, workspace_id: uuid.UUID) -> set[tuple]:
+    recipes = db.execute(
+        select(models.Recipe.id, models.Recipe.title, models.Recipe.source_url).where(
+            models.Recipe.workspace_id == workspace_id
+        )
+    ).all()
+    names: dict[uuid.UUID, list[str]] = {recipe.id: [] for recipe in recipes}
+    ingredient_rows = db.execute(
+        select(models.Ingredient.recipe_id, models.Ingredient.name)
+        .join(models.Recipe)
+        .where(models.Recipe.workspace_id == workspace_id, models.Ingredient.is_header.is_(False))
+    ).all()
+    for row in ingredient_rows:
+        names[row.recipe_id].append(row.name)
+    keys: set[tuple] = set()
+    for recipe in recipes:
+        keys |= _duplicate_keys(recipe.title, recipe.source_url, names[recipe.id])
+    return keys
+
+
+def _validation_detail(exc: ValidationError) -> str:
+    fields = sorted({".".join(str(part) for part in error["loc"]) or "receita" for error in exc.errors()})
+    return f"Campos inválidos: {', '.join(fields)}"
+
+
+def import_recipes(
+    db: Session, workspace_id: uuid.UUID, entries: list[Any], allow_duplicates: bool
+) -> schemas.RecipeImportResult:
+    """Importa as receitas de um `tacho.recipe-export` numa única transação
+    (um só commit no fim — um erro inesperado não deixa metade do ficheiro
+    gravado). Entradas malformadas e duplicadas são saltadas e reportadas
+    em `items`, sem abortar as restantes. Categorias e tags são associadas
+    por nome normalizado dentro da workspace e criadas quando faltam."""
+    existing_keys = set() if allow_duplicates else _workspace_duplicate_keys(db, workspace_id)
+    file_keys: set[tuple] = set()
+    categories = {
+        _import_key(c.name): c
+        for c in db.scalars(select(models.Category).where(models.Category.workspace_id == workspace_id))
+    }
+    tags = {
+        _import_key(t.name): t for t in db.scalars(select(models.Tag).where(models.Tag.workspace_id == workspace_id))
+    }
+    created_categories: list[str] = []
+    created_tags: list[str] = []
+    images_not_imported = 0
+    items: list[schemas.RecipeImportItem] = []
+
+    for index, raw in enumerate(entries):
+        raw_title = raw.get("title") if isinstance(raw, dict) else None
+        title = (raw_title.strip() if isinstance(raw_title, str) else "") or f"#{index + 1}"
+        try:
+            entry = schemas.RecipeImportEntry.model_validate(raw)
+        except ValidationError as exc:
+            items.append(
+                schemas.RecipeImportItem(
+                    title=title, status="skipped", reason="invalid", detail=_validation_detail(exc)
+                )
+            )
+            continue
+
+        keys = _duplicate_keys(entry.title, entry.source_url, [i.name for i in entry.ingredients if not i.is_header])
+        if keys & existing_keys:
+            items.append(schemas.RecipeImportItem(title=entry.title, status="skipped", reason="duplicate"))
+            continue
+        if keys & file_keys:
+            items.append(schemas.RecipeImportItem(title=entry.title, status="skipped", reason="duplicate_in_file"))
+            continue
+        file_keys |= keys
+
+        recipe_categories: list[models.Category] = []
+        for exported_category in entry.categories:
+            name = exported_category.name.strip()
+            key = _import_key(name)
+            if not key:
+                continue
+            category = categories.get(key)
+            if category is None:
+                category = models.Category(
+                    workspace_id=workspace_id, name=name, color=exported_category.color, icon=exported_category.icon
+                )
+                db.add(category)
+                categories[key] = category
+                created_categories.append(name)
+            if category not in recipe_categories:
+                recipe_categories.append(category)
+        recipe_tags: list[models.Tag] = []
+        for exported_tag in entry.tags:
+            key = _import_key(exported_tag.name)
+            tag = tags.get(key)
+            if tag is None:
+                tag = models.Tag(workspace_id=workspace_id, name=exported_tag.name)
+                db.add(tag)
+                tags[key] = tag
+                created_tags.append(exported_tag.name)
+            if tag not in recipe_tags:
+                recipe_tags.append(tag)
+
+        recipe = models.Recipe(
+            workspace_id=workspace_id,
+            title=entry.title,
+            description=entry.description,
+            servings=entry.servings,
+            prep_minutes=entry.prep_minutes,
+            cook_minutes=entry.cook_minutes,
+            source_url=entry.source_url,
+            notes=entry.notes,
+            rating=entry.rating,
+            calories_kcal=entry.calories_kcal,
+            protein_g=entry.protein_g,
+            carbs_g=entry.carbs_g,
+            fat_g=entry.fat_g,
+            estimated_cost=entry.estimated_cost,
+            ingredients=[
+                models.Ingredient(
+                    position=i, name=ing.name, quantity=ing.quantity, unit=ing.unit, is_header=ing.is_header
+                )
+                for i, ing in enumerate(entry.ingredients)
+            ],
+            steps=[
+                models.Step(position=i, instruction=step.instruction, duration_minutes=step.duration_minutes)
+                for i, step in enumerate(entry.steps)
+            ],
+            categories=recipe_categories,
+            tags=recipe_tags,
+        )
+        db.add(recipe)
+        db.flush()
+        if entry.image_path or entry.images:
+            images_not_imported += 1
+        items.append(schemas.RecipeImportItem(title=entry.title, status="imported", recipe_id=recipe.id))
+
+    db.commit()
+    imported = sum(1 for item in items if item.status == "imported")
+    return schemas.RecipeImportResult(
+        imported=imported,
+        skipped=len(items) - imported,
+        created_categories=created_categories,
+        created_tags=created_tags,
+        images_not_imported=images_not_imported,
+        items=items,
+    )
 
 
 def delete_recipe(db: Session, workspace_id: uuid.UUID, recipe_id: uuid.UUID) -> bool:
