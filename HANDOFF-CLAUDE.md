@@ -50,9 +50,10 @@ apagar alterações.
 - Frontend privado usa `/media/...`; frontend de partilha usa o endpoint por
   token.
 - Importação URL valida HTTP(S), resolve DNS e rejeita endereços locais/privados;
-  redirects foram desativados no download direto de imagens.
-- Atenção: fazer uma revisão de SSRF completa, incluindo redirects/scraping e
-  DNS rebinding, antes de declarar isto resolvido.
+  o HTML e a foto são descarregados por `backend/app/remote_fetch.py`
+  (redirects validados salto a salto, ligação ao IP validado contra DNS
+  rebinding, limites de tamanho/tempo/content-type) e o recipe-scrapers só faz
+  parsing offline. Política e risco residual em `SECURITY.md`.
 
 ### Docker
 

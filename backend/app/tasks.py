@@ -2,13 +2,17 @@ import re
 import uuid
 from collections.abc import Callable
 
-from recipe_scrapers import AbstractScraper, WebsiteNotImplementedError, scrape_html, scrape_me
+from recipe_scrapers import AbstractScraper, WebsiteNotImplementedError, scrape_html
 
 from app import gemini, models
 from app.celery_app import celery_app
 from app.config import get_settings
 from app.database import SessionLocal
 from app.images import save_recipe_image_from_url
+from app.remote_fetch import fetch_public_url
+
+MAX_HTML_BYTES = 5 * 1024 * 1024
+HTML_CONTENT_TYPES = frozenset({"text/html", "application/xhtml+xml"})
 
 
 def _safe_field(getter: Callable[[], object]) -> object | None:
@@ -148,15 +152,23 @@ def _extract_steps(scraper: AbstractScraper) -> list[str]:
 
 
 def _scrape(url: str) -> AbstractScraper:
+    # O HTML é sempre descarregado por nós (redirects validados salto a
+    # salto, limites de tamanho/tempo — ver app/remote_fetch.py) e o
+    # recipe-scrapers só faz parsing offline; deixá-lo ir à rede seguiria
+    # redirects para a rede interna sem qualquer validação.
+    page = fetch_public_url(url, allowed_content_types=HTML_CONTENT_TYPES, max_bytes=MAX_HTML_BYTES)
+    html = page.text()
     try:
-        return scrape_me(url)
+        return scrape_html(html, org_url=page.url, supported_only=True)
     except WebsiteNotImplementedError:
         # No site-specific scraper — fall back to generic schema.org parsing.
-        return scrape_html(None, url, online=True, wild_mode=True)
+        return scrape_html(html, org_url=page.url, supported_only=False)
 
 
-@celery_app.task(name="tacho.import_recipe_from_url", bind=True)
-def import_recipe_from_url(self, url: str, workspace_id: str) -> str:
+# Limites de tempo para um site lento não prender um worker indefinidamente
+# (a soft limit levanta SoftTimeLimitExceeded na task; a hard mata o processo).
+@celery_app.task(name="tacho.import_recipe_from_url", bind=True, soft_time_limit=60, time_limit=90)
+def import_recipe_from_url(self, url: str, workspace_id: str) -> dict[str, str]:
     scraper = _scrape(url)
 
     # Gerado já aqui (em vez de deixar o INSERT atribuir um) para a foto
@@ -213,6 +225,8 @@ def import_recipe_from_url(self, url: str, workspace_id: str) -> str:
         db.add(recipe)
         db.commit()
         db.refresh(recipe)
-        return str(recipe.id)
+        # A workspace segue no resultado para o endpoint de estado só revelar
+        # o recipe_id a quem pediu a importação.
+        return {"recipe_id": str(recipe.id), "workspace_id": workspace_id}
     finally:
         db.close()

@@ -1,15 +1,12 @@
-import ipaddress
 import os
 import shutil
-import socket
 import uuid
 from pathlib import Path
-from urllib.parse import urlparse
 
-import requests
 from fastapi import HTTPException, UploadFile
 
 from app.config import Settings
+from app.remote_fetch import fetch_public_url
 
 ALLOWED_CONTENT_TYPES = {
     "image/jpeg": ".jpg",
@@ -25,21 +22,6 @@ def resolve_image_path(image_path: str, settings: Settings) -> Path:
     if candidate == root or root not in candidate.parents:
         raise HTTPException(status_code=404, detail="Imagem não encontrada")
     return candidate
-
-
-def validate_remote_url(url: str) -> None:
-    """Reject URLs that resolve to local or otherwise non-public addresses."""
-    parsed = urlparse(url)
-    if parsed.scheme not in {"http", "https"} or not parsed.hostname:
-        raise ValueError("only public HTTP(S) URLs are accepted")
-    try:
-        addresses = {item[4][0] for item in socket.getaddrinfo(parsed.hostname, parsed.port or 443)}
-    except socket.gaierror as exc:
-        raise ValueError("URL hostname could not be resolved") from exc
-    for address in addresses:
-        ip = ipaddress.ip_address(address)
-        if not ip.is_global:
-            raise ValueError("URLs resolving to private or local networks are not accepted")
 
 
 def _recipe_dir(recipe_id: uuid.UUID | str, settings: Settings) -> str:
@@ -86,31 +68,16 @@ def save_recipe_image_from_url(url: str, settings: Settings, recipe_id: uuid.UUI
     ser gravada (`tasks.py` gera o uuid primeiro) para a foto cair logo na
     pasta certa."""
     try:
-        validate_remote_url(url)
-        with requests.get(url, timeout=10, stream=True, allow_redirects=False) as response:
-            response.raise_for_status()
-
-            content_type = response.headers.get("content-type", "").split(";")[0].strip()
-            ext = ALLOWED_CONTENT_TYPES.get(content_type)
-            if ext is None:
-                return None
-
-            chunks: list[bytes] = []
-            total = 0
-            for chunk in response.iter_content(chunk_size=65536):
-                total += len(chunk)
-                if total > settings.max_image_bytes:
-                    return None
-                chunks.append(chunk)
+        image = fetch_public_url(url, allowed_content_types=ALLOWED_CONTENT_TYPES, max_bytes=settings.max_image_bytes)
     except Exception:
         return None
+    ext = ALLOWED_CONTENT_TYPES[image.content_type]
 
     dir_path = _recipe_dir(recipe_id, settings)
     os.makedirs(dir_path, exist_ok=True)
     filename = f"{uuid.uuid4()}{ext}"
     with open(os.path.join(dir_path, filename), "wb") as f:
-        for chunk in chunks:
-            f.write(chunk)
+        f.write(image.content)
     return os.path.join("receitas", str(recipe_id), filename)
 
 

@@ -1,3 +1,4 @@
+import logging
 import uuid
 
 from celery.result import AsyncResult
@@ -18,13 +19,14 @@ from app.images import (
     delete_recipe_image,
     delete_recipe_images_dir,
     save_recipe_image,
-    validate_remote_url,
 )
 from app.models import User
+from app.remote_fetch import validate_remote_url
 from app.schema_org import recipe_to_schema_org
 from app.tasks import import_recipe_from_url
 
 router = APIRouter(prefix="/recipes", tags=["recipes"])
+logger = logging.getLogger(__name__)
 
 
 @router.get("/export")
@@ -157,12 +159,23 @@ async def import_recipe_from_photos(
 
 
 @router.get("/import/{task_id}", response_model=schemas.ImportStatus)
-def get_import_status(task_id: str, user: User = Depends(current_active_user)):
+def get_import_status(task_id: str, workspace_id: uuid.UUID = Depends(get_workspace_id)):
     result = AsyncResult(task_id, app=celery_app)
     if result.failed():
-        raise HTTPException(status_code=422, detail=f"Falha ao importar: {result.result}")
+        # O texto da exceção do worker pode trazer hostnames, caminhos ou
+        # detalhes internos — fica só no log do servidor.
+        logger.error("Importação %s falhou: %r\n%s", task_id, result.result, result.traceback)
+        raise HTTPException(
+            status_code=422,
+            detail="Falha ao importar esta receita. Confirma o endereço ou tenta mais tarde.",
+        )
     if result.ready():
-        return schemas.ImportStatus(task_id=task_id, status="done", recipe_id=result.result)
+        payload = result.result
+        # Só quem pediu a importação vê o recipe_id; resultados de outras
+        # workspaces (ou num formato antigo, sem workspace) ficam como 404.
+        if not isinstance(payload, dict) or payload.get("workspace_id") != str(workspace_id):
+            raise HTTPException(status_code=404, detail="Importação não encontrada")
+        return schemas.ImportStatus(task_id=task_id, status="done", recipe_id=payload.get("recipe_id"))
     return schemas.ImportStatus(task_id=task_id, status="pending")
 
 

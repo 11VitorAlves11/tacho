@@ -18,3 +18,9 @@ The production image is shared by three Compose services:
 This keeps web, worker and migrations synchronized while avoiding multiple
 release artifacts.
 
+
+Recipe import by URL runs in the worker. The HTML and the recipe photo are
+downloaded by `app/remote_fetch.py`, which only connects to validated public
+addresses, follows at most 5 redirects (each validated), and enforces size,
+content-type and time limits before `recipe-scrapers` parses the page offline.
+See [`SECURITY.md`](../SECURITY.md#recipe-import-by-url).
