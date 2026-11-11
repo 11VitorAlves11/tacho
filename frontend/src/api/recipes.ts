@@ -1,9 +1,11 @@
+import type { RecipeExportDocument } from '../lib/recipeExport'
 import { api } from './client'
 import type {
   Category,
   ImportStatus,
   Recipe,
   RecipeExtraction,
+  RecipeImportResult,
   RecipeInput,
   RecipeShare,
   RecipeSummary,
@@ -45,6 +47,13 @@ export async function listRecipes(params?: {
 export async function exportWorkspaceRecipes() {
   const { data } = await api.get('/recipes/export')
   return data as { format: string; version: number; recipes: unknown[] }
+}
+
+// `skip` (por omissão) salta receitas que já existem na workspace;
+// `duplicate` importa-as na mesma, como cópias.
+export async function importWorkspaceRecipes(document: RecipeExportDocument, mode: 'skip' | 'duplicate' = 'skip') {
+  const { data } = await api.post<RecipeImportResult>('/recipes/import-file', document, { params: { mode } })
+  return data
 }
 
 export async function getRecipe(id: string) {
