@@ -496,9 +496,11 @@ class ShoppingListItem(Base):
 
 class PantryItem(Base):
     """Produto disponível no agregado, com stock e validade opcionais.
-    Alimenta o filtro "Dá para fazer" (crud.py::
-    list_recipes, makeable_only) por correspondência de substring
-    normalizada (sem acentos) contra o nome dos ingredientes."""
+    Alimenta o filtro "Dá para fazer" (crud.py::list_recipes, makeable_only),
+    os ingredientes em falta e a exclusão na lista de compras, por
+    correspondência de palavras inteiras normalizadas (sem acentos, plurais
+    simples tolerados) contra o nome dos ingredientes — regra em
+    crud.py::_in_pantry."""
 
     __tablename__ = "pantry_items"
     __table_args__ = (UniqueConstraint("workspace_id", "name", name="uq_pantry_item_workspace_name"),)

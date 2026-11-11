@@ -1,9 +1,8 @@
 """`POST /shopping-list/generate` — documenta o comportamento atual.
 
-A exclusão pela despensa é feita por substring do nome normalizado
-(`crud.generate_shopping_list`); os casos-limite dessa comparação
-(ex. "sal" vs "salmão") são deliberadamente deixados de fora — aqui só se
-fixam os casos pretendidos, com nomes iguais.
+Aqui só se fixam os casos com nomes iguais; os casos-limite da exclusão
+pela despensa (ex. "sal" vs "salmão", plurais) estão em
+`test_api_pantry_matching.py`.
 """
 
 from collections.abc import Callable
