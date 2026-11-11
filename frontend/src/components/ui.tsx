@@ -1,7 +1,8 @@
 import { t } from '../i18n'
-import { useState, type ButtonHTMLAttributes, type HTMLAttributes, type InputHTMLAttributes, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, type ButtonHTMLAttributes, type HTMLAttributes, type InputHTMLAttributes, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from 'react'
 import type { CategoryIcon } from '../api/types'
-import { EyeIcon, EyeOffIcon, SearchIcon } from './icons'
+import { nextMenuIndex } from '../lib/menu'
+import { EyeIcon, EyeOffIcon, MoreIcon, SearchIcon } from './icons'
 
 export function Button({
   variant = 'primary',
@@ -100,6 +101,10 @@ export function SearchInput({ className = '', ...props }: InputHTMLAttributes<HT
   )
 }
 
+export function TextInput({ className = '', ...props }: InputHTMLAttributes<HTMLInputElement>) {
+  return <input className={`min-h-11 w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm text-text-primary outline-none transition focus:border-primary-forest focus:ring-2 focus:ring-primary-forest/15 ${className}`} {...props} />
+}
+
 export function PasswordInput({ className = '', ...props }: Omit<InputHTMLAttributes<HTMLInputElement>, 'type'>) {
   const [visible, setVisible] = useState(false)
   return <div className={`relative ${className}`}><input type={visible ? 'text' : 'password'} className="min-h-11 w-full rounded-xl border border-border bg-surface py-2 pl-3 pr-12 text-sm text-text-primary outline-none transition focus:border-primary-forest focus:ring-2 focus:ring-primary-forest/15" {...props} /><button type="button" onClick={() => setVisible((value) => !value)} aria-label={visible ? t('Ocultar password') : t('Mostrar password')} aria-pressed={visible} className="absolute inset-y-0 right-0 flex w-11 items-center justify-center rounded-r-xl text-text-secondary transition-colors hover:text-text-primary"><span className="flex size-5 items-center justify-center">{visible ? <EyeOffIcon className="block size-5" /> : <EyeIcon className="block size-5" />}</span></button></div>
@@ -132,11 +137,13 @@ export function BottomSheet({
   title,
   onClose,
   children,
+  footer,
 }: {
   open: boolean
   title: string
   onClose: () => void
   children: ReactNode
+  footer?: ReactNode
 }) {
   if (!open) return null
   return (
@@ -149,9 +156,67 @@ export function BottomSheet({
           <button onClick={onClose} className="min-h-11 px-2 text-sm font-semibold text-forest-text">{t('Fechar')}</button>
         </div>
         <div className="mt-4">{children}</div>
+        {footer && <div className="sticky bottom-[calc(-1.25rem-env(safe-area-inset-bottom))] -mx-5 mb-[calc(-1.25rem-env(safe-area-inset-bottom))] mt-5 flex gap-2 border-t border-border bg-surface px-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-3">{footer}</div>}
       </section>
     </div>
   )
+}
+
+export interface OverflowMenuItem {
+  label: string
+  icon?: ReactNode
+  disabled?: boolean
+  onSelect: () => void
+}
+
+export function OverflowMenu({ label, items }: { label: string; items: OverflowMenuItem[] }) {
+  const [open, setOpen] = useState(false)
+  const rootRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const id = useId()
+
+  function enabledItems() {
+    return Array.from(menuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not(:disabled)') ?? [])
+  }
+
+  function close(returnFocus: boolean) {
+    setOpen(false)
+    if (returnFocus) triggerRef.current?.focus()
+  }
+
+  useEffect(() => {
+    if (!open) return
+    enabledItems()[0]?.focus()
+    function onPointerDown(event: PointerEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false)
+    }
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') close(true)
+    }
+    document.addEventListener('pointerdown', onPointerDown)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [open])
+
+  function handleMenuKeyDown(event: ReactKeyboardEvent<HTMLDivElement>) {
+    if (event.key === 'Tab') return setOpen(false)
+    const enabled = enabledItems()
+    const next = nextMenuIndex(enabled.indexOf(document.activeElement as HTMLButtonElement), enabled.length, event.key)
+    if (next === null) return
+    event.preventDefault()
+    enabled[next].focus()
+  }
+
+  return <div ref={rootRef} className="relative">
+    <button ref={triggerRef} type="button" aria-label={label} aria-haspopup="menu" aria-expanded={open} aria-controls={open ? id : undefined} onClick={() => setOpen((value) => !value)} onKeyDown={(event) => { if (event.key === 'ArrowDown' && !open) { event.preventDefault(); setOpen(true) } }} className={`inline-flex size-10 shrink-0 items-center justify-center rounded-xl border border-border bg-surface text-text-secondary transition-colors hover:bg-muted hover:text-text-primary ${open ? 'bg-muted text-text-primary' : ''}`}><MoreIcon className="size-5" /></button>
+    {open && <div ref={menuRef} id={id} role="menu" aria-label={label} onKeyDown={handleMenuKeyDown} className="absolute right-0 top-full z-30 mt-2 min-w-52 rounded-xl border border-border bg-surface p-1.5 shadow-[0_12px_35px_rgba(20,30,24,0.14)]">
+      {items.map((item) => <button key={item.label} type="button" role="menuitem" tabIndex={-1} disabled={item.disabled} onClick={() => { close(true); item.onSelect() }} className="flex min-h-11 w-full items-center gap-2.5 rounded-lg px-3 text-left text-sm font-medium text-text-primary outline-none transition-colors hover:bg-muted focus:bg-muted disabled:opacity-50 [&_svg]:size-4 [&_svg]:text-text-secondary">{item.icon}{item.label}</button>)}
+    </div>}
+  </div>
 }
 
 export function Modal({ open, title, onClose, children }: { open: boolean; title: string; onClose: () => void; children: ReactNode }) {

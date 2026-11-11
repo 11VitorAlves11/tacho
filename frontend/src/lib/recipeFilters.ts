@@ -89,3 +89,8 @@ export function hasActiveFilter(filters: RecipeFilters): boolean {
 export function clearRecipeFilters(filters: RecipeFilters): RecipeFilters {
   return { ...DEFAULT_RECIPE_FILTERS, q: filters.q }
 }
+
+/** Tags na linha de filtros: todas quando expandida; recolhida, só as selecionadas, para um filtro ativo nunca ficar escondido. */
+export function visibleFilterTags<T extends { id: string }>(tags: T[], selectedIds: string[], expanded: boolean): T[] {
+  return expanded ? tags : tags.filter((tag) => selectedIds.includes(tag.id))
+}

@@ -5,7 +5,7 @@ import { CalendarIcon, CartIcon, FolderIcon, HomeIcon, PantryIcon, PlusIcon } fr
 const items = [
   { to: '/', label: 'Receitas', icon: HomeIcon, end: true },
   { to: '/adicionar', label: 'Adicionar receita', icon: PlusIcon },
-  { to: '/planeamento', label: 'Planeamento de Refeições', icon: CalendarIcon },
+  { to: '/planeamento', label: 'Planeamento', icon: CalendarIcon },
   { to: '/lista-compras', label: 'Lista de compras', icon: CartIcon },
   { to: '/colecoes', label: 'Coleções', icon: FolderIcon },
   { to: '/despensa', label: 'Despensa', icon: PantryIcon },

@@ -1,5 +1,5 @@
 import { t } from '../i18n'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigationType, useSearchParams } from 'react-router-dom'
 import { exportWorkspaceRecipes, importWorkspaceRecipes, listCategories, listRecipes, listTags, toggleFavorite } from '../api/recipes'
 import { listPantryItems } from '../api/pantry'
@@ -10,11 +10,11 @@ import { useAuth } from '../auth/useAuth'
 import { PageShell } from '../components/PageShell'
 import { RecipeCard } from '../components/RecipeCard'
 import { UserMenu } from '../components/UserMenu'
-import { CartIcon, HeartIcon, SlidersIcon } from '../components/icons'
-import { BottomSheet, Chip, EmptyState, ErrorState, Modal, SearchInput, Skeleton } from '../components/ui'
+import { CartIcon, ChevronDownIcon, DownloadIcon, FolderIcon, HeartIcon, SlidersIcon, UploadIcon } from '../components/icons'
+import { BottomSheet, Button, Chip, EmptyState, ErrorState, Modal, OverflowMenu, SearchInput, Skeleton } from '../components/ui'
 import { addDays, toDateKey } from '../lib/date'
 import { MAX_IMPORTED_RECIPES, parseRecipeExport, type RecipeExportError } from '../lib/recipeExport'
-import { RATING_OPTIONS, RECIPE_SORTS, clearRecipeFilters, hasActiveFilter, parseRecipeFilters, serializeRecipeFilters, type RecipeFilters } from '../lib/recipeFilters'
+import { RATING_OPTIONS, RECIPE_SORTS, clearRecipeFilters, hasActiveFilter, parseRecipeFilters, serializeRecipeFilters, visibleFilterTags, type RecipeFilters } from '../lib/recipeFilters'
 
 const SORT_LABELS: Record<RecipeSort, string> = {
   title: 'Título (A–Z)',
@@ -23,6 +23,12 @@ const SORT_LABELS: Record<RecipeSort, string> = {
   rating: 'Melhor classificadas',
   least_recently_made: 'Há mais tempo sem cozinhar',
 }
+
+const KPI_TILE = 'min-w-0 rounded-2xl border border-border bg-surface p-3 transition hover:border-primary-forest sm:p-4'
+const KPI_LABEL = 'line-clamp-2 min-h-[2lh] text-[10px] font-bold uppercase leading-tight tracking-wide text-text-secondary sm:line-clamp-1 sm:min-h-0 sm:text-xs'
+const KPI_VALUE = 'mt-1 text-xl font-bold sm:mt-2 sm:text-2xl'
+const KPI_DETAIL = 'mt-0.5 truncate text-xs text-text-secondary sm:mt-1 sm:text-sm'
+const FILTER_ROW_LABEL = 'flex min-h-10 w-24 shrink-0 items-center text-xs font-bold uppercase tracking-wide text-text-secondary'
 
 export function Home() {
   const { user } = useAuth()
@@ -39,6 +45,7 @@ export function Home() {
   const [locationKey, setLocationKey] = useState(location.key)
   const [dietaryProfiles, setDietaryProfiles] = useState<DietaryProfile[]>([])
   const [filtersOpen, setFiltersOpen] = useState(false)
+  const [tagsOpen, setTagsOpen] = useState(false)
   const [error, setError] = useState(false)
   const [upcomingMeals, setUpcomingMeals] = useState<MealPlanEntry[]>([])
   const [pantryItems, setPantryItems] = useState<PantryItem[]>([])
@@ -150,15 +157,16 @@ export function Home() {
   const firstName = user?.name?.trim().split(/\s+/)[0] ?? user?.email.split('@')[0] ?? ''
   const { categoryId, tagIds, ingredient, ratingMin, maxTotalMinutes, favorite: favoriteOnly, makeable: makeableOnly, pantrySuggestions, safeForAll, profileIds: selectedProfileIds, sort } = filters
   const hasFilter = hasActiveFilter(filters)
-  const allFilters = <>
+  const quickChips = <>
     <Chip active={favoriteOnly} onClick={() => toggleFlag('favorite')}><HeartIcon className="size-4" fill={favoriteOnly ? 'currentColor' : 'none'} /> {t('Favoritos')}</Chip>
     <Chip active={makeableOnly} onClick={() => toggleFlag('makeable')}><CartIcon className="size-4" /> {t('Dá para fazer')}</Chip>
     <Chip active={pantrySuggestions} onClick={() => toggleFlag('pantrySuggestions')}><CartIcon className="size-4" /> {t('Mais próximas')}</Chip>
     <Chip active={safeForAll} onClick={() => toggleFlag('safeForAll')}>{t('Adequadas a todos')}</Chip>
     {dietaryProfiles.map((profile) => <Chip key={profile.id} active={selectedProfileIds.includes(profile.id)} onClick={() => toggleProfile(profile.id)}>{t('Seguro:')} {profile.name}</Chip>)}
-    {categories.map((category) => <Chip key={category.id} kind="category" accentColor={category.color} icon={category.icon} active={categoryId === category.id} onClick={() => selectCategory(category.id)}>{category.name}</Chip>)}
-    {tags.map((tag) => <Chip key={tag.id} kind="tag" active={tagIds.includes(tag.id)} onClick={() => selectTag(tag.id)}>#{tag.name}</Chip>)}
   </>
+  const categoryChips = categories.map((category) => <Chip key={category.id} kind="category" accentColor={category.color} icon={category.icon} active={categoryId === category.id} onClick={() => selectCategory(category.id)}>{category.name}</Chip>)
+  const tagChip = (tag: Tag) => <Chip key={tag.id} kind="tag" active={tagIds.includes(tag.id)} onClick={() => selectTag(tag.id)}>#{tag.name}</Chip>
+  const visibleTags = visibleFilterTags(tags, tagIds, tagsOpen)
   const expiringItems = pantryItems.filter((item) => {
     if (!item.has_it || !item.expires_on) return false
     const days = Math.ceil((new Date(`${item.expires_on}T00:00:00`).getTime() - new Date().setHours(0, 0, 0, 0)) / 86400000)
@@ -172,10 +180,10 @@ export function Home() {
       <UserMenu variant="mobile" />
     </header>
 
-    <section className="mb-6 grid gap-3 sm:grid-cols-3" aria-label={t('Resumo semanal')}>
-      <Link to="/planeamento" className="rounded-2xl border border-border bg-surface p-4 transition hover:border-primary-forest"><p className="text-xs font-bold uppercase tracking-wide text-text-secondary">{t('Próximas refeições')}</p><p className="mt-2 text-2xl font-bold text-text-primary">{upcomingMeals.length}</p><p className="mt-1 line-clamp-1 text-sm text-text-secondary">{upcomingMeals[0]?.recipe.title ?? t('Completar o planeamento →')}</p></Link>
-      <Link to="/despensa" className="rounded-2xl border border-border bg-surface p-4 transition hover:border-primary-forest"><p className="text-xs font-bold uppercase tracking-wide text-text-secondary">{t('Validade próxima')}</p><p className={`mt-2 text-2xl font-bold ${expiringItems.length ? 'text-accent-orange' : 'text-text-primary'}`}>{expiringItems.length}</p><p className="mt-1 line-clamp-1 text-sm text-text-secondary">{expiringItems[0]?.name ?? t('Nenhum produto nos próximos 7 dias')}</p></Link>
-      <Link to="/lista-compras" className="rounded-2xl border border-border bg-surface p-4 transition hover:border-primary-forest"><p className="text-xs font-bold uppercase tracking-wide text-text-secondary">{t('Por comprar')}</p><p className="mt-2 text-2xl font-bold text-text-primary">{pendingShopping.length}</p><p className="mt-1 text-sm text-text-secondary">{t('artigos pendentes')}</p></Link>
+    <section className="mb-5 grid grid-cols-3 gap-2 sm:mb-6 sm:gap-3" aria-label={t('Resumo semanal')}>
+      <Link to="/planeamento" className={KPI_TILE}><p className={KPI_LABEL}>{t('Próximas refeições')}</p><p className={`${KPI_VALUE} text-text-primary`}>{upcomingMeals.length}</p><p className={KPI_DETAIL}>{upcomingMeals[0]?.recipe.title ?? t('Completar o planeamento →')}</p></Link>
+      <Link to="/despensa" className={KPI_TILE}><p className={KPI_LABEL}>{t('Validade próxima')}</p><p className={`${KPI_VALUE} ${expiringItems.length ? 'text-accent-orange' : 'text-text-primary'}`}>{expiringItems.length}</p><p className={KPI_DETAIL}>{expiringItems[0]?.name ?? t('Nenhum produto nos próximos 7 dias')}</p></Link>
+      <Link to="/lista-compras" className={KPI_TILE}><p className={KPI_LABEL}>{t('Por comprar')}</p><p className={`${KPI_VALUE} text-text-primary`}>{pendingShopping.length}</p><p className={KPI_DETAIL}>{t('artigos pendentes')}</p></Link>
     </section>
 
     <div className="flex min-w-0 items-center gap-2 sm:gap-3">
@@ -185,16 +193,21 @@ export function Home() {
 
     <section className="mt-6 hidden sm:block">
       <div className="mb-3 flex items-center justify-between"><h2 className="text-sm font-bold text-text-primary sm:text-base">{t('Filtros rápidos')}</h2>{hasFilter && <button onClick={clearFilters} className="text-xs font-semibold text-forest-text">{t('Limpar')}</button>}</div>
-      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:px-0 lg:flex-wrap">
-        <Chip active={favoriteOnly} onClick={() => toggleFlag('favorite')}><HeartIcon className="size-4" fill={favoriteOnly ? 'currentColor' : 'none'} /> {t('Favoritos')}</Chip>
-        <Chip active={makeableOnly} onClick={() => toggleFlag('makeable')}><CartIcon className="size-4" /> {t('Dá para fazer')}</Chip>
-        <Chip active={pantrySuggestions} onClick={() => toggleFlag('pantrySuggestions')}><CartIcon className="size-4" /> {t('Mais próximas')}</Chip>
-        <Chip active={safeForAll} onClick={() => toggleFlag('safeForAll')}>{t('Adequadas a todos')}</Chip>
-        {dietaryProfiles.map((profile) => <Chip key={profile.id} active={selectedProfileIds.includes(profile.id)} onClick={() => toggleProfile(profile.id)}>{t('Seguro:')} {profile.name}</Chip>)}
-        {categories.slice(0, 3).map((category) => <Chip key={category.id} kind="category" accentColor={category.color} icon={category.icon} active={categoryId === category.id} onClick={() => selectCategory(category.id)}>{category.name}</Chip>)}
+      <div className="flex gap-2 overflow-x-auto pb-1 lg:flex-wrap">
+        {quickChips}
         <Chip onClick={() => setFiltersOpen(true)} className="lg:hidden"><SlidersIcon className="size-4" /> {t('Mais')}</Chip>
-        <span className="hidden contents lg:contents">{categories.slice(3).map((category) => <Chip key={category.id} kind="category" accentColor={category.color} icon={category.icon} active={categoryId === category.id} onClick={() => selectCategory(category.id)}>{category.name}</Chip>)}{tags.map((tag) => <Chip key={tag.id} kind="tag" active={tagIds.includes(tag.id)} onClick={() => selectTag(tag.id)}>#{tag.name}</Chip>)}</span>
       </div>
+      {(categories.length > 0 || tags.length > 0) && <div className="mt-2 flex items-start gap-3">
+        <h3 className={FILTER_ROW_LABEL}>{t('Categorias')}</h3>
+        <div className="flex min-w-0 flex-1 gap-2 overflow-x-auto pb-1 lg:flex-wrap">
+          {categoryChips}
+          {tags.length > 0 && <Chip aria-pressed={undefined} aria-expanded={tagsOpen} aria-controls={visibleTags.length ? 'home-tag-filters' : undefined} onClick={() => setTagsOpen((open) => !open)}>{t('Tags')} ({tags.length}) <ChevronDownIcon className={`size-4 text-text-secondary transition-transform ${tagsOpen ? 'rotate-180' : ''}`} /></Chip>}
+        </div>
+      </div>}
+      {visibleTags.length > 0 && <div id="home-tag-filters" className="mt-2 flex items-start gap-3">
+        <h3 className={FILTER_ROW_LABEL}>{t('Tags')}</h3>
+        <div className="flex min-w-0 flex-1 gap-2 overflow-x-auto pb-1 lg:flex-wrap">{visibleTags.map(tagChip)}</div>
+      </div>}
       <div className="mt-3 hidden grid-cols-4 gap-3 lg:grid">
         <label className="text-xs font-semibold text-text-secondary">{t('Ingrediente')}<input value={ingredient} onChange={(event) => updateFilters({ ingredient: event.target.value })} placeholder={t('ex.: tomate')} className="mt-1 min-h-10 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text-primary outline-none focus:border-primary-forest" /></label>
         <label className="text-xs font-semibold text-text-secondary">{t('Classificação mínima')}<select value={ratingMin ?? ''} onChange={(event) => updateFilters({ ratingMin: event.target.value ? Number(event.target.value) : null })} className="mt-1 min-h-10 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text-primary"><option value="">{t('Qualquer')}</option>{RATING_OPTIONS.map((rating) => <option key={rating} value={rating}>{rating}{t('+ estrelas')}</option>)}</select></label>
@@ -204,14 +217,14 @@ export function Home() {
     </section>
 
     <section className="mt-8">
-      <div className="mb-4 flex items-end justify-between gap-3"><div><h2 className="text-xl font-bold tracking-tight text-text-primary lg:text-2xl">{t('Receitas')}</h2>{recipes && <p className="mt-0.5 text-sm text-text-secondary">{recipes.length} {recipes.length === 1 ? t('receita') : t('receitas')}</p>}</div><div className="flex items-center gap-3"><button type="button" onClick={() => void handleExport()} className="text-sm font-semibold text-forest-text">{t('Exportar')}</button><button type="button" disabled={importing} onClick={() => importInput.current?.click()} className="text-sm font-semibold text-forest-text disabled:opacity-50">{importing ? t('A importar…') : t('Importar')}</button><input ref={importInput} type="file" accept="application/json,.json" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; if (file) void handleImportFile(file) }} /><Link to="/colecoes" className="text-sm font-semibold text-forest-text">{t('Ver coleções')} <span aria-hidden>›</span></Link></div></div>
+      <div className="mb-4 flex items-end justify-between gap-3"><div><h2 className="text-xl font-bold tracking-tight text-text-primary lg:text-2xl">{t('Receitas')}</h2>{recipes && <p className="mt-0.5 text-sm text-text-secondary">{recipes.length} {recipes.length === 1 ? t('receita') : t('receitas')}{importing && <span role="status"> · {t('A importar…')}</span>}</p>}</div><div className="flex items-center gap-2"><Link to="/colecoes" className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-border bg-surface px-3.5 text-sm font-semibold text-text-primary transition-colors hover:border-primary-forest/40 hover:bg-primary-soft"><FolderIcon className="size-4 text-forest-text" />{t('Ver coleções')}</Link><OverflowMenu label={t('Mais ações')} items={[{ label: t('Exportar receitas'), icon: <DownloadIcon />, onSelect: () => void handleExport() }, { label: t('Importar receitas'), icon: <UploadIcon />, disabled: importing, onSelect: () => importInput.current?.click() }]} /><input ref={importInput} type="file" accept="application/json,.json" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; if (file) void handleImportFile(file) }} /></div></div>
       {error && <ErrorState>{t('Não foi possível ligar ao backend. Confirma se está a correr em')} {import.meta.env.VITE_API_URL}.</ErrorState>}
       {!error && recipes === null && <RecipeGridSkeleton />}
       {!error && recipes !== null && recipes.length === 0 && <EmptyState title={favoriteOnly ? t('Ainda não marcaste receitas favoritas.') : makeableOnly ? t('Nenhuma receita corresponde à despensa.') : t('Ainda não há receitas por aqui.')} description={t('Ajusta os filtros ou adiciona uma nova receita ao teu livro.')} action={<Link to="/adicionar" className="font-semibold text-forest-text">{t('Adicionar receita')}</Link>} />}
       {recipes && recipes.length > 0 && <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">{recipes.map((recipe) => <RecipeCard key={recipe.id} recipe={recipe} onToggleFavorite={handleToggleFavorite} />)}</div>}
     </section>
     <Modal open={Boolean(importResult || importError)} title={importError ? t('Importação falhou') : t('Importação concluída')} onClose={() => { setImportResult(null); setImportError(null) }}>{importError ? <p className="text-sm leading-relaxed text-text-secondary">{importError}</p> : importResult && <ImportSummary result={importResult} />}</Modal>
-    <BottomSheet open={filtersOpen} title={t('Filtrar receitas')} onClose={() => setFiltersOpen(false)}><div className="flex flex-wrap gap-2">{allFilters}</div><div className="mt-5 space-y-3"><label className="block text-xs font-semibold text-text-secondary">{t('Ingrediente')}<input value={ingredient} onChange={(event) => updateFilters({ ingredient: event.target.value })} placeholder={t('ex.: tomate')} className="mt-1 min-h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text-primary outline-none focus:border-primary-forest" /></label><label className="block text-xs font-semibold text-text-secondary">{t('Classificação mínima')}<select value={ratingMin ?? ''} onChange={(event) => updateFilters({ ratingMin: event.target.value ? Number(event.target.value) : null })} className="mt-1 min-h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text-primary"><option value="">{t('Qualquer')}</option>{RATING_OPTIONS.map((rating) => <option key={rating} value={rating}>{rating}{t('+ estrelas')}</option>)}</select></label><label className="block text-xs font-semibold text-text-secondary">{t('Tempo máximo')}<select value={maxTotalMinutes ?? ''} onChange={(event) => updateFilters({ maxTotalMinutes: event.target.value ? Number(event.target.value) : null })} className="mt-1 min-h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text-primary"><option value="">{t('Qualquer')}</option><option value="15">{t('15 minutos')}</option><option value="30">{t('30 minutos')}</option><option value="60">{t('1 hora')}</option><option value="120">{t('2 horas')}</option></select></label><label className="block text-xs font-semibold text-text-secondary">{t('Ordenar por')}<select value={sort} onChange={(event) => updateFilters({ sort: event.target.value as RecipeSort })} className="mt-1 min-h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text-primary">{RECIPE_SORTS.map((value) => <option key={value} value={value}>{t(SORT_LABELS[value])}</option>)}</select></label>{hasFilter && <button onClick={clearFilters} className="min-h-11 w-full rounded-xl border border-border text-sm font-semibold text-forest-text">{t('Limpar todos os filtros')}</button>}</div></BottomSheet>
+    <BottomSheet open={filtersOpen} title={t('Filtrar receitas')} onClose={() => setFiltersOpen(false)} footer={<>{hasFilter && <Button variant="secondary" onClick={clearFilters} className="flex-1">{t('Limpar todos os filtros')}</Button>}<Button onClick={() => setFiltersOpen(false)} className="flex-1">{t('Fechar')}</Button></>}><div className="space-y-5"><FilterGroup title={t('Filtros rápidos')}>{quickChips}</FilterGroup>{categories.length > 0 && <FilterGroup title={t('Categorias')}>{categoryChips}</FilterGroup>}{tags.length > 0 && <FilterGroup title={t('Tags')}>{tags.map(tagChip)}</FilterGroup>}</div><div className="mt-5 space-y-3"><label className="block text-xs font-semibold text-text-secondary">{t('Ingrediente')}<input value={ingredient} onChange={(event) => updateFilters({ ingredient: event.target.value })} placeholder={t('ex.: tomate')} className="mt-1 min-h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text-primary outline-none focus:border-primary-forest" /></label><label className="block text-xs font-semibold text-text-secondary">{t('Classificação mínima')}<select value={ratingMin ?? ''} onChange={(event) => updateFilters({ ratingMin: event.target.value ? Number(event.target.value) : null })} className="mt-1 min-h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text-primary"><option value="">{t('Qualquer')}</option>{RATING_OPTIONS.map((rating) => <option key={rating} value={rating}>{rating}{t('+ estrelas')}</option>)}</select></label><label className="block text-xs font-semibold text-text-secondary">{t('Tempo máximo')}<select value={maxTotalMinutes ?? ''} onChange={(event) => updateFilters({ maxTotalMinutes: event.target.value ? Number(event.target.value) : null })} className="mt-1 min-h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text-primary"><option value="">{t('Qualquer')}</option><option value="15">{t('15 minutos')}</option><option value="30">{t('30 minutos')}</option><option value="60">{t('1 hora')}</option><option value="120">{t('2 horas')}</option></select></label><label className="block text-xs font-semibold text-text-secondary">{t('Ordenar por')}<select value={sort} onChange={(event) => updateFilters({ sort: event.target.value as RecipeSort })} className="mt-1 min-h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text-primary">{RECIPE_SORTS.map((value) => <option key={value} value={value}>{t(SORT_LABELS[value])}</option>)}</select></label></div></BottomSheet>
   </PageShell>
 }
 
@@ -237,6 +250,10 @@ function ImportSummary({ result }: { result: RecipeImportResult }) {
     {result.images_not_imported > 0 && <p>{t('As fotografias não fazem parte da exportação — {count} receitas importadas ficaram sem foto.', { count: result.images_not_imported })}</p>}
     {skipped.length > 0 && <ul className="max-h-60 space-y-1 overflow-y-auto">{skipped.map((item, index) => <li key={index}><span className="font-medium text-text-primary">{item.title}</span> — {importReason(item)}</li>)}</ul>}
   </div>
+}
+
+function FilterGroup({ title, children }: { title: string; children: ReactNode }) {
+  return <div><h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-text-secondary">{title}</h3><div className="flex flex-wrap gap-2">{children}</div></div>
 }
 
 function RecipeGridSkeleton() {

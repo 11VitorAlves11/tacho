@@ -263,6 +263,14 @@ export function MoreIcon(props: SVGProps<SVGSVGElement>) {
   return <svg {...base} {...props}><circle cx="5" cy="12" r="1" fill="currentColor" stroke="none" /><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none" /><circle cx="19" cy="12" r="1" fill="currentColor" stroke="none" /></svg>
 }
 
+export function DownloadIcon(props: SVGProps<SVGSVGElement>) {
+  return <svg {...base} {...props}><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5M5 19h14" /></svg>
+}
+
+export function UploadIcon(props: SVGProps<SVGSVGElement>) {
+  return <svg {...base} {...props}><path d="M12 15V4M7.5 8.5 12 4l4.5 4.5M5 19h14" /></svg>
+}
+
 export function EyeIcon(props: SVGProps<SVGSVGElement>) {
   return <svg {...base} {...props}><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" /><circle cx="12" cy="12" r="2.75" /></svg>
 }
