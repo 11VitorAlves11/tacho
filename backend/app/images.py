@@ -1,21 +1,48 @@
+import io
 import ipaddress
+import logging
 import os
 import shutil
 import socket
 import uuid
 from pathlib import Path
+from typing import Literal
 from urllib.parse import urlparse
 
 import requests
 from fastapi import HTTPException, UploadFile
+from PIL import Image, ImageOps
+from starlette.concurrency import run_in_threadpool
 
 from app.config import Settings
+
+logger = logging.getLogger(__name__)
 
 ALLOWED_CONTENT_TYPES = {
     "image/jpeg": ".jpg",
     "image/png": ".png",
     "image/webp": ".webp",
 }
+# Formato Pillow esperado para cada tipo declarado — o `content-type` vem do
+# cliente (ou do site importado) e não prova nada sobre os bytes.
+PIL_FORMATS = {
+    "image/jpeg": "JPEG",
+    "image/png": "PNG",
+    "image/webp": "WEBP",
+}
+INVALID_IMAGE_DETAIL = "Formato de imagem não suportado (usa JPEG, PNG ou WEBP)."
+
+ImageSize = Literal["thumb", "medium"]
+# Variantes derivadas, gravadas ao lado do original como
+# `<uuid>.<tamanho>.webp`. O original fica intacto e continua a ser o
+# ficheiro canónico (`image_path`/`filename` na BD não mudam); as variantes
+# podem ser apagadas e voltam a ser geradas a pedido (`ensure_variant`).
+VARIANT_MAX_WIDTH: dict[ImageSize, int] = {"thumb": 480, "medium": 1200}
+VARIANT_QUALITY = 80
+
+
+class InvalidImageError(ValueError):
+    """Os bytes não descodificam como imagem do formato esperado."""
 
 
 def resolve_image_path(image_path: str, settings: Settings) -> Path:
@@ -25,6 +52,114 @@ def resolve_image_path(image_path: str, settings: Settings) -> Path:
     if candidate == root or root not in candidate.parents:
         raise HTTPException(status_code=404, detail="Imagem não encontrada")
     return candidate
+
+
+def variant_path(image_path: str, size: ImageSize) -> str:
+    """Caminho relativo da variante `size` de uma imagem guardada
+    ("receitas/<r>/<f>.jpg" -> "receitas/<r>/<f>.thumb.webp"). Funciona
+    também com caminhos antigos, planos. Passar sempre o resultado por
+    `resolve_image_path` antes de tocar no disco."""
+    return f"{os.path.splitext(image_path)[0]}.{size}.webp"
+
+
+def _load_image(source: bytes | Path, expected_format: str | None = None) -> Image.Image:
+    """Descodifica e valida a imagem por inteiro e aplica a orientação EXIF.
+
+    `formats` restringe os descodificadores tentados: um ficheiro declarado
+    como PNG que na verdade é outra coisa falha aqui. `draft` deixa o
+    descodificador JPEG reduzir já na leitura (DCT escalado) para o menor
+    tamanho que ainda cobre a maior variante — uma foto de 24 MP ocupa ~4x
+    menos memória. `Image.MAX_IMAGE_PIXELS` (omissão do Pillow) trava
+    bombas de descompressão com `DecompressionBombError`."""
+    formats = [expected_format] if expected_format else list(PIL_FORMATS.values())
+    largest = max(VARIANT_MAX_WIDTH.values())
+
+    def open_image() -> Image.Image:
+        return Image.open(io.BytesIO(source) if isinstance(source, bytes) else source, formats=formats)
+
+    try:
+        with open_image() as probe:
+            probe.verify()
+        with open_image() as image:
+            image.draft(None, (largest, largest))
+            image.load()
+            oriented = ImageOps.exif_transpose(image)
+    except Exception as exc:
+        # O Pillow levanta tipos variados para ficheiros corrompidos
+        # (OSError, SyntaxError, struct.error, DecompressionBombError...).
+        raise InvalidImageError(str(exc)) from exc
+    # Perfis ICC de CMYK/cinzento não servem para a saída RGB.
+    icc_profile = image.info.get("icc_profile") if image.mode in {"RGB", "RGBA"} else None
+    converted = oriented.convert("RGBA" if oriented.has_transparency_data else "RGB")
+    converted.info = {"icc_profile": icc_profile} if icc_profile else {}
+    return converted
+
+
+def _resize_to_width(image: Image.Image, max_width: int) -> Image.Image:
+    if image.width <= max_width:
+        return image
+    height = max(1, round(image.height * max_width / image.width))
+    resized = image.resize((max_width, height), Image.Resampling.LANCZOS)
+    resized.info = image.info
+    return resized
+
+
+def _write_variant(image: Image.Image, target: Path) -> None:
+    """Grava em ficheiro temporário + `os.replace` — dois pedidos a gerar
+    a mesma variante ao mesmo tempo nunca deixam um ficheiro meio escrito.
+    Só o perfil ICC passa para a variante; EXIF/XMP (ex.: GPS) não."""
+    tmp = target.with_name(f".{target.name}.{uuid.uuid4().hex}.tmp")
+    try:
+        image.save(
+            tmp,
+            "WEBP",
+            quality=VARIANT_QUALITY,
+            exif=b"",
+            xmp=b"",
+            icc_profile=image.info.get("icc_profile", b""),
+        )
+        os.replace(tmp, target)
+    finally:
+        tmp.unlink(missing_ok=True)
+
+
+def _write_variants(image: Image.Image, original: Path) -> None:
+    """Gera todas as variantes de uma imagem já descodificada. Best-effort:
+    o original já está gravado e `ensure_variant` volta a tentar a pedido,
+    por isso uma falha aqui (ex.: disco cheio) não chumba o upload."""
+    try:
+        # Da maior para a menor: cada redução parte da anterior.
+        for size in sorted(VARIANT_MAX_WIDTH, key=VARIANT_MAX_WIDTH.__getitem__, reverse=True):
+            image = _resize_to_width(image, VARIANT_MAX_WIDTH[size])
+            _write_variant(image, Path(variant_path(str(original), size)))
+    except Exception:
+        logger.warning("Falha a gerar variantes de %s", original, exc_info=True)
+
+
+def ensure_variant(image_path: str, size: ImageSize, settings: Settings) -> Path:
+    """Devolve o caminho absoluto da variante, gerando-a se faltar (ex.:
+    imagens anteriores às variantes). Levanta `InvalidImageError` se o
+    original não descodificar e `FileNotFoundError` se não existir."""
+    target = resolve_image_path(variant_path(image_path, size), settings)
+    if target.is_file():
+        return target
+    original = resolve_image_path(image_path, settings)
+    if not original.is_file():
+        raise FileNotFoundError(image_path)
+    _write_variant(_resize_to_width(_load_image(original), VARIANT_MAX_WIDTH[size]), target)
+    return target
+
+
+def _store_recipe_image(data: bytes, content_type: str, settings: Settings, recipe_id: uuid.UUID | str) -> str:
+    """Valida os bytes, grava o original tal como veio e gera as variantes."""
+    image = _load_image(data, PIL_FORMATS[content_type])
+    dir_path = _recipe_dir(recipe_id, settings)
+    os.makedirs(dir_path, exist_ok=True)
+    filename = f"{uuid.uuid4()}{ALLOWED_CONTENT_TYPES[content_type]}"
+    original = Path(dir_path) / filename
+    original.write_bytes(data)
+    _write_variants(image, original)
+    return os.path.join("receitas", str(recipe_id), filename)
 
 
 def validate_remote_url(url: str) -> None:
@@ -58,21 +193,20 @@ async def save_recipe_image(file: UploadFile, settings: Settings, recipe_id: uui
     """Valida e grava a foto em disco, devolvendo o caminho relativo (a
     partir de `images_dir`) a guardar em `Recipe.image_path`/
     `RecipeImage.filename`."""
-    ext = ALLOWED_CONTENT_TYPES.get(file.content_type or "")
-    if ext is None:
-        raise HTTPException(status_code=422, detail="Formato de imagem não suportado (usa JPEG, PNG ou WEBP).")
+    content_type = file.content_type or ""
+    if content_type not in ALLOWED_CONTENT_TYPES:
+        raise HTTPException(status_code=422, detail=INVALID_IMAGE_DETAIL)
 
     contents = await file.read()
     if len(contents) > settings.max_image_bytes:
         max_mb = settings.max_image_bytes // (1024 * 1024)
         raise HTTPException(status_code=422, detail=f"Imagem demasiado grande (máx. {max_mb}MB).")
 
-    dir_path = _recipe_dir(recipe_id, settings)
-    os.makedirs(dir_path, exist_ok=True)
-    filename = f"{uuid.uuid4()}{ext}"
-    with open(os.path.join(dir_path, filename), "wb") as f:
-        f.write(contents)
-    return os.path.join("receitas", str(recipe_id), filename)
+    try:
+        # Descodificar/redimensionar é CPU puro — fora do event loop.
+        return await run_in_threadpool(_store_recipe_image, contents, content_type, settings, recipe_id)
+    except InvalidImageError:
+        raise HTTPException(status_code=422, detail=INVALID_IMAGE_DETAIL)
 
 
 def save_recipe_image_from_url(url: str, settings: Settings, recipe_id: uuid.UUID | str) -> str | None:
@@ -91,8 +225,7 @@ def save_recipe_image_from_url(url: str, settings: Settings, recipe_id: uuid.UUI
             response.raise_for_status()
 
             content_type = response.headers.get("content-type", "").split(";")[0].strip()
-            ext = ALLOWED_CONTENT_TYPES.get(content_type)
-            if ext is None:
+            if content_type not in ALLOWED_CONTENT_TYPES:
                 return None
 
             chunks: list[bytes] = []
@@ -102,16 +235,11 @@ def save_recipe_image_from_url(url: str, settings: Settings, recipe_id: uuid.UUI
                 if total > settings.max_image_bytes:
                     return None
                 chunks.append(chunk)
+        # Bytes que não descodificam como o tipo anunciado também caem no
+        # `except` — receita importada sem foto, como antes.
+        return _store_recipe_image(b"".join(chunks), content_type, settings, recipe_id)
     except Exception:
         return None
-
-    dir_path = _recipe_dir(recipe_id, settings)
-    os.makedirs(dir_path, exist_ok=True)
-    filename = f"{uuid.uuid4()}{ext}"
-    with open(os.path.join(dir_path, filename), "wb") as f:
-        for chunk in chunks:
-            f.write(chunk)
-    return os.path.join("receitas", str(recipe_id), filename)
 
 
 def copy_recipe_image(image_path: str, settings: Settings, new_recipe_id: uuid.UUID | str) -> str | None:
@@ -120,7 +248,11 @@ def copy_recipe_image(image_path: str, settings: Settings, new_recipe_id: uuid.U
     receitas a apontar para o mesmo ficheiro — apagar uma apagaria a foto
     da outra. Funciona tanto a partir de um caminho novo (`receitas/<id>/
     <ficheiro>`) como de um caminho antigo, plano, anterior a esta
-    organização por pastas."""
+    organização por pastas.
+
+    A origem já está no disco (foi validada ao entrar), por isso é copiada
+    byte a byte; as variantes da cópia são geradas a partir dela, em
+    best-effort, tal como num upload."""
     ext = os.path.splitext(image_path)[1]
     src = resolve_image_path(image_path, settings)
     if not src.is_file():
@@ -128,15 +260,22 @@ def copy_recipe_image(image_path: str, settings: Settings, new_recipe_id: uuid.U
     dir_path = _recipe_dir(new_recipe_id, settings)
     os.makedirs(dir_path, exist_ok=True)
     filename = f"{uuid.uuid4()}{ext}"
-    shutil.copyfile(src, os.path.join(dir_path, filename))
+    destination = Path(dir_path) / filename
+    shutil.copyfile(src, destination)
+    try:
+        _write_variants(_load_image(destination), destination)
+    except InvalidImageError:
+        logger.warning("Imagem copiada não descodifica: %s", destination)
     return os.path.join("receitas", str(new_recipe_id), filename)
 
 
 def delete_recipe_image(image_path: str, settings: Settings) -> None:
-    try:
-        os.remove(resolve_image_path(image_path, settings))
-    except OSError:
-        pass
+    """Apaga o original e as variantes derivadas dele."""
+    for path in (image_path, *(variant_path(image_path, size) for size in VARIANT_MAX_WIDTH)):
+        try:
+            os.remove(resolve_image_path(path, settings))
+        except OSError:
+            pass
 
 
 def delete_recipe_images_dir(recipe_id: uuid.UUID | str, settings: Settings) -> None:
