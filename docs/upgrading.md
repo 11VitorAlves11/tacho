@@ -28,6 +28,16 @@ The `migrate` service applies each Alembic migration once before web and worker
 start. Never start a newer application against a database whose migration job
 failed.
 
+## Release-specific notes
+
+### Unreleased
+
+- Adds one migration (`876b063c0d21`, table `shopping_list_item_sources`) that
+  links shopping list items to the recipes they came from. It only creates a
+  new table; existing items keep working and simply show no source recipes.
+  Rolling back follows the rule above: restore the pre-upgrade backup rather
+  than downgrading.
+
 ## Rollback
 
 If no database migration ran, set `TACHO_VERSION` back to the previous version

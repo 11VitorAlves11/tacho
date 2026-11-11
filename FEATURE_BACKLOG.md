@@ -89,7 +89,10 @@ Tornar a lista gerada pelo plano semanal mais útil no momento das compras.
 - Excluir ou assinalar produtos já disponíveis na despensa.
 - Permitir adicionar artigos manuais.
 - Permitir marcar, desmarcar e remover artigos.
-- Indicar quais receitas originaram cada artigo.
+- Indicar quais receitas originaram cada artigo (concluído: cada artigo guarda
+  as receitas de origem, mostradas como links na lista; um ingrediente já
+  listado recebe também a nova receita).
+- Limpar de uma vez os artigos já comprados (concluído).
 
 ### 5. Receitas possíveis com a despensa atual
 
