@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { daysBetween, expiryStatus, formatDateKey, parseDateKey } from './date'
+import { daysBetween, expiryStatus, formatDateKey, formatRelativeDays, parseDateKey } from './date'
 
 const today = new Date(2026, 10, 11, 18, 30)
 
@@ -32,5 +32,25 @@ describe('expiry', () => {
 
   it('shows the date when expiry is far away', () => {
     expect(expiryStatus('2026-11-19', today)).toEqual({ tone: 'later', label: 'Validade: 19/11/2026' })
+  })
+})
+
+const now = new Date(2026, 10, 11, 9, 30)
+
+describe('formatRelativeDays', () => {
+  it('counts calendar days in local time, not elapsed hours', () => {
+    expect(formatRelativeDays(new Date(2026, 10, 10, 23, 50).toISOString(), now, 'pt-PT')).toBe('ontem')
+    expect(formatRelativeDays(new Date(2026, 10, 11, 0, 5).toISOString(), now, 'pt-PT')).toBe('hoje')
+  })
+
+  it('localises the phrase for the requested language', () => {
+    expect(formatRelativeDays(new Date(2026, 10, 8).toISOString(), now, 'pt-PT')).toBe('há 3 dias')
+    expect(formatRelativeDays(new Date(2026, 10, 8).toISOString(), now, 'en')).toBe('3 days ago')
+  })
+
+  it('switches to weeks, months and years for older dates', () => {
+    expect(formatRelativeDays(new Date(2026, 9, 28).toISOString(), now, 'pt-PT')).toBe('há 2 semanas')
+    expect(formatRelativeDays(new Date(2026, 7, 1).toISOString(), now, 'en')).toBe('3 months ago')
+    expect(formatRelativeDays(new Date(2024, 10, 1).toISOString(), now, 'en')).toBe('2 years ago')
   })
 })
