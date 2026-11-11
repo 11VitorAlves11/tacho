@@ -2,6 +2,7 @@ import { t } from '../i18n'
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { getPublicRecipe, publicRecipeImageUrl } from '../api/public'
+import { recipeHeroSrcSet } from '../api/recipes'
 import type { PublicRecipe as PublicRecipeType } from '../api/types'
 import { Brand } from '../components/Brand'
 import { ClockIcon, ServingsIcon } from '../components/icons'
@@ -59,7 +60,9 @@ export function PublicRecipe() {
         <article className="rounded-2xl bg-surface p-5 shadow-[0_2px_10px_-2px_rgba(28,43,31,0.12)] sm:p-8">
           {recipe.image_path && (
             <img
-              src={publicRecipeImageUrl(token!)}
+              src={publicRecipeImageUrl(token!, 'medium')}
+              srcSet={recipeHeroSrcSet(publicRecipeImageUrl(token!, 'medium'), publicRecipeImageUrl(token!))}
+              sizes="(min-width: 896px) 832px, 100vw"
               alt=""
               className="aspect-video w-full rounded-2xl object-cover"
             />

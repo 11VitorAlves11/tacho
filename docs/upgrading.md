@@ -28,6 +28,21 @@ The `migrate` service applies each Alembic migration once before web and worker
 start. Never start a newer application against a database whose migration job
 failed.
 
+## Pre-generating image variants
+
+Photos uploaded before image variants existed get their thumbnail and medium
+WebP variants the first time they are displayed.
+To create them all up front instead (optional, idempotent, prints a summary):
+
+```bash
+docker compose exec web ./docker-entrypoint.sh python -m scripts.generate_image_variants
+```
+
+The command goes through the entrypoint so the production secrets are loaded
+into the environment. With the development stack, use
+`docker compose -f docker-compose.dev.yml exec backend python -m scripts.generate_image_variants`.
+Variants are derived files; deleting them is harmless.
+
 ## Rollback
 
 If no database migration ran, set `TACHO_VERSION` back to the previous version

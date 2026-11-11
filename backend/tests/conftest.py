@@ -14,6 +14,7 @@ síncrono — por isso cada pedido faz commit normalmente e a limpeza é feita
 antes do teste seguinte.
 """
 
+import io
 import os
 import uuid
 from collections.abc import AsyncGenerator, Callable, Iterator
@@ -24,6 +25,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 from fastapi_users.password import PasswordHelper
+from PIL import Image
 from sqlalchemy import Engine, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -197,10 +199,15 @@ def create_recipe() -> Callable[..., dict[str, Any]]:
     return factory
 
 
-PNG_BYTES = (
-    b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89"
-    b"\x00\x00\x00\rIDATx\x9cc\xf8\xff\xff?\x00\x05\xfe\x02\xfe\xa7V\xbd\xfa\x00\x00\x00\x00IEND\xaeB`\x82"
-)
+def _png_bytes() -> bytes:
+    """PNG 2x2 real, gerado pelo Pillow — os uploads são validados byte a byte
+    (`app.images._load_image`), por isso um cabeçalho forjado já não chega."""
+    buffer = io.BytesIO()
+    Image.new("RGB", (2, 2), (67, 191, 80)).save(buffer, "PNG")
+    return buffer.getvalue()
+
+
+PNG_BYTES = _png_bytes()
 
 
 @pytest.fixture

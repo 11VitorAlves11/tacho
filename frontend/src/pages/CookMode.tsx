@@ -147,7 +147,10 @@ export function CookMode() {
     if (!recipe || !('serviceWorker' in navigator)) return
     const apiBase = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
     const urls = [`${apiBase}/recipes/${recipe.id}`]
-    if (recipe.image_path) urls.push(recipeImageUrl(recipe.image_path))
+    // O Modo Cozinha não mostra a foto; quem a mostra offline é o detalhe
+    // da receita, cujo `srcSet` escolhe entre `medium` e o original
+    // consoante o ecrã — o SW compara o URL exato, por isso guardam-se os dois.
+    if (recipe.image_path) urls.push(recipeImageUrl(recipe.image_path, 'medium'), recipeImageUrl(recipe.image_path))
     navigator.serviceWorker.ready
       .then((registration) => registration.active?.postMessage({ type: 'CACHE_ACTIVE_RECIPE', urls }))
       .catch(() => {})

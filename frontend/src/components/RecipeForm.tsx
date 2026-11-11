@@ -104,7 +104,7 @@ export function RecipeForm({
 
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(
-    initial?.image_path ? recipeImageUrl(initial.image_path) : null,
+    initial?.image_path ? recipeImageUrl(initial.image_path, 'medium') : null,
   )
   const imageInputRef = useRef<HTMLInputElement>(null)
 

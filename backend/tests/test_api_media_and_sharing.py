@@ -8,8 +8,8 @@ from fastapi.testclient import TestClient
 from sqlalchemy import update
 from sqlalchemy.orm import Session
 
+from app import images
 from app.models import Recipe
-from app.routers import media
 
 CreateRecipe = Callable[..., dict[str, Any]]
 PngUpload = Callable[[], dict[str, Any]]
@@ -92,13 +92,13 @@ def test_media_rejects_traversal_even_when_stored_in_database(
     db.execute(update(Recipe).where(Recipe.id == recipe["id"]).values(image_path="../secret.txt"))
     db.commit()
     resolved: list[str] = []
-    original = media.resolve_image_path
+    original = images.resolve_image_path
 
     def spy(image_path: str, settings: Any) -> Path:
         resolved.append(image_path)
         return original(image_path, settings)
 
-    monkeypatch.setattr(media, "resolve_image_path", spy)
+    monkeypatch.setattr(images, "resolve_image_path", spy)
 
     response = client.get("/media/..%2Fsecret.txt")
 

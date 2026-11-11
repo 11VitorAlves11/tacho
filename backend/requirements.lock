@@ -131,6 +131,8 @@ mf2py==2.0.1
     # via extruct
 packaging==26.3
     # via kombu
+pillow==13.0.0
+    # via tacho
 prompt-toolkit==3.0.53
     # via click-repl
 psycopg2-binary==2.9.12

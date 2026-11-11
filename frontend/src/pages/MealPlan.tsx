@@ -210,7 +210,7 @@ function RecipePicker({ recipes, onAssign, variant = 'add' }: { recipes: RecipeS
 
 function RecipePhoto({ recipe, className = '' }: { recipe: RecipeSummary; className?: string }) {
   return recipe.image_path
-    ? <img src={recipeImageUrl(recipe.image_path)} alt="" className={`object-cover ${className}`} />
+    ? <img src={recipeImageUrl(recipe.image_path, 'thumb')} loading="lazy" decoding="async" alt="" className={`object-cover ${className}`} />
     : <div aria-hidden="true" className={`flex items-center justify-center bg-primary-soft text-2xl text-forest-text/40 ${className}`}>♨</div>
 }
 
