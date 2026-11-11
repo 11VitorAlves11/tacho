@@ -62,6 +62,7 @@ def list_recipes(
     pantry_suggestions: bool = False,
     safe_for_all: bool = False,
     profile_ids: str | None = None,
+    sort: crud.RecipeSort = "title",
     db: Session = Depends(get_db),
     workspace_id: uuid.UUID = Depends(get_workspace_id),
     user: User = Depends(current_active_user),
@@ -93,6 +94,7 @@ def list_recipes(
         pantry_suggestions=pantry_suggestions,
         safe_for_all=safe_for_all,
         dietary_profile_ids=parsed_profile_ids,
+        sort=sort,
     )
 
 

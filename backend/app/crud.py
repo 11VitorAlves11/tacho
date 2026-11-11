@@ -3,8 +3,9 @@ import secrets
 import unicodedata
 import uuid
 from datetime import UTC, date, datetime, timedelta
+from typing import Literal
 
-from sqlalchemy import func, select
+from sqlalchemy import ColumnElement, func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app import models, schemas
@@ -29,6 +30,26 @@ def _prefix_tsquery(q: str) -> str | None:
     if not words:
         return None
     return " & ".join(f"{word}:*" for word in words)
+
+
+RecipeSort = Literal["title", "newest", "updated", "rating", "least_recently_made"]
+
+
+def _recipe_order_by(sort: RecipeSort) -> list[ColumnElement]:
+    """Cláusulas ORDER BY de cada ordenação da lista de receitas. O título
+    entra sempre como desempate para a ordem ser estável entre pedidos.
+    Em "há mais tempo sem cozinhar", as nunca cozinhadas (NULL) vêm
+    primeiro; em "melhor classificadas", as sem classificação vão para o fim."""
+    title = models.Recipe.title.asc()
+    if sort == "newest":
+        return [models.Recipe.created_at.desc(), title]
+    if sort == "updated":
+        return [models.Recipe.updated_at.desc(), title]
+    if sort == "rating":
+        return [models.Recipe.rating.desc().nulls_last(), title]
+    if sort == "least_recently_made":
+        return [models.Recipe.last_made_at.asc().nulls_first(), title]
+    return [title]
 
 
 def _recipe_query(workspace_id: uuid.UUID):
@@ -154,6 +175,7 @@ def list_recipes(
     pantry_suggestions: bool = False,
     safe_for_all: bool = False,
     dietary_profile_ids: list[uuid.UUID] | None = None,
+    sort: RecipeSort = "title",
 ) -> list[models.Recipe]:
     query = _recipe_query(workspace_id)
     if category_id is not None:
@@ -181,7 +203,7 @@ def list_recipes(
             query = query.where(
                 func.to_tsvector("portuguese", models.Recipe.title).op("@@")(func.to_tsquery("portuguese", tsquery))
             )
-    recipes = list(db.scalars(query.order_by(models.Recipe.title)))
+    recipes = list(db.scalars(query.order_by(*_recipe_order_by(sort))))
     pantry_query = select(models.PantryItem.name).where(
         models.PantryItem.workspace_id == workspace_id, models.PantryItem.has_it.is_(True)
     )
@@ -191,7 +213,12 @@ def list_recipes(
     if makeable_only:
         recipes = [r for r in recipes if _is_makeable(r, normalized_pantry)]
     if pantry_suggestions:
-        recipes.sort(key=lambda recipe: (recipe.missing_ingredient_count, recipe.title.lower()))
+        # Ingredientes em falta mandam sempre; o sort é estável, por isso a
+        # ordenação escolhida (vinda do SQL) fica como desempate.
+        if sort == "title":
+            recipes.sort(key=lambda recipe: (recipe.missing_ingredient_count, recipe.title.lower()))
+        else:
+            recipes.sort(key=lambda recipe: recipe.missing_ingredient_count)
     if safe_for_all:
         recipes = [recipe for recipe in recipes if not recipe.dietary_warnings]
     return _annotate_favorites(db, user_id, recipes)
