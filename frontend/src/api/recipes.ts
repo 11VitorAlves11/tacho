@@ -105,6 +105,14 @@ export async function addMissingRecipeIngredientsToShoppingList(id: string) {
   return data
 }
 
+// O detalhe (RecipeOut) não traz a disponibilidade face à despensa; só a
+// listagem a calcula. Procura a receita pelo título e devolve os nomes em
+// falta, ou null quando não a encontra (fica tudo como antes).
+export async function getRecipeMissingIngredients(recipe: { id: string; title: string }) {
+  const summaries = await listRecipes({ q: recipe.title })
+  return summaries.find((summary) => summary.id === recipe.id)?.missing_ingredients ?? null
+}
+
 export async function toggleFavorite(id: string) {
   const { data } = await api.post<Recipe>(`/recipes/${id}/favorite`)
   return data
