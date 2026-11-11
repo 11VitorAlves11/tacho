@@ -448,6 +448,25 @@ class PantryPriceHistory(BaseModel):
     monthly_totals: list[MonthlySpend]
 
 
+class ReceiptLine(BaseModel):
+    name: str
+    quantity: float | None = None
+    unit: str | None = None
+    price: float | None = None
+
+
+class ReceiptExtraction(BaseModel):
+    """Rascunho de uma fatura lida pelo Gemini, com preços — mesmo
+    princípio de `PantryExtraction`: nunca grava sozinho; o cliente revê
+    as linhas e confirma em `POST /pantry/receipt/confirm`.
+    `purchased_on` é texto ISO (YYYY-MM-DD) por ser o formato pedido ao
+    modelo; `gemini._clean_receipt` descarta-o se não for uma data válida."""
+
+    store: str | None = None
+    purchased_on: str | None = None
+    items: list[ReceiptLine] = []
+
+
 class ReceiptConfirmLine(BaseModel):
     name: str = Field(min_length=1, max_length=160)
     quantity: float | None = Field(default=None, gt=0, le=_MAX_AMOUNT)

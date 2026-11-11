@@ -12,11 +12,14 @@ de saúde (nutrição): um LLM pode "corrigir" quantidades/texto
 silenciosamente — por isso isto nunca grava sozinho, só alimenta um
 rascunho para revisão manual (ver schemas.RecipeExtraction)."""
 
+from datetime import date
+
 from google import genai
 from google.genai import types
 
 from app import schemas
 from app.config import Settings
+from app.images import ALLOWED_CONTENT_TYPES
 
 _MODEL = "gemini-flash-latest"
 
@@ -114,3 +117,62 @@ def extract_pantry_items_from_image(settings: Settings, image: tuple[bytes, str]
     data, content_type = image
     part = types.Part.from_bytes(data=data, mime_type=content_type)
     return _extract(settings, [_RECEIPT_PROMPT, part], schemas.PantryExtraction, lambda _r: True)
+
+
+_RECEIPT_PRICES_PROMPT = (
+    "Esta é uma foto de uma fatura/talão de supermercado em português. "
+    "Devolve JSON com: store (nome da loja, se visível), purchased_on "
+    "(data da compra no formato AAAA-MM-DD, se visível) e items — uma "
+    "linha por artigo alimentar ou de despensa comprado, com name (nome "
+    "genérico, em português europeu, minúsculas e no singular, ex. "
+    "'IOG NAT MIMOSA 4X125G' sai como 'iogurte natural'), quantity e unit "
+    "(quantidade comprada e unidade, ex. 0.5 e 'kg', 4 e 'un', se "
+    "indicadas) e price (total pago pela linha, em euros, número decimal "
+    "com ponto, já com os descontos dessa linha aplicados). Ignora linhas "
+    "que não são artigos comprados (total, subtotal, IVA, NIF, morada, "
+    "pagamento, troco, cartão de cliente) e artigos não alimentares "
+    "(sacos, higiene, limpeza). Não inventes valores que não estão na "
+    "imagem — deixa a null em vez de adivinhar; se não conseguires ler a "
+    "fatura, devolve items vazio."
+)
+
+
+def _clean_receipt(extraction: schemas.ReceiptExtraction, today: date) -> schemas.ReceiptExtraction:
+    """O resultado do modelo é só um rascunho, mas não deve chegar ao
+    cliente com valores impossíveis: datas inválidas ou futuras, preços
+    negativos e quantidades não positivas passam a null; linhas sem nome
+    são descartadas."""
+    purchased_on = None
+    if extraction.purchased_on:
+        try:
+            parsed: date | None = date.fromisoformat(extraction.purchased_on.strip())
+        except ValueError:
+            parsed = None
+        if parsed is not None and parsed <= today:
+            purchased_on = parsed.isoformat()
+    items = [
+        schemas.ReceiptLine(
+            name=line.name.strip(),
+            quantity=line.quantity if line.quantity is not None and line.quantity > 0 else None,
+            unit=(line.unit or "").strip() or None,
+            price=line.price if line.price is not None and line.price >= 0 else None,
+        )
+        for line in extraction.items
+        if line.name.strip()
+    ]
+    return schemas.ReceiptExtraction(
+        store=(extraction.store or "").strip() or None, purchased_on=purchased_on, items=items
+    )
+
+
+def extract_receipt(settings: Settings, image: tuple[bytes, str]) -> schemas.ReceiptExtraction | None:
+    """`image`: (bytes, content_type) de uma fatura. Rascunho com loja, data
+    e linhas com preço para revisão no frontend (`POST /pantry/receipt/
+    confirm`), nunca grava direto. None sem chave, com imagem vazia ou de
+    tipo não suportado, ou se o modelo falhar (ver `_extract`)."""
+    data, content_type = image
+    if not data or content_type not in ALLOWED_CONTENT_TYPES or not is_available(settings):
+        return None
+    part = types.Part.from_bytes(data=data, mime_type=content_type)
+    extraction = _extract(settings, [_RECEIPT_PRICES_PROMPT, part], schemas.ReceiptExtraction, lambda _r: True)
+    return _clean_receipt(extraction, date.today()) if extraction is not None else None

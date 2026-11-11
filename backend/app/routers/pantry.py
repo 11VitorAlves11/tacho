@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile
 from sqlalchemy.orm import Session
 
 from app import crud, gemini, schemas
-from app.config import get_settings
+from app.config import Settings, get_settings
 from app.database import get_db
 from app.deps import get_workspace_id
 from app.images import ALLOWED_CONTENT_TYPES
@@ -37,6 +37,14 @@ async def import_pantry_from_receipt(
     workspace_id: uuid.UUID = Depends(get_workspace_id),
 ):
     settings = get_settings()
+    image = await _read_receipt_image(file, settings)
+    extraction = gemini.extract_pantry_items_from_image(settings, image)
+    if extraction is None:
+        raise HTTPException(status_code=422, detail="Não foi possível reconhecer artigos nesta fatura.")
+    return extraction
+
+
+async def _read_receipt_image(file: UploadFile, settings: Settings) -> tuple[bytes, str]:
     if not gemini.is_available(settings):
         raise HTTPException(status_code=422, detail="Leitura de fatura não está configurada (sem GEMINI_API_KEY).")
 
@@ -47,14 +55,26 @@ async def import_pantry_from_receipt(
     if len(contents) > settings.max_image_bytes:
         max_mb = settings.max_image_bytes // (1024 * 1024)
         raise HTTPException(status_code=422, detail=f"Imagem demasiado grande (máx. {max_mb}MB).")
+    return contents, content_type
 
-    extraction = gemini.extract_pantry_items_from_image(settings, (contents, content_type))
+
+# Fatura com preços: mesmo fluxo de rascunho de "/import/receipt", mas o
+# Gemini devolve também loja, data e preço por linha. Só grava em
+# "/receipt/confirm", depois de o utilizador rever as linhas.
+# ⚠️ Não testado contra a API Gemini real — ver app/gemini.py.
+@router.post("/receipt", response_model=schemas.ReceiptExtraction)
+async def read_receipt(
+    file: UploadFile,
+    workspace_id: uuid.UUID = Depends(get_workspace_id),
+):
+    settings = get_settings()
+    image = await _read_receipt_image(file, settings)
+    extraction = gemini.extract_receipt(settings, image)
     if extraction is None:
         raise HTTPException(status_code=422, detail="Não foi possível reconhecer artigos nesta fatura.")
     return extraction
 
 
-# Grava uma fatura já revista pelo utilizador (ver crud.confirm_receipt).
 @router.post("/receipt/confirm", response_model=schemas.ReceiptConfirmOut, status_code=201)
 def confirm_receipt(
     payload: schemas.ReceiptConfirmIn,

@@ -1,10 +1,14 @@
+from collections.abc import Callable
 from datetime import date, timedelta
 from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
 
-from app import crud
+from app import crud, gemini, schemas
+from app.config import get_settings
+
+Upload = Callable[[], dict[str, tuple[str, bytes, str]]]
 
 
 def months_ago(months: int, day: int = 10) -> date:
@@ -176,3 +180,42 @@ def test_receipt_confirm_validation(client: TestClient) -> None:
     payload = {"purchased_on": future, "items": [{"name": "Ovos", "price": 1}]}
     assert client.post("/pantry/receipt/confirm", json=payload).status_code == 422
     assert client.get("/pantry").json() == []
+
+
+def test_read_receipt_requires_gemini(client: TestClient, png_upload: Upload, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(get_settings(), "gemini_api_key", None)
+    response = client.post("/pantry/receipt", files=png_upload())
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Leitura de fatura não está configurada (sem GEMINI_API_KEY)."
+
+
+def test_read_receipt_returns_draft_without_writing(
+    client: TestClient, png_upload: Upload, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(get_settings(), "gemini_api_key", "fake-key")
+    calls: list[tuple[bytes, str]] = []
+
+    def fake_extract(_settings: Any, image: tuple[bytes, str]) -> schemas.ReceiptExtraction:
+        calls.append(image)
+        return schemas.ReceiptExtraction(
+            store="Mercado",
+            purchased_on="2026-01-15",
+            items=[schemas.ReceiptLine(name="arroz", quantity=1, unit="kg", price=1.29)],
+        )
+
+    monkeypatch.setattr(gemini, "extract_receipt", fake_extract)
+    response = client.post("/pantry/receipt", files=png_upload())
+    assert response.status_code == 200, response.text
+    assert response.json() == {
+        "store": "Mercado",
+        "purchased_on": "2026-01-15",
+        "items": [{"name": "arroz", "quantity": 1, "unit": "kg", "price": 1.29}],
+    }
+    assert calls[0][1] == "image/png"
+    assert client.get("/pantry").json() == []
+
+    bad_type = client.post("/pantry/receipt", files={"file": ("a.gif", b"GIF89a", "image/gif")})
+    assert bad_type.status_code == 422
+
+    monkeypatch.setattr(gemini, "extract_receipt", lambda _settings, _image: None)
+    assert client.post("/pantry/receipt", files=png_upload()).status_code == 422
