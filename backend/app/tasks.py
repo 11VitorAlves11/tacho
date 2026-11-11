@@ -166,7 +166,7 @@ def _scrape(url: str) -> AbstractScraper:
 
 
 @celery_app.task(name="tacho.import_recipe_from_url", bind=True)
-def import_recipe_from_url(self, url: str, workspace_id: str) -> str:
+def import_recipe_from_url(self, url: str, workspace_id: str) -> dict[str, str]:
     scraper = _scrape(url)
 
     # Gerado já aqui (em vez de deixar o INSERT atribuir um) para a foto
@@ -223,6 +223,8 @@ def import_recipe_from_url(self, url: str, workspace_id: str) -> str:
         db.add(recipe)
         db.commit()
         db.refresh(recipe)
-        return str(recipe.id)
+        # A workspace segue no resultado para o endpoint de estado só revelar
+        # o recipe_id a quem pediu a importação.
+        return {"recipe_id": str(recipe.id), "workspace_id": workspace_id}
     finally:
         db.close()
