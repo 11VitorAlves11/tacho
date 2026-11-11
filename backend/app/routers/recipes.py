@@ -18,9 +18,9 @@ from app.images import (
     delete_recipe_image,
     delete_recipe_images_dir,
     save_recipe_image,
-    validate_remote_url,
 )
 from app.models import User
+from app.remote_fetch import validate_remote_url
 from app.schema_org import recipe_to_schema_org
 from app.tasks import import_recipe_from_url
 
