@@ -2,7 +2,7 @@ import { t, getLanguage } from '../i18n'
 import { useEffect, useState, type FormEvent } from 'react'
 import { createPriceEntry, deletePriceEntry, listPriceEntries } from '../api/pantry'
 import type { PantryItem, PantryPriceEntry } from '../api/types'
-import { toDateKey } from '../lib/date'
+import { formatDateKey, toDateKey } from '../lib/date'
 import { lastPriceLabel } from '../lib/prices'
 import { XIcon } from './icons'
 import { PriceLineChart } from './PriceCharts'
@@ -66,8 +66,8 @@ export function PantryPricePanel({ item, onChanged }: { item: PantryItem; onChan
         <ul className="divide-y divide-border">
           {entries.map((entry) => (
             <li key={entry.id} className="flex items-center gap-2 py-2 text-sm">
-              <span className="min-w-0 flex-1"><span className="block font-medium text-text-primary">{lastPriceLabel(entry)}</span><span className="block truncate text-xs text-text-secondary">{new Date(`${entry.purchased_on}T00:00:00`).toLocaleDateString(getLanguage())}{entry.quantity !== null && ` · ${entry.quantity.toLocaleString(getLanguage())}${entry.unit ? ` ${entry.unit}` : ''}`}{entry.store && ` · ${entry.store}`}{entry.source === 'receipt' && ` · ${t('fatura')}`}</span></span>
-              <button type="button" onClick={() => remove(entry)} aria-label={t('Apagar preço de {date}', { date: entry.purchased_on })} className="shrink-0 rounded-full p-1.5 text-text-secondary hover:bg-muted"><XIcon className="size-4" /></button>
+              <span className="min-w-0 flex-1"><span className="block font-medium text-text-primary">{lastPriceLabel(entry)}</span><span className="block truncate text-xs text-text-secondary">{formatDateKey(entry.purchased_on)}{entry.quantity !== null && ` · ${entry.quantity.toLocaleString(getLanguage())}${entry.unit ? ` ${entry.unit}` : ''}`}{entry.store && ` · ${entry.store}`}{entry.source === 'receipt' && ` · ${t('fatura')}`}</span></span>
+              <button type="button" onClick={() => remove(entry)} aria-label={t('Apagar preço de {date}', { date: formatDateKey(entry.purchased_on) })} className="shrink-0 rounded-full p-1.5 text-text-secondary hover:bg-muted"><XIcon className="size-4" /></button>
             </li>
           ))}
         </ul>

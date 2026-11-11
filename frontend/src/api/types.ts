@@ -231,10 +231,6 @@ export interface PantryItemInput {
   minimum_quantity?: number | null
 }
 
-export interface PantryExtraction {
-  items: string[]
-}
-
 export interface CookbookSummary {
   id: string
   name: string

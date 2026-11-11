@@ -92,4 +92,10 @@ describe('bar chart', () => {
     expect(chart.bars[1]).toMatchObject({ height: 100, y: 10 })
     expect(chart.bars[1].x).toBeGreaterThan(chart.bars[0].x + chart.bars[0].width)
   })
+
+  it('caps the bar width on wide charts and keeps each bar centred in its slot', () => {
+    const chart = buildBarChart([{ month: '2026-01', total: 5 }, { month: '2026-02', total: 10 }], { ...box, width: 1040 }, 40)
+    expect(chart.bars.map((bar) => bar.width)).toEqual([40, 40])
+    expect(chart.bars.map((bar) => bar.x)).toEqual([267.5, 762.5])
+  })
 })

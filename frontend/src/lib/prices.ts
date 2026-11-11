@@ -109,12 +109,13 @@ export interface BarChart {
   max: number
 }
 
-export function buildBarChart(totals: MonthlySpend[], box: ChartBox): BarChart {
+/** `maxBarWidth` evita barras largas demais quando o gráfico ocupa um ecrã inteiro. */
+export function buildBarChart(totals: MonthlySpend[], box: ChartBox, maxBarWidth = Infinity): BarChart {
   const innerWidth = box.width - box.left - box.right
   const innerHeight = box.height - box.top - box.bottom
   const max = niceCeiling(Math.max(0, ...totals.map((entry) => entry.total)))
   const slot = totals.length ? innerWidth / totals.length : innerWidth
-  const width = round(slot * 0.62)
+  const width = round(Math.min(slot * 0.62, maxBarWidth))
   const bars = totals.map((entry, index) => {
     const height = round((entry.total / max) * innerHeight)
     return { x: round(box.left + slot * index + (slot - width) / 2), y: round(box.top + innerHeight - height), width, height, month: entry.month, total: entry.total }
