@@ -161,7 +161,7 @@ function ShoppingListRow({
   onDelete: () => void
 }) {
   return (
-    <li className="flex min-h-14 items-center gap-3 rounded-xl border border-border bg-surface p-3">
+    <li className="flex min-h-14 min-w-0 items-center gap-3 rounded-xl border border-border bg-surface p-3">
       <button
         type="button"
         onClick={onToggle}
