@@ -2,6 +2,7 @@ import re
 import secrets
 import unicodedata
 import uuid
+from collections.abc import Iterable
 from datetime import UTC, date, datetime, timedelta
 from typing import Literal
 
@@ -18,6 +19,50 @@ def _normalize(text: str) -> str:
     decomposed = unicodedata.normalize("NFKD", text)
     without_accents = "".join(c for c in decomposed if not unicodedata.combining(c))
     return without_accents.lower().strip()
+
+
+# Correspondência despensa ↔ ingrediente (lista de compras, "dá para fazer",
+# ingredientes em falta, sugestões). Regra: ambos os nomes passam por
+# `_normalize` e são partidos em palavras (tudo o que não é letra separa);
+# um item da despensa cobre o ingrediente se CADA palavra do item existir,
+# como palavra inteira, no nome do ingrediente. Assim "sal" não cobre
+# "salmão" nem "salsa", "ovo" não cobre "novo", "azeite" cobre "azeite
+# virgem" mas "azeite virgem" não cobre "azeite". Itens da despensa sem
+# letras (vazios, só espaços/números) são ignorados.
+#
+# Plurais (tolerância conservadora, ver `_word_forms`): duas palavras
+# correspondem se partilharem uma forma — a própria palavra, sem "s" final,
+# sem "es" final, e "-ões"/"-ães" -> "-ão" (pães ≈ pão, limões ≈ limão).
+# Cada forma reduzida tem de manter pelo menos 3 letras.
+#
+# Limitação aceite: um item de uma palavra cobre qualquer ingrediente que
+# contenha essa palavra — "alho" na despensa cobre "alho francês".
+_WORD_RE = re.compile(r"[^\W\d_]+")
+_MIN_STEM = 3
+
+PantryTokens = list[tuple[frozenset[str], ...]]
+
+
+def _word_forms(word: str) -> frozenset[str]:
+    forms = {word}
+    for suffix, replacement in (("oes", "ao"), ("aes", "ao"), ("es", ""), ("s", "")):
+        if word.endswith(suffix) and len(word) - len(suffix) + len(replacement) >= _MIN_STEM:
+            forms.add(word[: -len(suffix)] + replacement)
+    return frozenset(forms)
+
+
+def _name_forms(name: str) -> tuple[frozenset[str], ...]:
+    return tuple(_word_forms(word) for word in _WORD_RE.findall(_normalize(name)))
+
+
+def _pantry_tokens(pantry_names: Iterable[str]) -> PantryTokens:
+    """Pré-calcula as formas de cada item da despensa uma vez por pedido."""
+    return [tokens for tokens in map(_name_forms, pantry_names) if tokens]
+
+
+def _in_pantry(ingredient_name: str, pantry: PantryTokens) -> bool:
+    ingredient_forms = frozenset[str]().union(*_name_forms(ingredient_name))
+    return any(all(forms & ingredient_forms for forms in tokens) for tokens in pantry)
 
 
 def _prefix_tsquery(q: str) -> str | None:
@@ -90,28 +135,24 @@ def _annotate_favorites(db: Session, user_id: uuid.UUID, recipes: list[models.Re
     return recipes
 
 
-def _is_makeable(recipe: models.Recipe, normalized_pantry: list[str]) -> bool:
+def _is_makeable(recipe: models.Recipe, pantry: PantryTokens) -> bool:
     ingredients = [i for i in recipe.ingredients if not i.is_header]
     if not ingredients:
         return False
-    return all(
-        any(pantry_name in _normalize(ingredient.name) for pantry_name in normalized_pantry)
-        for ingredient in ingredients
-    )
+    return all(_in_pantry(ingredient.name, pantry) for ingredient in ingredients)
 
 
-def _missing_ingredients(recipe: models.Recipe, normalized_pantry: list[str]) -> list[str]:
+def _missing_ingredients(recipe: models.Recipe, pantry: PantryTokens) -> list[str]:
     return [
         ingredient.name
         for ingredient in recipe.ingredients
-        if not ingredient.is_header
-        and not any(pantry_name in _normalize(ingredient.name) for pantry_name in normalized_pantry)
+        if not ingredient.is_header and not _in_pantry(ingredient.name, pantry)
     ]
 
 
-def _annotate_availability(recipes: list[models.Recipe], normalized_pantry: list[str]) -> list[models.Recipe]:
+def _annotate_availability(recipes: list[models.Recipe], pantry: PantryTokens) -> list[models.Recipe]:
     for recipe in recipes:
-        missing = _missing_ingredients(recipe, normalized_pantry)
+        missing = _missing_ingredients(recipe, pantry)
         recipe.missing_ingredients = missing
         recipe.missing_ingredient_count = len(missing)
         recipe.is_makeable = bool(recipe.ingredients) and len(missing) == 0
@@ -141,7 +182,7 @@ def _annotate_dietary_warnings(
 
 
 def _annotate_substitution_suggestions(
-    db: Session, workspace_id: uuid.UUID, recipes: list[models.Recipe], normalized_pantry: list[str]
+    db: Session, workspace_id: uuid.UUID, recipes: list[models.Recipe], pantry: PantryTokens
 ) -> list[models.Recipe]:
     substitutions = list(
         db.scalars(
@@ -151,7 +192,7 @@ def _annotate_substitution_suggestions(
     for recipe in recipes:
         suggestions = []
         for ingredient in recipe.ingredients:
-            if ingredient.is_header or any(name in _normalize(ingredient.name) for name in normalized_pantry):
+            if ingredient.is_header or _in_pantry(ingredient.name, pantry):
                 continue
             for substitution in substitutions:
                 if _normalize(substitution.ingredient_name) in _normalize(ingredient.name):
@@ -207,11 +248,11 @@ def list_recipes(
     pantry_query = select(models.PantryItem.name).where(
         models.PantryItem.workspace_id == workspace_id, models.PantryItem.has_it.is_(True)
     )
-    normalized_pantry = [_normalize(name) for name in db.scalars(pantry_query)]
-    _annotate_availability(recipes, normalized_pantry)
+    pantry = _pantry_tokens(db.scalars(pantry_query))
+    _annotate_availability(recipes, pantry)
     _annotate_dietary_warnings(db, workspace_id, recipes, dietary_profile_ids)
     if makeable_only:
-        recipes = [r for r in recipes if _is_makeable(r, normalized_pantry)]
+        recipes = [r for r in recipes if _is_makeable(r, pantry)]
     if pantry_suggestions:
         # Ingredientes em falta mandam sempre; o sort é estável, por isso a
         # ordenação escolhida (vinda do SQL) fica como desempate.
@@ -238,16 +279,15 @@ def get_recipe(
     if user_id is not None:
         recipe = _annotate_favorites(db, user_id, [recipe])[0]
         recipe = _annotate_dietary_warnings(db, workspace_id, [recipe])[0]
-        normalized_pantry = [
-            _normalize(name)
-            for name in db.scalars(
+        pantry = _pantry_tokens(
+            db.scalars(
                 select(models.PantryItem.name).where(
                     models.PantryItem.workspace_id == workspace_id,
                     models.PantryItem.has_it.is_(True),
                 )
             )
-        ]
-        recipe = _annotate_substitution_suggestions(db, workspace_id, [recipe], normalized_pantry)[0]
+        )
+        recipe = _annotate_substitution_suggestions(db, workspace_id, [recipe], pantry)[0]
     return recipe
 
 
@@ -870,9 +910,8 @@ def suggest_meal_plan(db: Session, workspace_id: uuid.UUID, user_id: uuid.UUID, 
     recipes = list_recipes(db, workspace_id, user_id, pantry_suggestions=True, safe_for_all=True)
     if not recipes:
         return []
-    expiring_names = [
-        _normalize(name)
-        for name in db.scalars(
+    expiring = _pantry_tokens(
+        db.scalars(
             select(models.PantryItem.name).where(
                 models.PantryItem.workspace_id == workspace_id,
                 models.PantryItem.has_it.is_(True),
@@ -880,14 +919,10 @@ def suggest_meal_plan(db: Session, workspace_id: uuid.UUID, user_id: uuid.UUID, 
                 models.PantryItem.expires_on <= week_start + timedelta(days=7),
             )
         )
-    ]
+    )
 
     def uses_expiring_product(recipe: models.Recipe) -> bool:
-        return any(
-            pantry_name in _normalize(ingredient.name)
-            for ingredient in recipe.ingredients
-            for pantry_name in expiring_names
-        )
+        return any(_in_pantry(ingredient.name, expiring) for ingredient in recipe.ingredients)
 
     recipes.sort(
         key=lambda recipe: (
@@ -1292,7 +1327,7 @@ def generate_shopping_list(db: Session, workspace_id: uuid.UUID, week_start: dat
         models.PantryItem.workspace_id == workspace_id,
         models.PantryItem.has_it.is_(True),
     )
-    pantry_names = [_normalize(name) for name in db.scalars(pantry_query)]
+    pantry = _pantry_tokens(db.scalars(pantry_query))
 
     aggregated: dict[tuple[str, str], tuple[str, float, bool, str | None]] = {}
     for entry in entries:
@@ -1300,7 +1335,7 @@ def generate_shopping_list(db: Session, workspace_id: uuid.UUID, week_start: dat
             if ingredient.is_header:
                 continue
             normalized_name = _normalize(ingredient.name)
-            if normalized_name in existing_names or any(name in normalized_name for name in pantry_names):
+            if normalized_name in existing_names or _in_pantry(ingredient.name, pantry):
                 continue
             normalized_unit = _normalize(ingredient.unit or "")
             key = (normalized_name, normalized_unit)
@@ -1333,8 +1368,10 @@ def generate_shopping_list(db: Session, workspace_id: uuid.UUID, week_start: dat
 def add_recipe_to_shopping_list(
     db: Session, workspace_id: uuid.UUID, recipe_id: uuid.UUID
 ) -> list[models.ShoppingListItem] | None:
-    """Mesma lógica de dedup de `generate_shopping_list`, mas a partir dos
-    ingredientes de uma única receita em vez de todo o plano semanal.
+    """Mesma lógica de dedup de `generate_shopping_list` (nomes normalizados),
+    mas a partir dos ingredientes de uma única receita em vez de todo o plano
+    semanal. Não exclui o que já está na despensa — isso é o
+    `add_missing_recipe_ingredients_to_shopping_list`.
     Devolve só os itens novos (não a lista toda), para o frontend poder
     mostrar "N ingredientes adicionados" sem ter de comparar antes/depois."""
     recipe = get_recipe(db, workspace_id, recipe_id)
@@ -1344,16 +1381,17 @@ def add_recipe_to_shopping_list(
     existing_query = select(models.ShoppingListItem.name).where(
         models.ShoppingListItem.workspace_id == workspace_id, models.ShoppingListItem.is_checked.is_(False)
     )
-    existing_names = set(db.scalars(existing_query))
+    existing_names = {_normalize(name) for name in db.scalars(existing_query)}
 
     new_items: list[models.ShoppingListItem] = []
     seen_this_run: set[str] = set()
     for ingredient in recipe.ingredients:
         if ingredient.is_header:
             continue
-        if ingredient.name in existing_names or ingredient.name in seen_this_run:
+        normalized_name = _normalize(ingredient.name)
+        if normalized_name in existing_names or normalized_name in seen_this_run:
             continue
-        seen_this_run.add(ingredient.name)
+        seen_this_run.add(normalized_name)
         item = models.ShoppingListItem(
             workspace_id=workspace_id,
             name=ingredient.name,
@@ -1378,7 +1416,7 @@ def add_missing_recipe_ingredients_to_shopping_list(
         models.PantryItem.workspace_id == workspace_id,
         models.PantryItem.has_it.is_(True),
     )
-    pantry_names = [_normalize(name) for name in db.scalars(pantry_query)]
+    pantry = _pantry_tokens(db.scalars(pantry_query))
     existing_query = select(models.ShoppingListItem.name).where(
         models.ShoppingListItem.workspace_id == workspace_id,
         models.ShoppingListItem.is_checked.is_(False),
@@ -1393,7 +1431,7 @@ def add_missing_recipe_ingredients_to_shopping_list(
             ingredient.is_header
             or normalized_name in existing_names
             or normalized_name in seen
-            or any(pantry_name in normalized_name for pantry_name in pantry_names)
+            or _in_pantry(ingredient.name, pantry)
         ):
             continue
         seen.add(normalized_name)
