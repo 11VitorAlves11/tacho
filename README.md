@@ -104,7 +104,7 @@ to each browser, so household members can use different preferences.
 
 | | What you can do |
 |---|---|
-| **Recipe book** | Create and edit recipes with ingredients, steps, photographs and galleries. Organise them with categories, tags and collections; keep favourites and ratings. |
+| **Recipe book** | Create and edit recipes with ingredients, steps, photographs and galleries. Organise them with categories, tags and collections; keep favourites and ratings. Sort the list and keep filters in a shareable URL. |
 | **Import and export** | Import recipes from supported websites. Export individual recipes as schema.org data or the household recipe collection as versioned JSON. Optional Gemini extraction handles text and photographs. |
 | **Cooking mode** | Follow steps in a full-screen view, use timers and scale portions. The active recipe can be cached for interruptions in connectivity. |
 | **Meal planning** | Assign recipes to the week, copy weeks, save templates, repeat meals and request suggestions. |

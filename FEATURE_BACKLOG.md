@@ -77,7 +77,12 @@ Facilitar a descoberta de receitas dentro de bibliotecas maiores.
 - Filtrar por tempo de preparação e confeção.
 - Combinar vários filtros simultaneamente.
 - Permitir limpar todos os filtros rapidamente.
-- Preservar os filtros ao abrir uma receita e regressar à pesquisa.
+- ~~Preservar os filtros ao abrir uma receita e regressar à pesquisa.~~
+  Concluído: filtros, pesquisa e ordenação ficam no URL (`?q=…&sort=…`), que
+  também pode ser partilhado.
+- ~~Ordenar receitas~~ Concluído: por título, mais recentes, atualizadas
+  recentemente, melhor classificadas ou há mais tempo sem cozinhar
+  (`GET /recipes?sort=`).
 
 ### 4. Lista de compras consolidada
 
