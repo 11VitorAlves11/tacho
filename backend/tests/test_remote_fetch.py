@@ -261,3 +261,8 @@ def test_recipe_image_download_rejects_redirect_to_private_address(
     )
     assert save_recipe_image_from_url("https://cdn.example/photo.jpg", settings, uuid.uuid4()) is None
     assert session.requested == ["https://cdn.example/photo.jpg"]
+
+
+def test_import_task_has_time_limits() -> None:
+    assert tasks.import_recipe_from_url.soft_time_limit == 60
+    assert tasks.import_recipe_from_url.time_limit == 90

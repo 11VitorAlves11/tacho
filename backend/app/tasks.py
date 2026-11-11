@@ -165,7 +165,9 @@ def _scrape(url: str) -> AbstractScraper:
         return scrape_html(html, org_url=page.url, supported_only=False)
 
 
-@celery_app.task(name="tacho.import_recipe_from_url", bind=True)
+# Limites de tempo para um site lento não prender um worker indefinidamente
+# (a soft limit levanta SoftTimeLimitExceeded na task; a hard mata o processo).
+@celery_app.task(name="tacho.import_recipe_from_url", bind=True, soft_time_limit=60, time_limit=90)
 def import_recipe_from_url(self, url: str, workspace_id: str) -> dict[str, str]:
     scraper = _scrape(url)
 
