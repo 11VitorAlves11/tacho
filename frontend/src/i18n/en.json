@@ -280,11 +280,7 @@
   "← Lista de Compras": "← Shopping list",
   "Marca o que tens em casa — usado no filtro \"Dá para fazer\" das receitas.": "Record what you have at home — used by the \"Ready to cook\" recipe filter.",
   "A ler a fatura…": "Reading receipt…",
-  "Ler fatura do supermercado": "Read grocery receipt",
   "Não foi possível reconhecer artigos nesta fatura. Tenta outra foto, com boa luz e a fatura inteira enquadrada.": "Could not recognise items in this receipt. Try another photo with good lighting and the whole receipt visible.",
-  "Reconhecidos": "Recognised",
-  "artigo(s) — confirma antes de adicionar à despensa.": "item(s) — review before adding to the pantry.",
-  "A adicionar…": "Adding…",
   "A despensa está vazia.": "Your pantry is empty.",
   "Adiciona os ingredientes que costumas ter em casa.": "Add the ingredients you usually keep at home.",
   "Adicionar ingrediente…": "Add ingredient…",
@@ -434,7 +430,6 @@
   "Retirar {name} da sugestão": "Remove {name} from the suggestion",
   "Aplicar {count} sugestões": "Apply {count} suggestions",
   "Repetir {name}": "Repeat {name}",
-  "Adicionar {count} à despensa": "Add {count} to the pantry",
   "Remover {name} da despensa": "Remove {name} from the pantry",
   "Validade: {date}": "Expires: {date}",
   "{count} ingredientes adicionados à lista de compras.": "{count} ingredients added to the shopping list.",
@@ -495,7 +490,7 @@
   "Preço (€)": "Price (€)",
   "Total: {total}": "Total: {total}",
   "Guardar {count} artigo(s)": "Save {count} item(s)",
-  "Ler fatura com preços": "Read receipt with prices",
+  "Ler fatura": "Read receipt",
   "{items} produto(s) atualizados na despensa e {prices} preço(s) registados.": "{items} pantry item(s) updated and {prices} price(s) recorded.",
   "Rever fatura": "Review receipt"
 }

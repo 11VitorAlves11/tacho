@@ -1,6 +1,5 @@
 import { api } from './client'
 import type {
-  PantryExtraction,
   PantryItem,
   PantryItemInput,
   PantryPriceEntry,
@@ -18,18 +17,6 @@ export async function listPantryItems() {
 
 export async function createPantryItem(payload: PantryItemInput & { name: string }) {
   const { data } = await api.post<PantryItem>('/pantry', payload)
-  return data
-}
-
-export async function importPantryFromReceipt(file: File) {
-  const formData = new FormData()
-  formData.append('file', file)
-  const { data } = await api.post<PantryExtraction>('/pantry/import/receipt', formData)
-  return data
-}
-
-export async function bulkCreatePantryItems(names: string[]) {
-  const { data } = await api.post<PantryItem[]>('/pantry/bulk', { names })
   return data
 }
 
