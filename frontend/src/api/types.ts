@@ -258,12 +258,18 @@ export interface DietaryProfile {
   created_at: string
 }
 
+export interface ShoppingListItemSource {
+  id: string
+  title: string
+}
+
 export interface ShoppingListItem {
   id: string
   name: string
   quantity: string | null
   is_checked: boolean
   created_at: string
+  sources: ShoppingListItemSource[]
 }
 
 export interface CurrentUser {

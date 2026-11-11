@@ -433,5 +433,9 @@
   "{day} às {time}": "{day} at {time}",
   "{progress}% da lista concluída": "{progress}% of the list completed",
   "Desmarcar {name}": "Uncheck {name}",
-  "Marcar {name} como comprado": "Mark {name} as purchased"
+  "Marcar {name} como comprado": "Mark {name} as purchased",
+  "Limpar comprados": "Clear purchased",
+  "Limpar itens comprados?": "Clear purchased items?",
+  "Os {count} itens marcados como comprados são removidos da lista.": "The {count} items marked as purchased will be removed from the list.",
+  "Receitas de origem": "Source recipes"
 }

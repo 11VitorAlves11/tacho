@@ -94,3 +94,8 @@ export async function updateShoppingListItem(
 export async function deleteShoppingListItem(id: string) {
   await api.delete(`/shopping-list/${id}`)
 }
+
+export async function clearCheckedShoppingListItems() {
+  const { data } = await api.delete<{ deleted: number }>('/shopping-list/checked')
+  return data.deleted
+}
