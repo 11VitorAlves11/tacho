@@ -105,7 +105,7 @@ to each browser, so household members can use different preferences.
 | | What you can do |
 |---|---|
 | **Recipe book** | Create and edit recipes with ingredients, steps, photographs and galleries. Organise them with categories, tags and collections; keep favourites and ratings. Sort the list and keep filters in a shareable URL. |
-| **Import and export** | Import recipes from supported websites. Export individual recipes as schema.org data or the household recipe collection as versioned JSON. Optional Gemini extraction handles text and photographs. |
+| **Import and export** | Import recipes from supported websites. Export individual recipes as schema.org data or the household recipe collection as versioned JSON, and import that JSON back without creating duplicates. Optional Gemini extraction handles text and photographs. |
 | **Cooking mode** | Follow steps in a full-screen view, use timers and scale portions. The active recipe can be cached for interruptions in connectivity. |
 | **Meal planning** | Assign recipes to the week, copy weeks, save templates, repeat meals and request suggestions. |
 | **Shared shopping list** | Generate ingredients from the meal plan, add your own items, see which recipes each item came from, mark purchases as complete and clear bought items in one go. |
@@ -201,7 +201,8 @@ docker compose up -d --wait
 ```
 
 The [backup and restore guide](docs/backup-restore.md) covers recovery and verification.
-Recipe JSON exports are useful for portability; they do not replace a full installation backup.
+Recipe JSON exports are useful for portability; they do not replace a full installation backup
+(see [import/export format](docs/backup-restore.md#recipe-export-and-import)).
 
 ## Development and documentation
 

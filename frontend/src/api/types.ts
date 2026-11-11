@@ -217,6 +217,23 @@ export interface ImportStatus {
   recipe_id: string | null
 }
 
+export interface RecipeImportItem {
+  title: string
+  status: 'imported' | 'skipped'
+  reason: 'duplicate' | 'duplicate_in_file' | 'invalid' | null
+  detail: string | null
+  recipe_id: string | null
+}
+
+export interface RecipeImportResult {
+  imported: number
+  skipped: number
+  created_categories: string[]
+  created_tags: string[]
+  images_not_imported: number
+  items: RecipeImportItem[]
+}
+
 export type MealType = 'pequeno_almoco' | 'almoco' | 'lanche' | 'jantar'
 
 export interface MealPlanEntry {

@@ -1,6 +1,6 @@
 import uuid
 from datetime import date, datetime
-from typing import Annotated
+from typing import Annotated, Any, Literal
 
 from fastapi_users import schemas as fu_schemas
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, HttpUrl, StringConstraints
@@ -308,6 +308,87 @@ class PublicRecipeOut(BaseModel):
     steps: list[StepOut]
     categories: list[CategoryOut]
     tags: list[TagOut]
+
+
+RECIPE_EXPORT_FORMAT = "tacho.recipe-export"
+MAX_IMPORTED_RECIPES = 500
+
+# Limites das colunas (Integer, Numeric(10,2), Numeric(6,1), Numeric(8,2)) —
+# validados por receita na importação, para um valor fora do intervalo
+# ficar reportado como entrada inválida em vez de rebentar o INSERT (e a
+# transação do ficheiro inteiro) com um DataError do Postgres.
+Int32 = Annotated[int, Field(ge=-2_147_483_648, le=2_147_483_647)]
+NonEmptyText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+
+
+class RecipeExportDocument(BaseModel):
+    """Envelope de `GET /recipes/export`, aceite de volta por
+    `POST /recipes/import-file`. As receitas ficam cruas aqui —
+    cada uma é validada à parte (`RecipeImportEntry`) para uma entrada
+    malformada ser reportada sem invalidar o ficheiro todo."""
+
+    format: Literal["tacho.recipe-export"]
+    version: Literal[1]
+    recipes: list[Any] = Field(max_length=MAX_IMPORTED_RECIPES)
+
+
+class ImportedIngredient(IngredientIn):
+    quantity: float | None = Field(default=None, ge=-99_999_999.99, le=99_999_999.99)
+
+
+class ImportedStep(StepIn):
+    duration_minutes: Int32 | None = None
+
+
+class ImportedTag(BaseModel):
+    name: NonEmptyText
+
+
+class RecipeImportEntry(BaseModel):
+    """Os campos de conteúdo de um `RecipeOut` exportado. Tudo o resto
+    (ids, imagens, favoritos, comentários, histórico, notas pós-confeção,
+    `source_recipe_id`) é ignorado — ver docs/backup-restore.md."""
+
+    title: NonEmptyText
+    description: str | None = None
+    servings: Int32 | None = None
+    prep_minutes: Int32 | None = None
+    cook_minutes: Int32 | None = None
+    source_url: str | None = None
+    notes: str | None = None
+    rating: int | None = Field(default=None, ge=1, le=5)
+    calories_kcal: Int32 | None = None
+    protein_g: float | None = Field(default=None, ge=-99_999.9, le=99_999.9)
+    carbs_g: float | None = Field(default=None, ge=-99_999.9, le=99_999.9)
+    fat_g: float | None = Field(default=None, ge=-99_999.9, le=99_999.9)
+    estimated_cost: float | None = Field(default=None, ge=-999_999.99, le=999_999.99)
+    ingredients: list[ImportedIngredient] = []
+    steps: list[ImportedStep] = []
+    categories: list[CategoryCreate] = []
+    tags: list[ImportedTag] = []
+    image_path: str | None = None
+    images: list[dict[str, Any]] = []
+
+
+class RecipeImportItem(BaseModel):
+    title: str
+    status: Literal["imported", "skipped"]
+    # "duplicate": já existe na workspace; "duplicate_in_file": repetida
+    # mais acima no mesmo ficheiro; "invalid": entrada malformada.
+    reason: Literal["duplicate", "duplicate_in_file", "invalid"] | None = None
+    detail: str | None = None
+    recipe_id: uuid.UUID | None = None
+
+
+class RecipeImportResult(BaseModel):
+    imported: int
+    skipped: int
+    created_categories: list[str]
+    created_tags: list[str]
+    # Receitas importadas que tinham fotografias no ficheiro — os ficheiros
+    # de imagem não vão no JSON, por isso nunca são importados.
+    images_not_imported: int
+    items: list[RecipeImportItem]
 
 
 class MealPlanEntryIn(BaseModel):

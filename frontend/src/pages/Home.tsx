@@ -1,18 +1,19 @@
 import { t } from '../i18n'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigationType, useSearchParams } from 'react-router-dom'
-import { exportWorkspaceRecipes, listCategories, listRecipes, listTags, toggleFavorite } from '../api/recipes'
+import { exportWorkspaceRecipes, importWorkspaceRecipes, listCategories, listRecipes, listTags, toggleFavorite } from '../api/recipes'
 import { listPantryItems } from '../api/pantry'
 import { listMealPlan, listShoppingList } from '../api/planning'
 import { listDietaryProfiles } from '../api/profiles'
-import type { Category, DietaryProfile, MealPlanEntry, PantryItem, RecipeSort, RecipeSummary, ShoppingListItem, Tag } from '../api/types'
+import type { Category, DietaryProfile, MealPlanEntry, PantryItem, RecipeImportItem, RecipeImportResult, RecipeSort, RecipeSummary, ShoppingListItem, Tag } from '../api/types'
 import { useAuth } from '../auth/useAuth'
 import { PageShell } from '../components/PageShell'
 import { RecipeCard } from '../components/RecipeCard'
 import { UserMenu } from '../components/UserMenu'
 import { CartIcon, HeartIcon, SlidersIcon } from '../components/icons'
-import { BottomSheet, Chip, EmptyState, ErrorState, SearchInput, Skeleton } from '../components/ui'
+import { BottomSheet, Chip, EmptyState, ErrorState, Modal, SearchInput, Skeleton } from '../components/ui'
 import { addDays, toDateKey } from '../lib/date'
+import { MAX_IMPORTED_RECIPES, parseRecipeExport, type RecipeExportError } from '../lib/recipeExport'
 import { RATING_OPTIONS, RECIPE_SORTS, clearRecipeFilters, hasActiveFilter, parseRecipeFilters, serializeRecipeFilters, type RecipeFilters } from '../lib/recipeFilters'
 
 const SORT_LABELS: Record<RecipeSort, string> = {
@@ -42,6 +43,11 @@ export function Home() {
   const [upcomingMeals, setUpcomingMeals] = useState<MealPlanEntry[]>([])
   const [pantryItems, setPantryItems] = useState<PantryItem[]>([])
   const [shoppingItems, setShoppingItems] = useState<ShoppingListItem[]>([])
+  const [reloadKey, setReloadKey] = useState(0)
+  const [importing, setImporting] = useState(false)
+  const [importResult, setImportResult] = useState<RecipeImportResult | null>(null)
+  const [importError, setImportError] = useState<string | null>(null)
+  const importInput = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     listCategories().then(setCategories).catch(() => {})
@@ -73,7 +79,7 @@ export function Home() {
         .then(setRecipes).catch(() => setError(true))
     }, 250)
     return () => clearTimeout(handle)
-  }, [filters])
+  }, [filters, reloadKey])
 
   function updateFilters(patch: Partial<RecipeFilters>) {
     setFilters((current) => ({ ...current, ...patch }))
@@ -97,6 +103,28 @@ export function Home() {
     link.download = `tacho-receitas-${toDateKey(new Date())}.json`
     link.click()
     URL.revokeObjectURL(url)
+  }
+
+  async function handleImportFile(file: File) {
+    setImportError(null)
+    setImportResult(null)
+    const parsed = parseRecipeExport(await file.text())
+    if ('error' in parsed) {
+      setImportError(importErrorMessage(parsed.error))
+      return
+    }
+    setImporting(true)
+    try {
+      setImportResult(await importWorkspaceRecipes(parsed.document))
+      listCategories().then(setCategories).catch(() => {})
+      listTags().then(setTags).catch(() => {})
+      setReloadKey((key) => key + 1)
+    } catch (err) {
+      const detail = (err as { response?: { data?: { detail?: unknown } } })?.response?.data?.detail
+      setImportError(typeof detail === 'string' ? detail : t('Não foi possível importar o ficheiro. Verifica a ligação e tenta de novo.'))
+    } finally {
+      setImporting(false)
+    }
   }
 
   function selectCategory(id: string) {
@@ -176,14 +204,39 @@ export function Home() {
     </section>
 
     <section className="mt-8">
-      <div className="mb-4 flex items-end justify-between gap-3"><div><h2 className="text-xl font-bold tracking-tight text-text-primary lg:text-2xl">{t('Receitas')}</h2>{recipes && <p className="mt-0.5 text-sm text-text-secondary">{recipes.length} {recipes.length === 1 ? t('receita') : t('receitas')}</p>}</div><div className="flex items-center gap-3"><button type="button" onClick={() => void handleExport()} className="text-sm font-semibold text-forest-text">{t('Exportar')}</button><Link to="/colecoes" className="text-sm font-semibold text-forest-text">{t('Ver coleções')} <span aria-hidden>›</span></Link></div></div>
+      <div className="mb-4 flex items-end justify-between gap-3"><div><h2 className="text-xl font-bold tracking-tight text-text-primary lg:text-2xl">{t('Receitas')}</h2>{recipes && <p className="mt-0.5 text-sm text-text-secondary">{recipes.length} {recipes.length === 1 ? t('receita') : t('receitas')}</p>}</div><div className="flex items-center gap-3"><button type="button" onClick={() => void handleExport()} className="text-sm font-semibold text-forest-text">{t('Exportar')}</button><button type="button" disabled={importing} onClick={() => importInput.current?.click()} className="text-sm font-semibold text-forest-text disabled:opacity-50">{importing ? t('A importar…') : t('Importar')}</button><input ref={importInput} type="file" accept="application/json,.json" className="hidden" onChange={(event) => { const file = event.target.files?.[0]; event.target.value = ''; if (file) void handleImportFile(file) }} /><Link to="/colecoes" className="text-sm font-semibold text-forest-text">{t('Ver coleções')} <span aria-hidden>›</span></Link></div></div>
       {error && <ErrorState>{t('Não foi possível ligar ao backend. Confirma se está a correr em')} {import.meta.env.VITE_API_URL}.</ErrorState>}
       {!error && recipes === null && <RecipeGridSkeleton />}
       {!error && recipes !== null && recipes.length === 0 && <EmptyState title={favoriteOnly ? t('Ainda não marcaste receitas favoritas.') : makeableOnly ? t('Nenhuma receita corresponde à despensa.') : t('Ainda não há receitas por aqui.')} description={t('Ajusta os filtros ou adiciona uma nova receita ao teu livro.')} action={<Link to="/adicionar" className="font-semibold text-forest-text">{t('Adicionar receita')}</Link>} />}
       {recipes && recipes.length > 0 && <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">{recipes.map((recipe) => <RecipeCard key={recipe.id} recipe={recipe} onToggleFavorite={handleToggleFavorite} />)}</div>}
     </section>
+    <Modal open={Boolean(importResult || importError)} title={importError ? t('Importação falhou') : t('Importação concluída')} onClose={() => { setImportResult(null); setImportError(null) }}>{importError ? <p className="text-sm leading-relaxed text-text-secondary">{importError}</p> : importResult && <ImportSummary result={importResult} />}</Modal>
     <BottomSheet open={filtersOpen} title={t('Filtrar receitas')} onClose={() => setFiltersOpen(false)}><div className="flex flex-wrap gap-2">{allFilters}</div><div className="mt-5 space-y-3"><label className="block text-xs font-semibold text-text-secondary">{t('Ingrediente')}<input value={ingredient} onChange={(event) => updateFilters({ ingredient: event.target.value })} placeholder={t('ex.: tomate')} className="mt-1 min-h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text-primary outline-none focus:border-primary-forest" /></label><label className="block text-xs font-semibold text-text-secondary">{t('Classificação mínima')}<select value={ratingMin ?? ''} onChange={(event) => updateFilters({ ratingMin: event.target.value ? Number(event.target.value) : null })} className="mt-1 min-h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text-primary"><option value="">{t('Qualquer')}</option>{RATING_OPTIONS.map((rating) => <option key={rating} value={rating}>{rating}{t('+ estrelas')}</option>)}</select></label><label className="block text-xs font-semibold text-text-secondary">{t('Tempo máximo')}<select value={maxTotalMinutes ?? ''} onChange={(event) => updateFilters({ maxTotalMinutes: event.target.value ? Number(event.target.value) : null })} className="mt-1 min-h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text-primary"><option value="">{t('Qualquer')}</option><option value="15">{t('15 minutos')}</option><option value="30">{t('30 minutos')}</option><option value="60">{t('1 hora')}</option><option value="120">{t('2 horas')}</option></select></label><label className="block text-xs font-semibold text-text-secondary">{t('Ordenar por')}<select value={sort} onChange={(event) => updateFilters({ sort: event.target.value as RecipeSort })} className="mt-1 min-h-11 w-full rounded-xl border border-border bg-surface px-3 text-sm text-text-primary">{RECIPE_SORTS.map((value) => <option key={value} value={value}>{t(SORT_LABELS[value])}</option>)}</select></label>{hasFilter && <button onClick={clearFilters} className="min-h-11 w-full rounded-xl border border-border text-sm font-semibold text-forest-text">{t('Limpar todos os filtros')}</button>}</div></BottomSheet>
   </PageShell>
+}
+
+function importErrorMessage(error: RecipeExportError) {
+  if (error === 'invalid_json') return t('O ficheiro não é JSON válido.')
+  if (error === 'unsupported_version') return t('Versão do ficheiro de exportação não suportada.')
+  if (error === 'no_recipes') return t('O ficheiro não tem receitas para importar.')
+  if (error === 'too_many') return t('Demasiadas receitas num só ficheiro (máx. {max}).', { max: MAX_IMPORTED_RECIPES })
+  return t('O ficheiro não é uma exportação de receitas do Tacho.')
+}
+
+function importReason(item: RecipeImportItem) {
+  if (item.reason === 'duplicate') return t('já existe no livro de receitas')
+  if (item.reason === 'duplicate_in_file') return t('repetida no ficheiro')
+  return item.detail ? `${t('entrada inválida')} (${item.detail})` : t('entrada inválida')
+}
+
+function ImportSummary({ result }: { result: RecipeImportResult }) {
+  const skipped = result.items.filter((item) => item.status === 'skipped')
+  return <div className="space-y-3 text-sm text-text-secondary">
+    <p className="text-text-primary"><strong>{result.imported}</strong> {t('importadas')} · <strong>{result.skipped}</strong> {t('ignoradas')}</p>
+    {(result.created_categories.length > 0 || result.created_tags.length > 0) && <p>{t('Criadas:')} {[...result.created_categories, ...result.created_tags.map((name) => `#${name}`)].join(', ')}</p>}
+    {result.images_not_imported > 0 && <p>{t('As fotografias não fazem parte da exportação — {count} receitas importadas ficaram sem foto.', { count: result.images_not_imported })}</p>}
+    {skipped.length > 0 && <ul className="max-h-60 space-y-1 overflow-y-auto">{skipped.map((item, index) => <li key={index}><span className="font-medium text-text-primary">{item.title}</span> — {importReason(item)}</li>)}</ul>}
+  </div>
 }
 
 function RecipeGridSkeleton() {

@@ -1,8 +1,9 @@
 import logging
 import uuid
+from typing import Any, Literal
 
 from celery.result import AsyncResult
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, UploadFile
+from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, UploadFile
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
@@ -158,6 +159,47 @@ async def import_recipe_from_photos(
     if extraction is None:
         raise HTTPException(status_code=422, detail="Não foi possível reconhecer uma receita nestas fotos.")
     return extraction
+
+
+def _parse_export_document(payload: Any) -> schemas.RecipeExportDocument:
+    """Valida o envelope à mão para devolver mensagens em português (os
+    erros do Pydantic por omissão chegam em inglês e por campo)."""
+    if not isinstance(payload, dict) or payload.get("format") != schemas.RECIPE_EXPORT_FORMAT:
+        raise HTTPException(status_code=422, detail="O ficheiro não é uma exportação de receitas do Tacho.")
+    if payload.get("version") != 1:
+        raise HTTPException(status_code=422, detail="Versão do ficheiro de exportação não suportada.")
+    if not isinstance(payload.get("recipes"), list):
+        raise HTTPException(status_code=422, detail="O ficheiro de exportação não tem uma lista de receitas.")
+    if len(payload["recipes"]) > schemas.MAX_IMPORTED_RECIPES:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Demasiadas receitas num só ficheiro (máx. {schemas.MAX_IMPORTED_RECIPES}).",
+        )
+    return schemas.RecipeExportDocument.model_validate(payload)
+
+
+# Registado antes de "/{recipe_id}" pelo mesmo motivo do "/import" acima.
+# Recebe o JSON de `GET /recipes/export` (lido no browser) e devolve um
+# relatório por receita — ver `crud.import_recipes` para a regra de
+# duplicados e docs/backup-restore.md para o que fica de fora.
+@router.post(
+    "/import-file",
+    response_model=schemas.RecipeImportResult,
+    openapi_extra={
+        "requestBody": {
+            "required": True,
+            "content": {"application/json": {"schema": schemas.RecipeExportDocument.model_json_schema()}},
+        }
+    },
+)
+def import_recipe_export(
+    payload: Any = Body(),
+    mode: Literal["skip", "duplicate"] = "skip",
+    db: Session = Depends(get_db),
+    workspace_id: uuid.UUID = Depends(get_workspace_id),
+):
+    document = _parse_export_document(payload)
+    return crud.import_recipes(db, workspace_id, document.recipes, allow_duplicates=mode == "duplicate")
 
 
 @router.get("/import/{task_id}", response_model=schemas.ImportStatus)

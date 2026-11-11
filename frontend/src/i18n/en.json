@@ -444,5 +444,21 @@
   "Limpar comprados": "Clear purchased",
   "Limpar itens comprados?": "Clear purchased items?",
   "Os {count} itens marcados como comprados são removidos da lista.": "The {count} items marked as purchased will be removed from the list.",
-  "Receitas de origem": "Source recipes"
+  "Receitas de origem": "Source recipes",
+  "Importar": "Import",
+  "Importação falhou": "Import failed",
+  "Importação concluída": "Import finished",
+  "Não foi possível importar o ficheiro. Verifica a ligação e tenta de novo.": "Could not import the file. Check your connection and try again.",
+  "O ficheiro não é JSON válido.": "The file is not valid JSON.",
+  "Versão do ficheiro de exportação não suportada.": "Unsupported export file version.",
+  "O ficheiro não tem receitas para importar.": "The file has no recipes to import.",
+  "Demasiadas receitas num só ficheiro (máx. {max}).": "Too many recipes in one file (max. {max}).",
+  "O ficheiro não é uma exportação de receitas do Tacho.": "The file is not a Tacho recipe export.",
+  "já existe no livro de receitas": "already in the recipe book",
+  "repetida no ficheiro": "repeated in the file",
+  "entrada inválida": "invalid entry",
+  "importadas": "imported",
+  "ignoradas": "skipped",
+  "Criadas:": "Created:",
+  "As fotografias não fazem parte da exportação — {count} receitas importadas ficaram sem foto.": "Photos are not part of the export — {count} imported recipes have no photo."
 }
