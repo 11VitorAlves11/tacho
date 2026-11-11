@@ -65,6 +65,16 @@ cookbook_recipes = Table(
     Column("recipe_id", UUID(as_uuid=True), ForeignKey("recipes.id", ondelete="CASCADE"), primary_key=True),
 )
 
+# Receitas que originaram cada item da lista de compras. Sem relationship()
+# do lado de Recipe: apagar uma receita remove só a ligação (CASCADE na BD),
+# o item continua na lista.
+shopping_list_item_sources = Table(
+    "shopping_list_item_sources",
+    Base.metadata,
+    Column("item_id", UUID(as_uuid=True), ForeignKey("shopping_list_items.id", ondelete="CASCADE"), primary_key=True),
+    Column("recipe_id", UUID(as_uuid=True), ForeignKey("recipes.id", ondelete="CASCADE"), primary_key=True),
+)
+
 
 class Workspace(Base):
     __tablename__ = "workspaces"
@@ -492,6 +502,9 @@ class ShoppingListItem(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     workspace: Mapped["Workspace"] = relationship(back_populates="shopping_list_items")
+    source_recipes: Mapped[list["Recipe"]] = relationship(
+        secondary=shopping_list_item_sources, order_by="Recipe.title", passive_deletes=True
+    )
 
 
 class PantryItem(Base):

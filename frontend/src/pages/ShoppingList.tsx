@@ -3,6 +3,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
 import {
   addShoppingListItem,
+  clearCheckedShoppingListItems,
   deleteShoppingListItem,
   generateShoppingList,
   listShoppingList,
@@ -11,7 +12,9 @@ import {
 import type { ShoppingListItem } from '../api/types'
 import { PageShell } from '../components/PageShell'
 import { PlusIcon, TrashIcon } from '../components/icons'
+import { ConfirmDialog } from '../components/ui'
 import { startOfWeek, toDateKey } from '../lib/date'
+import { visibleSources } from '../lib/shoppingList'
 
 export function ShoppingList() {
   const [items, setItems] = useState<ShoppingListItem[] | null>(null)
@@ -19,6 +22,7 @@ export function ShoppingList() {
   const [generating, setGenerating] = useState(false)
   const [newName, setNewName] = useState('')
   const [newQuantity, setNewQuantity] = useState('')
+  const [confirmClear, setConfirmClear] = useState(false)
 
   useEffect(() => {
     listShoppingList()
@@ -49,6 +53,16 @@ export function ShoppingList() {
     setItems((prev) => prev?.filter((i) => i.id !== id) ?? prev)
   }
 
+  async function handleClearChecked() {
+    setConfirmClear(false)
+    try {
+      await clearCheckedShoppingListItems()
+      setItems((prev) => prev?.filter((i) => !i.is_checked) ?? prev)
+    } catch {
+      setError(true)
+    }
+  }
+
   async function handleAdd(e: FormEvent) {
     e.preventDefault()
     if (!newName.trim()) return
@@ -76,9 +90,12 @@ export function ShoppingList() {
         </button>
       </div>
 
-      <Link to="/despensa" className="mb-6 inline-block text-sm font-medium text-forest-text">
-        {t('Despensa →')}
-      </Link>
+      <div className="mb-6 flex items-center justify-between gap-3">
+        <Link to="/despensa" className="text-sm font-medium text-forest-text">
+          {t('Despensa →')}
+        </Link>
+        {checked.length > 0 && <button type="button" onClick={() => setConfirmClear(true)} className="rounded-full px-3 py-1.5 text-sm font-medium text-text-secondary transition-colors hover:bg-bg-sage hover:text-text-primary">{t('Limpar comprados')}</button>}
+      </div>
 
       {items && items.length > 0 && <div className="mb-6 h-2 overflow-hidden rounded-full bg-muted" aria-label={t('{progress}% da lista concluída', { progress: progress })} role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}><div className="h-full rounded-full bg-primary-forest transition-[width]" style={{ width: `${progress}%` }} /></div>}
 
@@ -128,6 +145,8 @@ export function ShoppingList() {
           ))}
         </ul>
       )}
+
+      <ConfirmDialog open={confirmClear} title={t('Limpar itens comprados?')} description={t('Os {count} itens marcados como comprados são removidos da lista.', { count: checked.length })} confirmLabel={t('Limpar')} onCancel={() => setConfirmClear(false)} onConfirm={handleClearChecked} />
     </PageShell>
   )
 }
@@ -157,6 +176,7 @@ function ShoppingListRow({
           {item.name}
         </span>
         {item.quantity && <span className="ml-2 text-xs text-text-secondary">{item.quantity}</span>}
+        <SourceLinks item={item} />
       </div>
       <button
         type="button"
@@ -168,4 +188,10 @@ function ShoppingListRow({
       </button>
     </li>
   )
+}
+
+function SourceLinks({ item }: { item: ShoppingListItem }) {
+  const { shown, hidden } = visibleSources(item.sources)
+  if (shown.length === 0) return null
+  return <p className="mt-0.5 truncate text-xs text-text-secondary" aria-label={t('Receitas de origem')}>{shown.map((source, index) => <span key={source.id}>{index > 0 && ', '}<Link to={`/receitas/${source.id}`} className="hover:text-forest-text hover:underline">{source.title}</Link></span>)}{hidden > 0 && <span title={item.sources.slice(shown.length).map((source) => source.title).join(', ')}> +{hidden}</span>}</p>
 }

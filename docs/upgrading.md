@@ -43,6 +43,16 @@ into the environment. With the development stack, use
 `docker compose -f docker-compose.dev.yml exec backend python -m scripts.generate_image_variants`.
 Variants are derived files; deleting them is harmless.
 
+## Release-specific notes
+
+### Unreleased
+
+- Adds one migration (`876b063c0d21`, table `shopping_list_item_sources`) that
+  links shopping list items to the recipes they came from. It only creates a
+  new table; existing items keep working and simply show no source recipes.
+  Rolling back follows the rule above: restore the pre-upgrade backup rather
+  than downgrading.
+
 ## Rollback
 
 If no database migration ran, set `TACHO_VERSION` back to the previous version

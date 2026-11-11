@@ -334,6 +334,13 @@ class ShoppingListItemUpdate(BaseModel):
     is_checked: bool | None = None
 
 
+class ShoppingListItemSource(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    title: str
+
+
 class ShoppingListItemOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -342,6 +349,12 @@ class ShoppingListItemOut(BaseModel):
     quantity: str | None
     is_checked: bool
     created_at: datetime
+    # Receitas que originaram o item, por título; vazio nos itens manuais.
+    sources: list[ShoppingListItemSource] = Field(validation_alias="source_recipes")
+
+
+class ClearShoppingListResult(BaseModel):
+    deleted: int
 
 
 class PantryItemIn(BaseModel):

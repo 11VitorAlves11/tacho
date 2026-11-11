@@ -130,3 +130,107 @@ def test_shopping_list_item_crud(client: TestClient) -> None:
     assert client.delete(f"/shopping-list/{item_id}").status_code == 204
     assert client.get("/shopping-list").json() == []
     assert client.delete(f"/shopping-list/{item_id}").status_code == 404
+
+
+def sources_of(items: list[dict[str, Any]]) -> list[tuple[str, str | None, list[str]]]:
+    return sorted((item["name"], item["quantity"], [source["title"] for source in item["sources"]]) for item in items)
+
+
+def test_generated_items_record_every_source_recipe(client: TestClient, planned_week: None) -> None:
+    response = client.post("/shopping-list/generate", json={"week_start": WEEK_START})
+
+    expected = [
+        ("Farinha", "500 g", ["Bolo", "Panquecas"]),
+        ("Leite", "1 L", ["Bolo"]),
+        ("Leite", "2 chávenas", ["Panquecas"]),
+        ("Ovos", "5", ["Bolo", "Panquecas"]),
+        ("Sal", None, ["Panquecas"]),
+    ]
+    assert sources_of(response.json()) == expected
+    assert sources_of(client.get("/shopping-list").json()) == expected
+
+
+def test_generate_attaches_recipes_to_ingredients_already_listed(client: TestClient, planned_week: None) -> None:
+    client.post("/shopping-list", json={"name": "ovos", "quantity": "1 dúzia"})
+
+    response = client.post("/shopping-list/generate", json={"week_start": WEEK_START})
+
+    assert ("ovos", "1 dúzia", ["Bolo", "Panquecas"]) in sources_of(response.json())
+
+
+def test_added_recipe_is_attached_to_existing_unchecked_item(client: TestClient, create_recipe: CreateRecipe) -> None:
+    sopa = create_recipe(client, title="Sopa", ingredients=[{"name": "Cenoura", "quantity": 2}])
+    salada = create_recipe(client, title="Salada", ingredients=[{"name": "Cenoura", "quantity": 1}, {"name": "Alface"}])
+    assert client.post(f"/recipes/{sopa['id']}/shopping-list").status_code == 200
+
+    added = client.post(f"/recipes/{salada['id']}/shopping-list").json()
+
+    assert sources_of(added) == [("Alface", None, ["Salada"])]
+    assert sources_of(client.get("/shopping-list").json()) == [
+        ("Alface", None, ["Salada"]),
+        ("Cenoura", "2", ["Salada", "Sopa"]),
+    ]
+
+
+def test_checked_items_do_not_receive_new_sources(client: TestClient, create_recipe: CreateRecipe) -> None:
+    item = client.post("/shopping-list", json={"name": "Cenoura"}).json()
+    client.patch(f"/shopping-list/{item['id']}", json={"is_checked": True})
+    recipe = create_recipe(client, title="Sopa", ingredients=[{"name": "Cenoura"}])
+
+    client.post(f"/recipes/{recipe['id']}/shopping-list")
+
+    assert sources_of(client.get("/shopping-list").json()) == [("Cenoura", None, []), ("Cenoura", None, ["Sopa"])]
+
+
+def test_missing_ingredients_record_their_source(client: TestClient, create_recipe: CreateRecipe) -> None:
+    client.post("/shopping-list", json={"name": "Alho"})
+    recipe = create_recipe(client, title="Açorda", ingredients=[{"name": "Pão"}, {"name": "alho"}])
+
+    added = client.post(f"/recipes/{recipe['id']}/shopping-list/missing").json()
+
+    assert sources_of(added) == [("Pão", None, ["Açorda"])]
+    assert ("Alho", None, ["Açorda"]) in sources_of(client.get("/shopping-list").json())
+
+
+def test_manual_items_have_no_sources(client: TestClient) -> None:
+    created = client.post("/shopping-list", json={"name": "Pão"})
+
+    assert created.json()["sources"] == []
+    assert client.get("/shopping-list").json()[0]["sources"] == []
+
+
+def test_deleting_a_recipe_keeps_the_item_but_drops_the_source(client: TestClient, create_recipe: CreateRecipe) -> None:
+    sopa = create_recipe(client, title="Sopa", ingredients=[{"name": "Cenoura"}, {"name": "Nabo"}])
+    salada = create_recipe(client, title="Salada", ingredients=[{"name": "Cenoura"}])
+    client.post(f"/recipes/{sopa['id']}/shopping-list")
+    client.post(f"/recipes/{salada['id']}/shopping-list")
+
+    assert client.delete(f"/recipes/{sopa['id']}").status_code == 204
+
+    assert sources_of(client.get("/shopping-list").json()) == [("Cenoura", None, ["Salada"]), ("Nabo", None, [])]
+
+
+def test_clear_checked_removes_only_bought_items_of_the_workspace(client: TestClient, other_client: TestClient) -> None:
+    for name in ("Pão", "Leite", "Ovos"):
+        item = client.post("/shopping-list", json={"name": name}).json()
+        if name != "Ovos":
+            client.patch(f"/shopping-list/{item['id']}", json={"is_checked": True})
+    other_item = other_client.post("/shopping-list", json={"name": "Café"}).json()
+    other_client.patch(f"/shopping-list/{other_item['id']}", json={"is_checked": True})
+
+    response = client.delete("/shopping-list/checked")
+
+    assert response.status_code == 200
+    assert response.json() == {"deleted": 2}
+    assert [item["name"] for item in client.get("/shopping-list").json()] == ["Ovos"]
+    assert [item["name"] for item in other_client.get("/shopping-list").json()] == ["Café"]
+    assert client.delete("/shopping-list/checked").json() == {"deleted": 0}
+
+
+def test_clearing_checked_items_keeps_their_source_recipes(client: TestClient, create_recipe: CreateRecipe) -> None:
+    recipe = create_recipe(client, title="Sopa", ingredients=[{"name": "Cenoura"}])
+    item = client.post(f"/recipes/{recipe['id']}/shopping-list").json()[0]
+    client.patch(f"/shopping-list/{item['id']}", json={"is_checked": True})
+
+    assert client.delete("/shopping-list/checked").json() == {"deleted": 1}
+    assert client.get(f"/recipes/{recipe['id']}").status_code == 200

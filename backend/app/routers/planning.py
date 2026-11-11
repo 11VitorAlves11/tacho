@@ -162,6 +162,14 @@ def generate_shopping_list(
     return crud.generate_shopping_list(db, workspace_id, payload.week_start)
 
 
+# Também antes de "/shopping-list/{item_id}", pelo mesmo motivo.
+@router.delete("/shopping-list/checked", response_model=schemas.ClearShoppingListResult)
+def delete_checked_shopping_list_items(
+    db: Session = Depends(get_db), workspace_id: uuid.UUID = Depends(get_workspace_id)
+):
+    return {"deleted": crud.delete_checked_shopping_list_items(db, workspace_id)}
+
+
 @router.post("/shopping-list", response_model=schemas.ShoppingListItemOut, status_code=201)
 def create_shopping_list_item(
     payload: schemas.ShoppingListItemIn,
