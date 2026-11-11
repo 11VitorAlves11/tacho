@@ -24,6 +24,11 @@ const SORT_LABELS: Record<RecipeSort, string> = {
   least_recently_made: 'Há mais tempo sem cozinhar',
 }
 
+const KPI_TILE = 'min-w-0 rounded-2xl border border-border bg-surface p-3 transition hover:border-primary-forest sm:p-4'
+const KPI_LABEL = 'line-clamp-2 min-h-[2lh] text-[10px] font-bold uppercase leading-tight tracking-wide text-text-secondary sm:line-clamp-1 sm:min-h-0 sm:text-xs'
+const KPI_VALUE = 'mt-1 text-xl font-bold sm:mt-2 sm:text-2xl'
+const KPI_DETAIL = 'mt-0.5 truncate text-xs text-text-secondary sm:mt-1 sm:text-sm'
+
 export function Home() {
   const { user } = useAuth()
   const [recipes, setRecipes] = useState<RecipeSummary[] | null>(null)
@@ -172,10 +177,10 @@ export function Home() {
       <UserMenu variant="mobile" />
     </header>
 
-    <section className="mb-6 grid gap-3 sm:grid-cols-3" aria-label={t('Resumo semanal')}>
-      <Link to="/planeamento" className="rounded-2xl border border-border bg-surface p-4 transition hover:border-primary-forest"><p className="text-xs font-bold uppercase tracking-wide text-text-secondary">{t('Próximas refeições')}</p><p className="mt-2 text-2xl font-bold text-text-primary">{upcomingMeals.length}</p><p className="mt-1 line-clamp-1 text-sm text-text-secondary">{upcomingMeals[0]?.recipe.title ?? t('Completar o planeamento →')}</p></Link>
-      <Link to="/despensa" className="rounded-2xl border border-border bg-surface p-4 transition hover:border-primary-forest"><p className="text-xs font-bold uppercase tracking-wide text-text-secondary">{t('Validade próxima')}</p><p className={`mt-2 text-2xl font-bold ${expiringItems.length ? 'text-accent-orange' : 'text-text-primary'}`}>{expiringItems.length}</p><p className="mt-1 line-clamp-1 text-sm text-text-secondary">{expiringItems[0]?.name ?? t('Nenhum produto nos próximos 7 dias')}</p></Link>
-      <Link to="/lista-compras" className="rounded-2xl border border-border bg-surface p-4 transition hover:border-primary-forest"><p className="text-xs font-bold uppercase tracking-wide text-text-secondary">{t('Por comprar')}</p><p className="mt-2 text-2xl font-bold text-text-primary">{pendingShopping.length}</p><p className="mt-1 text-sm text-text-secondary">{t('artigos pendentes')}</p></Link>
+    <section className="mb-5 grid grid-cols-3 gap-2 sm:mb-6 sm:gap-3" aria-label={t('Resumo semanal')}>
+      <Link to="/planeamento" className={KPI_TILE}><p className={KPI_LABEL}>{t('Próximas refeições')}</p><p className={`${KPI_VALUE} text-text-primary`}>{upcomingMeals.length}</p><p className={KPI_DETAIL}>{upcomingMeals[0]?.recipe.title ?? t('Completar o planeamento →')}</p></Link>
+      <Link to="/despensa" className={KPI_TILE}><p className={KPI_LABEL}>{t('Validade próxima')}</p><p className={`${KPI_VALUE} ${expiringItems.length ? 'text-accent-orange' : 'text-text-primary'}`}>{expiringItems.length}</p><p className={KPI_DETAIL}>{expiringItems[0]?.name ?? t('Nenhum produto nos próximos 7 dias')}</p></Link>
+      <Link to="/lista-compras" className={KPI_TILE}><p className={KPI_LABEL}>{t('Por comprar')}</p><p className={`${KPI_VALUE} text-text-primary`}>{pendingShopping.length}</p><p className={KPI_DETAIL}>{t('artigos pendentes')}</p></Link>
     </section>
 
     <div className="flex min-w-0 items-center gap-2 sm:gap-3">
