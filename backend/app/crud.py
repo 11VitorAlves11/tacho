@@ -2,9 +2,10 @@ import re
 import secrets
 import unicodedata
 import uuid
+from collections.abc import Callable
 from datetime import UTC, date, datetime, timedelta
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session, selectinload
 
 from app import models, schemas
@@ -1095,6 +1096,7 @@ def list_shopping_list_items(db: Session, workspace_id: uuid.UUID) -> list[model
     query = (
         select(models.ShoppingListItem)
         .where(models.ShoppingListItem.workspace_id == workspace_id)
+        .options(selectinload(models.ShoppingListItem.source_recipes))
         .order_by(models.ShoppingListItem.created_at)
     )
     return list(db.scalars(query))
@@ -1128,6 +1130,18 @@ def update_shopping_list_item(
     db.commit()
     db.refresh(item)
     return item
+
+
+def delete_checked_shopping_list_items(db: Session, workspace_id: uuid.UUID) -> int:
+    """Remove os itens já comprados (marcados); as ligações às receitas de
+    origem saem por CASCADE na BD. Devolve quantos foram removidos."""
+    result = db.execute(
+        delete(models.ShoppingListItem).where(
+            models.ShoppingListItem.workspace_id == workspace_id, models.ShoppingListItem.is_checked.is_(True)
+        )
+    )
+    db.commit()
+    return result.rowcount
 
 
 def delete_shopping_list_item(db: Session, workspace_id: uuid.UUID, item_id: uuid.UUID) -> bool:
@@ -1235,6 +1249,28 @@ def _format_quantity(quantity, unit: str | None) -> str | None:
     return " ".join(parts) if parts else None
 
 
+def _link_listed_items_to_recipe(
+    db: Session,
+    workspace_id: uuid.UUID,
+    recipe: models.Recipe,
+    skip: list[models.ShoppingListItem],
+    key: Callable[[str], str] = _normalize,
+) -> None:
+    """Junta `recipe` às origens dos itens por marcar que já estavam na lista
+    com o nome de um dos seus ingredientes — esses ingredientes foram
+    saltados pela dedup, mas a lista continua a dizer de onde vêm."""
+    names = {key(ingredient.name) for ingredient in recipe.ingredients if not ingredient.is_header}
+    query = (
+        select(models.ShoppingListItem)
+        .where(models.ShoppingListItem.workspace_id == workspace_id, models.ShoppingListItem.is_checked.is_(False))
+        .options(selectinload(models.ShoppingListItem.source_recipes))
+    )
+    for item in db.scalars(query):
+        if item in skip or key(item.name) not in names or recipe in item.source_recipes:
+            continue
+        item.source_recipes.append(recipe)
+
+
 def generate_shopping_list(db: Session, workspace_id: uuid.UUID, week_start: date) -> list[models.ShoppingListItem]:
     """Agrega os ingredientes de todas as receitas planeadas na semana
     (week_start .. +6 dias) para a lista de compras. Quantidades com o mesmo
@@ -1268,6 +1304,7 @@ def generate_shopping_list(db: Session, workspace_id: uuid.UUID, week_start: dat
     pantry_names = [_normalize(name) for name in db.scalars(pantry_query)]
 
     aggregated: dict[tuple[str, str], tuple[str, float, bool, str | None]] = {}
+    sources: dict[tuple[str, str], list[models.Recipe]] = {}
     for entry in entries:
         for ingredient in entry.recipe.ingredients:
             if ingredient.is_header:
@@ -1288,16 +1325,21 @@ def generate_shopping_list(db: Session, workspace_id: uuid.UUID, week_start: dat
                     previous[2] or ingredient.quantity is not None,
                     previous[3],
                 )
+            if entry.recipe not in sources.setdefault(key, []):
+                sources[key].append(entry.recipe)
 
     new_items: list[models.ShoppingListItem] = []
-    for name, amount, has_quantity, unit in aggregated.values():
+    for key, (name, amount, has_quantity, unit) in aggregated.items():
         item = models.ShoppingListItem(
             workspace_id=workspace_id,
             name=name,
             quantity=_format_quantity(amount if has_quantity else None, unit),
+            source_recipes=sources[key],
         )
         db.add(item)
         new_items.append(item)
+    for recipe in {entry.recipe for entry in entries}:
+        _link_listed_items_to_recipe(db, workspace_id, recipe, skip=new_items)
 
     db.commit()
     return list_shopping_list_items(db, workspace_id)
@@ -1331,9 +1373,11 @@ def add_recipe_to_shopping_list(
             workspace_id=workspace_id,
             name=ingredient.name,
             quantity=_format_quantity(ingredient.quantity, ingredient.unit),
+            source_recipes=[recipe],
         )
         db.add(item)
         new_items.append(item)
+    _link_listed_items_to_recipe(db, workspace_id, recipe, skip=new_items, key=str)
 
     db.commit()
     for item in new_items:
@@ -1374,9 +1418,11 @@ def add_missing_recipe_ingredients_to_shopping_list(
             workspace_id=workspace_id,
             name=ingredient.name,
             quantity=_format_quantity(ingredient.quantity, ingredient.unit),
+            source_recipes=[recipe],
         )
         db.add(item)
         new_items.append(item)
+    _link_listed_items_to_recipe(db, workspace_id, recipe, skip=new_items)
     db.commit()
     for item in new_items:
         db.refresh(item)
