@@ -41,6 +41,20 @@ CORS_ORIGINS=["https://recipes.example.com"]
 
 Terminate TLS at the proxy. Do not publish the PostgreSQL or Redis ports.
 
+Login attempts are rate-limited per client IP ([details](configuration.md#login-rate-limiting)).
+Uvicorn only trusts `X-Forwarded-For`/`X-Forwarded-Proto` from addresses listed
+in `FORWARDED_ALLOW_IPS` (default `127.0.0.1`). When the proxy reaches Tacho
+from another host or container, set it to the proxy's address as seen by the
+`web` container, for example:
+
+```dotenv
+FORWARDED_ALLOW_IPS=172.18.0.10
+```
+
+Without it, every visitor appears to come from the proxy and shares a single
+per-IP attempt budget. Do not use `*` unless port 8000 is reachable only
+through the proxy, since any client could then forge its address.
+
 ## Verify
 
 ```bash

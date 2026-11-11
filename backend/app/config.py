@@ -63,6 +63,13 @@ class Settings(BaseSettings):
     oidc_display_name: str = "OpenID Connect"
     oidc_allow_provisioning: bool = False
     oidc_disable_local_login: bool = False
+    # Proteção contra força bruta em `POST /auth/cookie/login` e `POST /setup`
+    # (app/rate_limit.py). Conta só tentativas falhadas numa janela fixa, por
+    # IP e por par (IP, email); um login certo limpa o contador do par. Um
+    # limite 0 desliga essa verificação.
+    login_rate_limit_window_seconds: int = 15 * 60
+    login_max_failures_per_ip: int = 10
+    login_max_failures_per_email: int = 5
     # Importação inteligente (app/gemini.py): fallback de extração quando o
     # recipe-scrapers falha, e importação por foto (Vision). Opcional — sem
     # chave, `gemini.is_available()` devolve False e a app funciona na

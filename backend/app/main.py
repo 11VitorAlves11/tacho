@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from app.auth import auth_backend, fastapi_users
+from app.auth import fastapi_users
 from app.config import get_settings
 from app.routers import auth as auth_router
 from app.routers import (
@@ -21,6 +21,7 @@ from app.routers import (
     substitutions,
     taxonomy,
 )
+from app.routers import login as login_router
 from app.schemas import UserRead, UserUpdate
 
 settings = get_settings()
@@ -39,7 +40,7 @@ app.add_middleware(
 )
 
 if not settings.oidc_disable_local_login:
-    app.include_router(fastapi_users.get_auth_router(auth_backend), prefix="/auth/cookie", tags=["auth"])
+    app.include_router(login_router.router, prefix="/auth/cookie", tags=["auth"])
 app.include_router(fastapi_users.get_users_router(UserRead, UserUpdate), prefix="/users", tags=["users"])
 app.include_router(auth_router.router)
 app.include_router(recipes.router)
