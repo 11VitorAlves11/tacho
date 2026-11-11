@@ -1,7 +1,7 @@
 import { t } from '../i18n'
 import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getSetupStatus, setup } from '../api/auth'
+import { getSetupStatus, isRateLimited, setup } from '../api/auth'
 import { AuthLayout } from '../auth/AuthLayout'
 import { useAuth } from '../auth/useAuth'
 import { PasswordInput } from '../components/ui'
@@ -45,8 +45,8 @@ export function Setup() {
       // e devolvia sempre a /setup, mesmo depois deste navigate.
       await refresh()
       navigate('/login', { replace: true, state: { justSetup: true } })
-    } catch {
-      setError(t('Não foi possível criar a conta. Tenta outra vez.'))
+    } catch (err) {
+      setError(isRateLimited(err) ? t('Demasiadas tentativas. Tenta novamente dentro de alguns minutos.') : t('Não foi possível criar a conta. Tenta outra vez.'))
     } finally {
       setLoading(false)
     }

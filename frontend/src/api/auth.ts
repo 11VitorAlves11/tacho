@@ -21,6 +21,11 @@ export async function login(email: string, password: string) {
   })
 }
 
+// 429 do limitador de tentativas falhadas (`backend/app/rate_limit.py`).
+export function isRateLimited(error: unknown): boolean {
+  return axios.isAxiosError(error) && error.response?.status === 429
+}
+
 export async function logout() {
   await api.post('/auth/logout')
 }

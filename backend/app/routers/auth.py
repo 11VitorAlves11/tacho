@@ -24,6 +24,7 @@ from app.constants import DEFAULT_WORKSPACE_ID
 from app.database import get_db
 from app.deps import get_workspace_id
 from app.models import OIDCIdentity, User, WorkspaceMember
+from app.rate_limit import RateLimiter, client_ip, get_rate_limiter, setup_limits
 
 router = APIRouter(tags=["auth"])
 
@@ -169,21 +170,28 @@ def setup_status(db: Session = Depends(get_db)):
 
 @router.post("/setup", response_model=schemas.SetupStatus, status_code=201)
 async def setup(
+    request: Request,
     payload: schemas.SetupRequest,
     db: Session = Depends(get_db),
     user_manager: UserManager = Depends(get_user_manager),
+    limiter: RateLimiter = Depends(get_rate_limiter),
 ):
     """Cria a primeira conta e liga-a ao Workspace já semeado
     (`DEFAULT_WORKSPACE_ID`, migração `93c380aef9a6`) — nunca cria uma
     workspace nova. Só funciona enquanto não existir nenhum utilizador;
     é a única forma de entrar pela primeira vez, já que não há registo
-    público nem convite por email."""
+    público nem convite por email. Tentativas recusadas contam para o
+    mesmo limite por IP do login (`app/rate_limit.py`)."""
+    limits = setup_limits(client_ip(request))
+    await limiter.enforce(limits)
     count = db.scalar(select(func.count()).select_from(User))
     if count and count > 0:
+        await limiter.record_failure(limits)
         raise HTTPException(status_code=403, detail="A configuração inicial já foi concluída")
     try:
         user = await user_manager.create(fu_schemas.BaseUserCreate(email=payload.email, password=payload.password))
     except fu_exceptions.UserAlreadyExists:
+        await limiter.record_failure(limits)
         raise HTTPException(status_code=409, detail="Já existe uma conta com este email")
     created_user = db.get(User, user.id)
     if created_user is None:

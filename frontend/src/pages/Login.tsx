@@ -1,7 +1,7 @@
 import { t } from '../i18n'
 import { useEffect, useState, type FormEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { getOIDCStatus, login, oidcStartUrl } from '../api/auth'
+import { getOIDCStatus, isRateLimited, login, oidcStartUrl } from '../api/auth'
 import type { OIDCStatus } from '../api/types'
 import { AuthLayout } from '../auth/AuthLayout'
 import { useAuth } from '../auth/useAuth'
@@ -31,8 +31,8 @@ export function Login() {
       await login(email, password)
       await refresh()
       navigate('/', { replace: true })
-    } catch {
-      setError(t('Email ou password incorretos.'))
+    } catch (err) {
+      setError(isRateLimited(err) ? t('Demasiadas tentativas. Tenta novamente dentro de alguns minutos.') : t('Email ou password incorretos.'))
     } finally {
       setLoading(false)
     }
