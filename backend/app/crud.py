@@ -1341,8 +1341,10 @@ def generate_shopping_list(db: Session, workspace_id: uuid.UUID, week_start: dat
 def add_recipe_to_shopping_list(
     db: Session, workspace_id: uuid.UUID, recipe_id: uuid.UUID
 ) -> list[models.ShoppingListItem] | None:
-    """Mesma lógica de dedup de `generate_shopping_list`, mas a partir dos
-    ingredientes de uma única receita em vez de todo o plano semanal.
+    """Mesma lógica de dedup de `generate_shopping_list` (nomes normalizados),
+    mas a partir dos ingredientes de uma única receita em vez de todo o plano
+    semanal. Não exclui o que já está na despensa — isso é o
+    `add_missing_recipe_ingredients_to_shopping_list`.
     Devolve só os itens novos (não a lista toda), para o frontend poder
     mostrar "N ingredientes adicionados" sem ter de comparar antes/depois."""
     recipe = get_recipe(db, workspace_id, recipe_id)
@@ -1352,16 +1354,17 @@ def add_recipe_to_shopping_list(
     existing_query = select(models.ShoppingListItem.name).where(
         models.ShoppingListItem.workspace_id == workspace_id, models.ShoppingListItem.is_checked.is_(False)
     )
-    existing_names = set(db.scalars(existing_query))
+    existing_names = {_normalize(name) for name in db.scalars(existing_query)}
 
     new_items: list[models.ShoppingListItem] = []
     seen_this_run: set[str] = set()
     for ingredient in recipe.ingredients:
         if ingredient.is_header:
             continue
-        if ingredient.name in existing_names or ingredient.name in seen_this_run:
+        normalized_name = _normalize(ingredient.name)
+        if normalized_name in existing_names or normalized_name in seen_this_run:
             continue
-        seen_this_run.add(ingredient.name)
+        seen_this_run.add(normalized_name)
         item = models.ShoppingListItem(
             workspace_id=workspace_id,
             name=ingredient.name,

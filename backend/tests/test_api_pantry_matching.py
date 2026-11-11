@@ -90,3 +90,25 @@ def test_known_limitation_single_word_pantry_item_covers_longer_names(
     recipe = create_recipe(client, ingredients=[{"name": "Alho francês"}])
 
     assert names_to_buy_per_path(client, recipe["id"])["missing_ingredients"] == []
+
+
+def test_add_recipe_dedupes_by_normalized_name(client: TestClient, create_recipe: CreateRecipe) -> None:
+    client.post("/shopping-list", json={"name": "acucar"})
+    recipe = create_recipe(
+        client,
+        ingredients=[{"name": "Açúcar"}, {"name": "FARINHA"}, {"name": "farinha"}, {"name": "Leite"}],
+    )
+
+    response = client.post(f"/recipes/{recipe['id']}/shopping-list")
+
+    assert response.status_code == 200, response.text
+    assert [item["name"] for item in response.json()] == ["FARINHA", "Leite"]
+
+
+def test_add_recipe_does_not_exclude_pantry_items(client: TestClient, create_recipe: CreateRecipe) -> None:
+    client.post("/pantry", json={"name": "Leite"})
+    recipe = create_recipe(client, ingredients=[{"name": "Leite"}])
+
+    response = client.post(f"/recipes/{recipe['id']}/shopping-list")
+
+    assert [item["name"] for item in response.json()] == ["Leite"]
