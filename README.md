@@ -109,7 +109,7 @@ to each browser, so household members can use different preferences.
 | **Cooking mode** | Follow steps in a full-screen view, use timers and scale portions. The active recipe can be cached for interruptions in connectivity. |
 | **Meal planning** | Assign recipes to the week, copy weeks, save templates, repeat meals and request suggestions. |
 | **Shared shopping list** | Generate ingredients from the meal plan, add your own items and mark purchases as complete. |
-| **Pantry** | Track quantities, units, expiry dates and minimum stock. Find recipes you can make and see what ingredients are missing. |
+| **Pantry** | Track quantities, units, expiry dates and minimum stock. Find recipes you can make and see what ingredients are missing. Record what you paid (by hand or by reading a receipt photo), see each item's price history and your monthly spending. Prices are in euros. |
 | **Household preferences** | Record dietary profiles, review ingredient warnings and keep substitution rules. |
 | **Sharing and printing** | Create temporary public recipe links and QR codes, or use print-friendly recipe views. |
 | **Language and appearance** | Switch between European Portuguese and English, with localised dates and light, dark or system themes. Preferences are remembered in each browser. |
@@ -169,7 +169,7 @@ Once your instance is reachable over HTTPS:
 
 | Integration | Configuration |
 |---|---|
-| **Gemini extraction** | Set `GEMINI_API_KEY` to enable AI-assisted extraction. Submitted content is processed by Google; manual entry and ordinary website scraping do not require this key. |
+| **Gemini extraction** | Set `GEMINI_API_KEY` to enable AI-assisted extraction of recipes and grocery receipts (pantry items and prices). Submitted content, including receipt photographs, is processed by Google; manual entry and ordinary website scraping do not require this key. |
 | **OpenID Connect** | Set `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_REDIRECT_URI` and the client secret if required. The callback is normally `https://your-host/auth/oidc/callback`. |
 | **Forward-auth** | Enable `TRUST_FORWARD_AUTH` and configure the shared secret and identity headers on a trusted reverse proxy. |
 

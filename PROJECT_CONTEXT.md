@@ -21,6 +21,9 @@ interface está atualmente escrita em português. O repositório oficial é
 - Fotografias de capa e galerias privadas.
 - Modo de cozinha com passos, temporizadores, ajuste de doses e cache offline.
 - Planeamento semanal de refeições, despensa e lista de compras.
+- Preços da despensa: registo manual ou por foto da fatura (Gemini, com
+  revisão antes de gravar), histórico de preços por produto e gastos mensais
+  em gráficos SVG; moeda única (euro).
 - Links temporários para partilhar receitas publicamente.
 - Vários utilizadores no mesmo agregado/workspace.
 - Autenticação por cookie e integração opcional com forward-auth.

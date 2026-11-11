@@ -23,6 +23,13 @@ Copy `.env.example` to `.env`. Empty optional values disable their feature.
 | `OIDC_ALLOW_PROVISIONING` | Create new workspace members after verified OIDC login | `false` |
 | `OIDC_DISABLE_LOCAL_LOGIN` | Remove password login endpoint and form | `false` |
 
+## Pantry prices
+
+Pantry prices are stored as plain amounts and always displayed in euros (EUR).
+There is no currency setting: a household that records prices in another
+currency will see them labelled as euros. Reading prices from a receipt photo
+requires `GEMINI_API_KEY` and sends the photograph to Google.
+
 ## Secrets
 
 The generic Compose generates the database password and `AUTH_SECRET` inside
