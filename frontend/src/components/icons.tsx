@@ -88,6 +88,10 @@ export function CopyIcon(props: SVGProps<SVGSVGElement>) {
   )
 }
 
+export function SwapIcon(props: SVGProps<SVGSVGElement>) {
+  return <svg {...base} {...props}><path d="M4 8h14M14.5 4.5 18 8l-3.5 3.5" /><path d="M20 16H6M9.5 12.5 6 16l3.5 3.5" /></svg>
+}
+
 export function HeartIcon(props: SVGProps<SVGSVGElement>) {
   return (
     <svg {...base} {...props}>
