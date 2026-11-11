@@ -106,8 +106,10 @@ def test_upload_rejects_bytes_that_do_not_match_declared_type(tmp_path: Path, da
     assert not any(path.is_file() for path in tmp_path.rglob("*"))
 
 
-def test_upload_rejects_decompression_bomb(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(Image, "MAX_IMAGE_PIXELS", 100)
+@pytest.mark.filterwarnings("ignore::PIL.Image.DecompressionBombWarning")
+@pytest.mark.parametrize("max_pixels", [100, 6000], ids=["pillow-error", "pillow-only-warns"])
+def test_upload_rejects_decompression_bomb(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, max_pixels: int) -> None:
+    monkeypatch.setattr(Image, "MAX_IMAGE_PIXELS", max_pixels)
     with pytest.raises(HTTPException) as excinfo:
         save(tmp_path, image_bytes((100, 100), "PNG"), "image/png")
 

@@ -69,8 +69,11 @@ def _load_image(source: bytes | Path, expected_format: str | None = None) -> Ima
     como PNG que na verdade é outra coisa falha aqui. `draft` deixa o
     descodificador JPEG reduzir já na leitura (DCT escalado) para o menor
     tamanho que ainda cobre a maior variante — uma foto de 24 MP ocupa ~4x
-    menos memória. `Image.MAX_IMAGE_PIXELS` (omissão do Pillow) trava
-    bombas de descompressão com `DecompressionBombError`."""
+    menos memória. Bombas de descompressão: o Pillow só avisa entre
+    `Image.MAX_IMAGE_PIXELS` e o dobro disso (e levanta
+    `DecompressionBombError` acima); aqui o próprio limite já é recusado,
+    antes de descodificar — um PNG pequeno pode valer centenas de MB em
+    memória."""
     formats = [expected_format] if expected_format else list(PIL_FORMATS.values())
     largest = max(VARIANT_MAX_WIDTH.values())
 
@@ -79,18 +82,22 @@ def _load_image(source: bytes | Path, expected_format: str | None = None) -> Ima
 
     try:
         with open_image() as probe:
+            if Image.MAX_IMAGE_PIXELS and probe.width * probe.height > Image.MAX_IMAGE_PIXELS:
+                raise InvalidImageError("imagem com demasiados píxeis")
             probe.verify()
         with open_image() as image:
             image.draft(None, (largest, largest))
             image.load()
-            oriented = ImageOps.exif_transpose(image)
+            # `in_place` evita uma cópia inteira quando não há rotação.
+            ImageOps.exif_transpose(image, in_place=True)
     except Exception as exc:
         # O Pillow levanta tipos variados para ficheiros corrompidos
         # (OSError, SyntaxError, struct.error, DecompressionBombError...).
         raise InvalidImageError(str(exc)) from exc
     # Perfis ICC de CMYK/cinzento não servem para a saída RGB.
     icc_profile = image.info.get("icc_profile") if image.mode in {"RGB", "RGBA"} else None
-    converted = oriented.convert("RGBA" if oriented.has_transparency_data else "RGB")
+    mode = "RGBA" if image.has_transparency_data else "RGB"
+    converted = image if image.mode == mode else image.convert(mode)
     converted.info = {"icc_profile": icc_profile} if icc_profile else {}
     return converted
 
