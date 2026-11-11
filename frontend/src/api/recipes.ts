@@ -6,6 +6,7 @@ import type {
   RecipeExtraction,
   RecipeInput,
   RecipeShare,
+  RecipeSort,
   RecipeSummary,
   ShoppingListItem,
   Tag,
@@ -23,6 +24,7 @@ export async function listRecipes(params?: {
   pantrySuggestions?: boolean
   safeForAll?: boolean
   profileIds?: string[]
+  sort?: RecipeSort
 }) {
   const { data } = await api.get<RecipeSummary[]>('/recipes', {
     params: {
@@ -37,6 +39,7 @@ export async function listRecipes(params?: {
       pantry_suggestions: params?.pantrySuggestions,
       safe_for_all: params?.safeForAll,
       profile_ids: params?.profileIds?.join(','),
+      sort: params?.sort,
     },
   })
   return data

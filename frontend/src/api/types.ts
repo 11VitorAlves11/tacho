@@ -58,6 +58,8 @@ export interface Comment {
   author_email: string
 }
 
+export type RecipeSort = 'title' | 'newest' | 'updated' | 'rating' | 'least_recently_made'
+
 export interface RecipeSummary {
   id: string
   title: string
