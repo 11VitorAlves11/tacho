@@ -119,6 +119,8 @@ class CookbookSummary(BaseModel):
     # Não é coluna — len(cookbook.recipes), anotado por crud.py antes de
     # sair (mesmo padrão do Recipe.is_favorite).
     recipe_count: int
+    # Até 4 fotos de receitas da coleção para a capa — também anotado por crud.py.
+    cover_image_paths: list[str] = []
 
 
 class RecipeCreate(BaseModel):

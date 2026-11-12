@@ -5,7 +5,7 @@ import { Sidebar } from './Sidebar'
 
 export function PageShell({ children, wide = false }: { children: ReactNode; wide?: boolean }) {
   return (
-    <div className="min-h-svh overflow-x-hidden bg-bg-sage pb-[calc(7.5rem+env(safe-area-inset-bottom))] lg:pb-0 print:min-h-0 print:pb-0">
+    <div className="min-h-svh overflow-x-clip bg-bg-sage pb-[calc(7.5rem+env(safe-area-inset-bottom))] lg:pb-0 print:min-h-0 print:pb-0">
       <Header />
       <div className="flex">
         <Sidebar />

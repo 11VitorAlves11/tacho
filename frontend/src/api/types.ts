@@ -235,6 +235,7 @@ export interface CookbookSummary {
   id: string
   name: string
   recipe_count: number
+  cover_image_paths: string[]
 }
 
 export interface CookbookDetail {
