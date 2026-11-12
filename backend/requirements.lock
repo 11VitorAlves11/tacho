@@ -30,7 +30,7 @@ billiard==4.2.4
     # via celery
 celery==5.6.3
     # via tacho
-certifi==2026.7.22
+certifi==2026.10.23
     # via
     #   httpcore
     #   httpx
@@ -62,7 +62,7 @@ cryptography==50.0.1
     #   pyjwt
 distro==1.9.0
     # via google-genai
-dnspython==2.8.0
+dnspython==2.9.2
     # via email-validator
 email-validator==2.3.0
     # via fastapi-users
@@ -139,7 +139,7 @@ psycopg2-binary==2.9.12
     # via tacho
 pwdlib==0.3.0
     # via fastapi-users
-pyasn1==0.6.4
+pyasn1==0.6.5
     # via pyasn1-modules
 pyasn1-modules==0.4.2
     # via google-auth
@@ -154,7 +154,7 @@ pydantic-core==2.46.4
     # via pydantic
 pydantic-settings==2.14.2
     # via tacho
-pyjwt==2.13.0
+pyjwt==2.15.0
     # via
     #   fastapi-users
     #   tacho
@@ -229,7 +229,7 @@ tzdata==2026.3
     #   tzlocal
 tzlocal==5.4.4
     # via celery
-urllib3==2.7.0
+urllib3==2.8.0
     # via requests
 uvicorn==0.52.1
     # via tacho
