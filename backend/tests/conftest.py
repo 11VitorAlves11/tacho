@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from fake_redis import FakeRedis
 from fastapi.testclient import TestClient
 from fastapi_users.password import PasswordHelper
 from PIL import Image
@@ -130,6 +131,22 @@ def images_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     return path
 
 
+@pytest.fixture
+def rate_limit_store(app: Any) -> Iterator[FakeRedis]:
+    """Limitador de tentativas em memória, vazio em cada teste.
+
+    O cliente Redis de `app.rate_limit` guarda ligações presas ao event loop
+    onde foram abertas (o mesmo problema da pool asyncpg em `app`), e os
+    contadores num Redis real passariam de um teste para o seguinte."""
+    from app.rate_limit import RateLimiter, get_rate_limiter
+
+    store = FakeRedis()
+    limiter = RateLimiter(store, 900)
+    app.dependency_overrides[get_rate_limiter] = lambda: limiter
+    yield store
+    app.dependency_overrides.pop(get_rate_limiter, None)
+
+
 def login(client: TestClient, email: str, password: str) -> None:
     response = client.post("/auth/cookie/login", data={"username": email, "password": password})
     assert response.status_code == 204, response.text
@@ -137,13 +154,13 @@ def login(client: TestClient, email: str, password: str) -> None:
 
 
 @pytest.fixture
-def anon_client(app: Any, db: Session, images_dir: Path) -> Iterator[TestClient]:
+def anon_client(app: Any, db: Session, images_dir: Path, rate_limit_store: FakeRedis) -> Iterator[TestClient]:
     with TestClient(app) as client:
         yield client
 
 
 @pytest.fixture
-def client(app: Any, db: Session, images_dir: Path) -> Iterator[TestClient]:
+def client(app: Any, db: Session, images_dir: Path, rate_limit_store: FakeRedis) -> Iterator[TestClient]:
     """Primeira conta (criada por `POST /setup`, workspace semeada) com sessão iniciada."""
     with TestClient(app) as test_client:
         response = test_client.post("/setup", json={"name": "Owner", "email": OWNER_EMAIL, "password": OWNER_PASSWORD})
