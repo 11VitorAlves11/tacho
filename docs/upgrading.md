@@ -12,7 +12,7 @@
 Pinning versions makes rollback explicit:
 
 ```dotenv
-TACHO_VERSION=2.1.0
+TACHO_VERSION=2.2.0
 ```
 
 Then run:
@@ -45,7 +45,7 @@ Variants are derived files; deleting them is harmless.
 
 ## Release-specific notes
 
-### Unreleased
+### 2.2.0
 
 - Adds one migration (`876b063c0d21`, table `shopping_list_item_sources`) that
   links shopping list items to the recipes they came from. It only creates a
