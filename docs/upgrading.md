@@ -12,7 +12,7 @@
 Pinning versions makes rollback explicit:
 
 ```dotenv
-TACHO_VERSION=2.2.0
+TACHO_VERSION=2.2.1
 ```
 
 Then run:
