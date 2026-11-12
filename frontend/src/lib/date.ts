@@ -64,3 +64,14 @@ export function expiryStatus(key: string, today: Date): { tone: ExpiryTone; labe
   if (days <= EXPIRY_SOON_DAYS) return { tone: 'soon', label: t('Expira em {count} dias', { count: days }) }
   return { tone: 'later', label: t('Validade: {date}', { date: formatDateKey(key) }) }
 }
+
+const RELATIVE_STEPS: [Intl.RelativeTimeFormatUnit, number][] = [['year', 365], ['month', 30], ['week', 7]]
+
+// Conta dias de calendário locais (não horas decorridas): ontem às 23h50
+// continua a ser "ontem" às 9h de hoje.
+export function formatRelativeDays(iso: string, now: Date = new Date(), language: string = getLanguage()): string {
+  const days = daysBetween(now, new Date(iso))
+  const format = new Intl.RelativeTimeFormat(language, { numeric: 'auto' })
+  const step = RELATIVE_STEPS.find(([, size]) => Math.abs(days) >= size)
+  return step ? format.format(Math.trunc(days / step[1]), step[0]) : format.format(days, 'day')
+}

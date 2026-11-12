@@ -10,6 +10,7 @@ import {
   deleteRecipeGalleryImage,
   duplicateRecipe,
   getRecipe,
+  getRecipeMissingIngredients,
   recipeHeroSrcSet,
   recipeImageUrl,
   setRecipeGalleryCover,
@@ -21,6 +22,7 @@ import type { Recipe } from '../api/types'
 import { PageShell } from '../components/PageShell'
 import { Brand } from '../components/Brand'
 import {
+  CalendarIcon,
   CameraIcon,
   CartIcon,
   ClockIcon,
@@ -29,6 +31,7 @@ import {
   FlameIcon,
   HeartIcon,
   MinusIcon,
+  PantryIcon,
   PencilIcon,
   PlayIcon,
   PlusIcon,
@@ -39,7 +42,11 @@ import {
   XIcon,
 } from '../components/icons'
 import { formatQuantity, scaleQuantity } from '../lib/quantity'
+import { formatRelativeDays } from '../lib/date'
 import { CategoryBadge, TagBadge } from '../components/ui'
+
+const ACTION_CLASS =
+  'flex min-h-14 min-w-0 flex-col items-center justify-center gap-1 rounded-xl border border-border bg-surface px-1 py-1.5 text-[11px] font-medium leading-tight sm:min-h-11 sm:flex-row sm:gap-1.5 sm:px-3 sm:text-sm'
 
 function formatLastMade(iso: string): string {
   return new Date(iso).toLocaleDateString(getLanguage(), { day: 'numeric', month: 'long', year: 'numeric' })
@@ -57,6 +64,7 @@ export function RecipeDetail() {
   const [uploadingGalleryImage, setUploadingGalleryImage] = useState(false)
   const [addingToShoppingList, setAddingToShoppingList] = useState(false)
   const [shoppingListFeedback, setShoppingListFeedback] = useState('')
+  const [missingIngredients, setMissingIngredients] = useState<string[] | null>(null)
   const galleryInputRef = useRef<HTMLInputElement>(null)
   const [shareState, setShareState] = useState<
     { status: 'loading' } | { status: 'ready'; qrDataUrl: string; shareUrl: string; expiresAt: string } | null
@@ -68,6 +76,7 @@ export function RecipeDetail() {
       .then((r) => {
         setRecipe(r)
         setDesiredServings(r.servings)
+        getRecipeMissingIngredients(r).then(setMissingIngredients).catch(() => {})
       })
       .catch(() => setNotFound(true))
   }, [id])
@@ -215,51 +224,53 @@ export function RecipeDetail() {
 
         <div className={`flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between ${recipe.image_path ? 'mt-5' : ''}`}>
           <div className="min-w-0"><h1 className="text-2xl font-bold text-text-primary sm:text-3xl">{recipe.title}</h1>{recipe.source_recipe_id && <Link to={`/receitas/${recipe.source_recipe_id}`} className="mt-1 inline-flex text-sm font-medium text-forest-text">{t('Variante de uma receita original →')}</Link>}</div>
-          <div className="flex max-w-full flex-wrap gap-2 print:hidden sm:shrink-0 sm:justify-end">
+          {/* Telemóvel: grelha de 5 com o rótulo por baixo do ícone (alvos
+              ≥ 56 px); a partir de sm, pílulas com ícone e texto lado a lado. */}
+          <div className="grid grid-cols-5 gap-2 print:hidden sm:flex sm:max-w-full sm:shrink-0 sm:flex-wrap sm:justify-end">
             <button
               type="button"
               onClick={handleToggleFavorite}
               aria-pressed={recipe.is_favorite}
-              aria-label={recipe.is_favorite ? t('Remover dos favoritos') : t('Adicionar aos favoritos')}
-              className={`flex min-h-11 items-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-1.5 text-sm font-medium ${
+              title={recipe.is_favorite ? t('Remover dos favoritos') : t('Adicionar aos favoritos')}
+              className={`${ACTION_CLASS} ${
                 recipe.is_favorite ? 'text-accent-leaf' : 'text-text-secondary hover:text-accent-leaf'
               }`}
             >
-              <HeartIcon className="size-4" fill={recipe.is_favorite ? 'currentColor' : 'none'} />
-              <span className="hidden sm:inline">{t('Favorito')}</span>
+              <HeartIcon className="size-5 sm:size-4" fill={recipe.is_favorite ? 'currentColor' : 'none'} />
+              {t('Favorito')}
             </button>
             <button
               type="button"
               onClick={handleDuplicate}
               disabled={duplicating}
-              className="flex min-h-11 items-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-1.5 text-sm font-medium text-text-secondary hover:text-forest-text disabled:opacity-50"
+              className={`${ACTION_CLASS} text-text-secondary hover:text-forest-text disabled:opacity-50`}
             >
-              <CopyIcon className="size-4" />
-              <span className="hidden sm:inline">{t('Duplicar')}</span>
+              <CopyIcon className="size-5 sm:size-4" />
+              {t('Duplicar')}
             </button>
             <button
               type="button"
               onClick={() => window.print()}
-              className="flex min-h-11 items-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-1.5 text-sm font-medium text-text-secondary hover:text-forest-text"
+              className={`${ACTION_CLASS} text-text-secondary hover:text-forest-text`}
             >
-              <PrinterIcon className="size-4" />
-              <span className="hidden sm:inline">{t('Imprimir')}</span>
+              <PrinterIcon className="size-5 sm:size-4" />
+              {t('Imprimir')}
             </button>
             <button
               type="button"
               onClick={handleShare}
               disabled={shareState?.status === 'loading'}
-              className="flex min-h-11 items-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-1.5 text-sm font-medium text-text-secondary hover:text-forest-text disabled:opacity-50"
+              className={`${ACTION_CLASS} text-text-secondary hover:text-forest-text disabled:opacity-50`}
             >
-              <QrIcon className="size-4" />
-              <span className="hidden sm:inline">{t('Partilhar')}</span>
+              <QrIcon className="size-5 sm:size-4" />
+              {t('Partilhar')}
             </button>
             <Link
               to={`/receitas/${recipe.id}/editar`}
-              className="flex min-h-11 items-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-1.5 text-sm font-medium text-text-secondary hover:text-forest-text"
+              className={`${ACTION_CLASS} text-text-secondary hover:text-forest-text`}
             >
-              <PencilIcon className="size-4" />
-              <span className="hidden sm:inline">{t('Editar')}</span>
+              <PencilIcon className="size-5 sm:size-4" />
+              {t('Editar')}
             </Link>
           </div>
         </div>
@@ -284,9 +295,22 @@ export function RecipeDetail() {
           })}
         </div>
 
-        <div className="mt-5 flex flex-wrap gap-6 rounded-2xl border border-border bg-surface p-5 print:break-inside-avoid print:border-black/15">
+        <div className="mt-5 grid grid-cols-2 gap-x-4 gap-y-5 rounded-2xl border border-border bg-surface p-5 print:break-inside-avoid print:border-black/15 sm:flex sm:flex-wrap sm:gap-6">
+          {/* Um único hero number por métrica (o tempo total); a repartição
+              prep/confeção fica por baixo, em pequeno, quando ambos existem. */}
           {totalMinutes > 0 && (
-            <HeroStat icon={<ClockIcon className="size-5" />} value={totalMinutes} label="min" tone="orange" />
+            <HeroStat
+              icon={<ClockIcon className="size-5" />}
+              value={totalMinutes}
+              label="min"
+              tone="orange"
+              detail={recipe.prep_minutes != null && recipe.cook_minutes != null && (
+                <>
+                  <span>{t('Preparação')} <span className="font-semibold text-text-primary">{recipe.prep_minutes}</span></span>
+                  <span>{t('Confeção')} <span className="font-semibold text-text-primary">{recipe.cook_minutes}</span></span>
+                </>
+              )}
+            />
           )}
           {recipe.servings != null && desiredServings != null && (
             <div className="flex items-center gap-2">
@@ -332,20 +356,17 @@ export function RecipeDetail() {
               tone="forest"
             />
           )}
+          {recipe.last_made_at && (
+            <div className="flex items-center gap-2" title={formatLastMade(recipe.last_made_at)}>
+              <span className="text-forest-text"><CalendarIcon className="size-5" /></span>
+              <div>
+                <div className="text-xs text-text-secondary">{t('Última vez')}</div>
+                <time dateTime={recipe.last_made_at} className="text-sm font-semibold text-text-primary">{formatRelativeDays(recipe.last_made_at)}</time>
+              </div>
+            </div>
+          )}
         </div>
 
-        {/* O hero number mostra sempre o tempo total ("Hierarchy" —
-            um único hero number por métrica); a repartição prep/confeção fica
-            como legenda secundária, só quando ambos os tempos são conhecidos. */}
-        {recipe.prep_minutes != null && recipe.cook_minutes != null && (
-          <p className="mt-2 text-xs text-text-secondary">
-            {t('Preparação:')} {recipe.prep_minutes} {t('min · Confeção:')} {recipe.cook_minutes} min
-          </p>
-        )}
-
-        {recipe.last_made_at && (
-          <p className="mt-2 text-xs text-text-secondary">{t('Feita pela última vez em')} {formatLastMade(recipe.last_made_at)}.</p>
-        )}
         {recipe.cook_history.length > 1 && <details className="mt-2 text-xs text-text-secondary"><summary className="cursor-pointer font-medium text-forest-text">{t('Histórico de confeções (')}{recipe.cook_history.length})</summary><ul className="mt-2 space-y-1 pl-4">{recipe.cook_history.map((entry) => <li key={entry.id}>{formatLastMade(entry.made_at)}</li>)}</ul></details>}
 
         {(recipe.categories.length > 0 || recipe.tags.length > 0) && (
@@ -367,15 +388,25 @@ export function RecipeDetail() {
           <section className="lg:sticky lg:top-24 lg:self-start">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-lg font-semibold text-text-primary">{t('Ingredientes')}</h2>
-              <button
-                type="button"
-                onClick={handleAddToShoppingList}
-                disabled={addingToShoppingList}
-                className="flex shrink-0 items-center gap-1.5 text-sm font-medium text-forest-text disabled:opacity-50 print:hidden"
-              >
-                <CartIcon className="size-4" />
-                <span className="hidden sm:inline">{t('Adicionar o que falta')}</span>
-              </button>
+              {recipe.ingredients.some((ing) => !ing.is_header) && (missingIngredients?.length === 0 ? (
+                <p className="flex shrink-0 items-center gap-1.5 text-sm font-medium text-forest-text print:hidden">
+                  <PantryIcon className="size-4" />
+                  {t('Tens tudo na despensa')}
+                </p>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleAddToShoppingList}
+                  disabled={addingToShoppingList}
+                  title={missingIngredients?.join(', ')}
+                  className="-my-2 flex min-h-11 shrink-0 items-center gap-1.5 text-sm font-medium text-forest-text disabled:opacity-50 print:hidden"
+                >
+                  <CartIcon className="size-4" />
+                  {missingIngredients
+                    ? t('Adicionar o que falta ({count})', { count: missingIngredients.length })
+                    : t('Adicionar o que falta')}
+                </button>
+              ))}
             </div>
             {shoppingListFeedback && (
               <p className="mt-1.5 text-xs text-text-secondary print:hidden">{shoppingListFeedback}</p>
@@ -640,11 +671,13 @@ function HeroStat({
   value,
   label,
   tone,
+  detail,
 }: {
   icon: ReactNode
   value: number
   label: string
   tone: 'orange' | 'forest'
+  detail?: ReactNode
 }) {
   const iconClass = tone === 'orange' ? 'text-accent-orange' : 'text-forest-text'
   return (
@@ -653,6 +686,7 @@ function HeroStat({
       <div>
         <div className="text-2xl font-bold leading-none text-text-primary sm:text-3xl">{value}</div>
         <div className="text-xs text-text-secondary">{label}</div>
+        {detail && <div className="mt-1 flex flex-col whitespace-nowrap text-[11px] leading-snug text-text-secondary sm:flex-row sm:gap-2.5">{detail}</div>}
       </div>
     </div>
   )
